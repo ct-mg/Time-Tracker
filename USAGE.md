@@ -6,24 +6,74 @@ This boilerplate provides a flexible way to create ChurchTools extensions that c
 
 The main function is `renderExtension(divId, entryPoint)` which allows you to render an extension to any DIV in ChurchTools.
 
+The boilerplate supports two build modes:
+- **Simple Mode** (default): Single bundle with all entry points
+- **Advanced Mode**: Code splitting with lazy loading
+
+See [BUILD_MODES.md](BUILD_MODES.md) for detailed comparison and guidance.
+
 ## Building the Extension
+
+### Default Build (uses mode from .env)
 
 ```bash
 npm run build
 ```
 
-This will generate two bundles in the `dist` folder:
-- `extension.es.js` - ES module format
-- `extension.umd.js` - UMD format (for script tag usage)
+### Explicit Build Mode
+
+```bash
+# Build in simple mode (single bundle)
+npm run build:simple
+
+# Build in advanced mode (code splitting)
+npm run build:advanced
+```
+
+**Output:**
+- Simple mode: `dist/extension.es.js` and `dist/extension.umd.js`
+- Advanced mode: Main bundle + separate chunks for each entry point
 
 ## Basic Usage
 
-### 1. Using ES Modules
+### Simple Mode (Static Imports)
+
+When built in simple mode, all entry points are immediately available:
+
+```javascript
+import {
+  renderExtension,
+  welcomeEntryPoint,
+  userInfoEntryPoint
+} from './extension.es.js';
+
+// Entry points are pre-loaded
+await renderExtension('welcome-div', welcomeEntryPoint);
+await renderExtension('user-div', userInfoEntryPoint);
+```
+
+### Advanced Mode (Dynamic Imports)
+
+When built in advanced mode, use `loadEntryPoint` for lazy loading:
+
+```javascript
+import { renderExtension, loadEntryPoint } from './extension.es.js';
+
+// Load entry point on demand
+const welcomeEntry = await loadEntryPoint('welcome');
+await renderExtension('welcome-div', welcomeEntry);
+
+// Only load user info when needed
+const userEntry = await loadEntryPoint('userInfo');
+await renderExtension('user-div', userEntry);
+```
+
+### Custom Entry Point (Works in Both Modes)
 
 ```javascript
 import { renderExtension } from './extension.es.js';
 
-// Define your entry point
+// Define your own entry point
 const myEntryPoint = ({ user, element, churchtoolsClient }) => {
   element.innerHTML = `<h1>Hello, ${user.firstName}!</h1>`;
 };
@@ -32,18 +82,21 @@ const myEntryPoint = ({ user, element, churchtoolsClient }) => {
 await renderExtension('my-extension-div', myEntryPoint);
 ```
 
-### 2. Using UMD (Script Tag)
+### UMD Usage (Script Tag)
 
 ```html
+<!-- For extension with KEY="calendar" -->
 <script src="extension.umd.js"></script>
 <script>
-  const { renderExtension } = ChurchToolsExtension;
+  // Access via global (simple mode)
+  const { renderExtension, welcomeEntryPoint } = ChurchToolsExtension_calendar;
+  renderExtension('my-div', welcomeEntryPoint);
 
-  const myEntryPoint = ({ user, element }) => {
-    element.innerHTML = `<h1>Hello, ${user.firstName}!</h1>`;
-  };
-
-  renderExtension('my-extension-div', myEntryPoint);
+  // OR access via global (advanced mode)
+  const { renderExtension, loadEntryPoint } = ChurchToolsExtension_calendar;
+  loadEntryPoint('welcome').then(entry => {
+    renderExtension('my-div', entry);
+  });
 </script>
 ```
 

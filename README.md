@@ -10,9 +10,14 @@ This project provides a boilerplate for building your own extension for [ChurchT
 - 📦 **Multiple Formats**: Builds both ES modules and UMD bundles
 - 🔒 **Type-Safe**: Full TypeScript support with comprehensive type definitions
 - 🚀 **Development Mode**: Hot-reload development server with auto-login
+- ⚡ **Dual Build Modes**: Choose between simple (single bundle) or advanced (code splitting) mode
+- 📁 **Flexible Deployment**: Built with relative paths - deploy to any URL structure without rebuilding
 
 ## Documentation
 
+- **[BUILD_MODES.md](BUILD_MODES.md)** - ⭐ Complete guide for choosing and using build modes (simple vs advanced)
+- **[EXAMPLES.md](EXAMPLES.md)** - 📚 Practical examples and comparisons of both build modes
+- **[CHURCHTOOLS_ASSET_PATH.md](CHURCHTOOLS_ASSET_PATH.md)** - 🔧 Asset path handling and deployment flexibility
 - **[USAGE.md](USAGE.md)** - General usage guide and API reference
 - **[INTEGRATION_EXAMPLE.md](INTEGRATION_EXAMPLE.md)** - Integration examples for ChurchTools
 - **[MULTI_EXTENSION_GUIDE.md](MULTI_EXTENSION_GUIDE.md)** - Guide for loading multiple extensions
@@ -47,7 +52,29 @@ The container includes the tools mentioned in the prerequisites pre-installed an
 
 Copy `.env-example` to `.env` and fill in your data.
 
-In the `.env` file, configure the necessary constants for your project. This file is included in `.gitignore` to prevent sensitive data from being committed to version control.
+In the `.env` file, configure the necessary constants for your project:
+
+```bash
+# Extension key (required)
+VITE_KEY=my-extension
+
+# Build mode: "simple" or "advanced" (optional, defaults to "simple")
+# - simple: Single bundle with all entry points (best for small extensions)
+# - advanced: Code splitting with lazy loading (best for large extensions)
+VITE_BUILD_MODE=simple
+
+# ChurchTools connection for development
+VITE_BASE_URL=https://your.church.tools
+VITE_USERNAME=youruser
+VITE_PASSWORD=yourpass
+```
+
+**Build Mode Selection:**
+- Use `simple` mode (default) for small to medium extensions (< 100KB)
+- Use `advanced` mode for large extensions with many entry points (> 100KB)
+- See [BUILD_MODES.md](BUILD_MODES.md) for detailed comparison
+
+This file is included in `.gitignore` to prevent sensitive data from being committed to version control.
 
 ## Development and Deployment
 
@@ -77,11 +104,27 @@ npm run dev
 
 ### Building for Production
 
-To create a production build:
+Build your extension using the mode configured in `.env`:
 
 ```bash
 npm run build
 ```
+
+Or explicitly choose a build mode:
+
+```bash
+# Build in simple mode (single bundle)
+npm run build:simple
+
+# Build in advanced mode (code splitting)
+npm run build:advanced
+```
+
+**What gets built:**
+- Simple mode: `dist/extension.es.js` and `dist/extension.umd.js`
+- Advanced mode: Main bundle + separate chunks for each entry point
+
+See [BUILD_MODES.md](BUILD_MODES.md) for details on choosing the right mode.
 
 ### Preview Production Build
 
@@ -108,20 +151,41 @@ You can find the package in the `releases` directory.
 
 ## Usage
 
-### Basic Example
+### Simple Mode (Default)
 
 ```javascript
-// ChurchTools loads the extension
+// ChurchTools loads the extension (simple mode)
+import { renderExtension, welcomeEntryPoint } from '/ccm/your-key/extension.es.js';
+
+// All entry points are immediately available
+await renderExtension('my-div-id', welcomeEntryPoint);
+```
+
+### Advanced Mode (Code Splitting)
+
+```javascript
+// ChurchTools loads the extension (advanced mode)
+import { renderExtension, loadEntryPoint } from '/ccm/your-key/extension.es.js';
+
+// Load entry point dynamically (only when needed)
+const entryPoint = await loadEntryPoint('welcome');
+await renderExtension('my-div-id', entryPoint);
+```
+
+### Custom Entry Point
+
+```javascript
 import { renderExtension } from '/ccm/your-key/extension.es.js';
 
-// Define an entry point
+// Define a custom entry point
 const myEntryPoint = ({ user, element, churchtoolsClient }) => {
   element.innerHTML = `<h1>Hello, ${user.firstName}!</h1>`;
 };
 
-// Render to a DIV
 await renderExtension('my-div-id', myEntryPoint);
 ```
+
+See [BUILD_MODES.md](BUILD_MODES.md) and [USAGE.md](USAGE.md) for complete documentation.
 
 ### Multi-Extension Support
 

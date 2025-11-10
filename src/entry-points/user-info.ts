@@ -4,7 +4,7 @@ import type { EntryPoint } from '../main';
  * User info entry point
  * Displays detailed information about the current user
  */
-export const userInfoEntryPoint: EntryPoint = ({ user, element }) => {
+const userInfoEntryPoint: EntryPoint = ({ user, element }) => {
     element.innerHTML = `
         <div style="padding: 2rem; max-width: 600px; margin: 0 auto;">
             <h1>User Information</h1>
@@ -16,3 +16,9 @@ export const userInfoEntryPoint: EntryPoint = ({ user, element }) => {
         </div>
     `;
 };
+
+// Named export for simple mode (static import)
+export { userInfoEntryPoint };
+
+// Default export for advanced mode (dynamic import)
+export default userInfoEntryPoint;

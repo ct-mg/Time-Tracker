@@ -4,7 +4,7 @@ import type { EntryPoint } from '../main';
  * Data viewer entry point
  * Demonstrates using the ChurchTools API to fetch and display data
  */
-export const dataViewerEntryPoint: EntryPoint = async ({ churchtoolsClient, element }) => {
+const dataViewerEntryPoint: EntryPoint = async ({ churchtoolsClient, element }) => {
     element.innerHTML = `
         <div style="padding: 2rem;">
             <h1>ChurchTools Data Viewer</h1>
@@ -37,3 +37,9 @@ ${JSON.stringify(whoami, null, 2)}
         errorEl.textContent = `Error loading data: ${error instanceof Error ? error.message : String(error)}`;
     }
 };
+
+// Named export for simple mode (static import)
+export { dataViewerEntryPoint };
+
+// Default export for advanced mode (dynamic import)
+export default dataViewerEntryPoint;

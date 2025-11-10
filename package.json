@@ -6,6 +6,8 @@
     "scripts": {
         "dev": "vite",
         "build": "tsc && vite build",
+        "build:simple": "VITE_BUILD_MODE=simple npm run build",
+        "build:advanced": "VITE_BUILD_MODE=advanced npm run build",
         "preview": "vite preview",
         "deploy": "npm run build && node scripts/package.js"
     },
