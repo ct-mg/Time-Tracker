@@ -6,14 +6,19 @@ export default ({ mode }) => {
     process.env = { ...process.env, ...loadEnv(mode, process.cwd()) };
 
     const isDevelopment = mode === 'development';
+    const key = process.env.VITE_KEY || 'default';
+
+    // Create a unique global name for UMD based on the extension key
+    // This prevents namespace collisions when multiple extensions are loaded
+    const globalName = `ChurchToolsExtension_${key}`;
 
     return defineConfig({
-        base: `/ccm/${process.env.VITE_KEY}/`,
+        base: `/ccm/${key}/`,
         build: isDevelopment ? {} : {
             lib: {
                 // Entry point for the library
                 entry: resolve(__dirname, 'src/index.ts'),
-                name: 'ChurchToolsExtension',
+                name: globalName,
                 // Generate both ES module and UMD formats
                 formats: ['es', 'umd'],
                 fileName: (format) => `extension.${format}.js`,

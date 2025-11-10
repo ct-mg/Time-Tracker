@@ -2,6 +2,21 @@
 
 This project provides a boilerplate for building your own extension for [ChurchTools](https://www.church.tools).
 
+## Features
+
+- 🎯 **Flexible Rendering**: Render extensions to any DIV element via `renderExtension(divId, entryPoint)`
+- 🔌 **Entry Points**: Define multiple entry points for different UI locations
+- 🏗️ **Multi-Extension Support**: Multiple extensions can coexist on the same page without namespace collisions
+- 📦 **Multiple Formats**: Builds both ES modules and UMD bundles
+- 🔒 **Type-Safe**: Full TypeScript support with comprehensive type definitions
+- 🚀 **Development Mode**: Hot-reload development server with auto-login
+
+## Documentation
+
+- **[USAGE.md](USAGE.md)** - General usage guide and API reference
+- **[INTEGRATION_EXAMPLE.md](INTEGRATION_EXAMPLE.md)** - Integration examples for ChurchTools
+- **[MULTI_EXTENSION_GUIDE.md](MULTI_EXTENSION_GUIDE.md)** - Guide for loading multiple extensions
+
 ## Getting Started
 
 ### Prerequisites
@@ -90,6 +105,41 @@ This command will:
 2. Package it using the `scripts/package.js` script
 
 You can find the package in the `releases` directory.
+
+## Usage
+
+### Basic Example
+
+```javascript
+// ChurchTools loads the extension
+import { renderExtension } from '/ccm/your-key/extension.es.js';
+
+// Define an entry point
+const myEntryPoint = ({ user, element, churchtoolsClient }) => {
+  element.innerHTML = `<h1>Hello, ${user.firstName}!</h1>`;
+};
+
+// Render to a DIV
+await renderExtension('my-div-id', myEntryPoint);
+```
+
+### Multi-Extension Support
+
+Each extension is built with a unique `KEY` that becomes part of its UMD global namespace:
+
+```html
+<!-- Load multiple extensions -->
+<script src="/ccm/calendar/extension.umd.js"></script>
+<script src="/ccm/events/extension.umd.js"></script>
+
+<script>
+  // Each has its own global: ChurchToolsExtension_{KEY}
+  ChurchToolsExtension_calendar.renderExtension('cal-div', calendarEntry);
+  ChurchToolsExtension_events.renderExtension('events-div', eventsEntry);
+</script>
+```
+
+See [MULTI_EXTENSION_GUIDE.md](MULTI_EXTENSION_GUIDE.md) for complete details.
 
 ## API
 

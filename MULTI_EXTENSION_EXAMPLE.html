@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ChurchTools - Multiple Extensions Example</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .extension-container {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .extension-container h2 {
+            margin-top: 0;
+            color: #333;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 10px;
+        }
+        .extension-content {
+            min-height: 100px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>ChurchTools - Multiple Extensions Demo</h1>
+        <p>This page demonstrates loading multiple extensions with different KEYs simultaneously.</p>
+
+        <!-- Extension 1: Calendar Extension -->
+        <div class="extension-container">
+            <h2>Calendar Extension (KEY: calendar)</h2>
+            <div id="calendar-extension" class="extension-content"></div>
+        </div>
+
+        <!-- Extension 2: Events Extension -->
+        <div class="extension-container">
+            <h2>Events Extension (KEY: events)</h2>
+            <div id="events-extension" class="extension-content"></div>
+        </div>
+
+        <!-- Extension 3: Users Extension -->
+        <div class="extension-container">
+            <h2>Users Extension (KEY: users)</h2>
+            <div id="users-extension" class="extension-content"></div>
+        </div>
+    </div>
+
+    <!-- Load Extension 1: Calendar (built with VITE_KEY=calendar) -->
+    <script src="/ccm/calendar/extension.umd.js"></script>
+
+    <!-- Load Extension 2: Events (built with VITE_KEY=events) -->
+    <script src="/ccm/events/extension.umd.js"></script>
+
+    <!-- Load Extension 3: Users (built with VITE_KEY=users) -->
+    <script src="/ccm/users/extension.umd.js"></script>
+
+    <!-- Initialize all extensions -->
+    <script>
+        // Each extension is available under its unique global name
+        // ChurchToolsExtension_calendar
+        // ChurchToolsExtension_events
+        // ChurchToolsExtension_users
+
+        (async function() {
+            try {
+                // Extension 1: Calendar
+                const { renderExtension: renderCalendar } = ChurchToolsExtension_calendar;
+                const calendarEntry = ({ user, element }) => {
+                    element.innerHTML = `
+                        <div style="padding: 1rem;">
+                            <p><strong>Calendar Extension</strong></p>
+                            <p>Logged in as: ${user.firstName} ${user.lastName}</p>
+                            <p>Extension KEY: calendar</p>
+                            <div style="margin-top: 1rem;">
+                                <button onclick="alert('Calendar feature clicked!')">View Calendar</button>
+                            </div>
+                        </div>
+                    `;
+                };
+                await renderCalendar('calendar-extension', calendarEntry);
+
+                // Extension 2: Events
+                const { renderExtension: renderEvents } = ChurchToolsExtension_events;
+                const eventsEntry = ({ user, element }) => {
+                    element.innerHTML = `
+                        <div style="padding: 1rem;">
+                            <p><strong>Events Extension</strong></p>
+                            <p>Logged in as: ${user.firstName} ${user.lastName}</p>
+                            <p>Extension KEY: events</p>
+                            <div style="margin-top: 1rem;">
+                                <button onclick="alert('Events feature clicked!')">Manage Events</button>
+                            </div>
+                        </div>
+                    `;
+                };
+                await renderEvents('events-extension', eventsEntry);
+
+                // Extension 3: Users
+                const { renderExtension: renderUsers } = ChurchToolsExtension_users;
+                const usersEntry = ({ user, element }) => {
+                    element.innerHTML = `
+                        <div style="padding: 1rem;">
+                            <p><strong>Users Extension</strong></p>
+                            <p>Logged in as: ${user.firstName} ${user.lastName}</p>
+                            <p>Extension KEY: users</p>
+                            <div style="margin-top: 1rem;">
+                                <button onclick="alert('Users feature clicked!')">View Users</button>
+                            </div>
+                        </div>
+                    `;
+                };
+                await renderUsers('users-extension', usersEntry);
+
+            } catch (error) {
+                console.error('Failed to load extensions:', error);
+            }
+        })();
+    </script>
+</body>
+</html>

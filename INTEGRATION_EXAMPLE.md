@@ -2,9 +2,19 @@
 
 This document shows how ChurchTools would integrate and use the built extension bundle.
 
+> **Multi-Extension Support:** For loading multiple extensions on the same page, see [MULTI_EXTENSION_GUIDE.md](MULTI_EXTENSION_GUIDE.md)
+
 ## Integration Scenario
 
 ChurchTools imports the bundle and calls `renderExtension(divId, entryPoint)` to render extensions in different locations.
+
+### Extension KEY and UMD Global Names
+
+Each extension is built with a unique `KEY` (e.g., `calendar`, `events`, `users`). When using UMD format, the global name is `ChurchToolsExtension_{KEY}` to prevent namespace collisions.
+
+For example:
+- Extension with `VITE_KEY=calendar` → global `ChurchToolsExtension_calendar`
+- Extension with `VITE_KEY=events` → global `ChurchToolsExtension_events`
 
 ## Example 1: ES Module Import
 
@@ -99,21 +109,24 @@ async function safelyRenderExtension(divId, entryPoint) {
 }
 ```
 
-## Example 6: UMD/Script Tag Usage (Legacy)
+## Example 6: UMD/Script Tag Usage
 
 ```html
 <!-- In ChurchTools HTML -->
 <div id="extension-area"></div>
 
-<script src="/path/to/extension.umd.js"></script>
+<!-- Load extension built with VITE_KEY=calendar -->
+<script src="/ccm/calendar/extension.umd.js"></script>
 <script>
-  // Access via global variable
-  const { renderExtension, welcomeEntryPoint } = ChurchToolsExtension;
+  // Access via global variable (ChurchToolsExtension_{KEY})
+  const { renderExtension, welcomeEntryPoint } = ChurchToolsExtension_calendar;
 
   renderExtension('extension-area', welcomeEntryPoint)
     .catch(console.error);
 </script>
 ```
+
+**Note:** The global name is `ChurchToolsExtension_{KEY}` where `{KEY}` is the value of `VITE_KEY` used during build. This prevents namespace collisions when multiple extensions are loaded on the same page.
 
 ## HTML Structure in ChurchTools
 
