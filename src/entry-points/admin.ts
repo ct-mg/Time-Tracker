@@ -34,7 +34,7 @@ const adminEntryPoint: EntryPoint<AdminData> = ({
             <div style="max-width: 900px; margin: 0 auto; padding: 2rem;">
                 <!-- Header -->
                 <div style="margin-bottom: 2rem;">
-                    <h2 style="margin: 0 0 0.5rem 0; color: #333;">Extension Settings</h2>
+                    <h1 style="margin: 0 0 0.5rem 0; font-size: 1.5rem; color: #333;">Extension Settings</h1>
                     <p style="margin: 0; color: #666;">
                         ${data.extensionInfo.name} v${data.extensionInfo.version}
                     </p>

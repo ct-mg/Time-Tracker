@@ -15,7 +15,7 @@
     "url": "https://github.com/yourname/extension-boilerplate.git"
   },
   "license": "MIT",
-  "image": "https://your-website.com/extension-icon.png",
+  "images": ["https://your-website.com/extension-icon.png"],
   "extensionPoints": [
     {
       "id": "main",

@@ -151,17 +151,5 @@ export async function renderExtension<TData = any>(
     };
 }
 
-// Default behavior for development mode
-if (import.meta.env.MODE === 'development') {
-    // Default entry point for development
-    const defaultEntryPoint: EntryPoint = ({ user, element }) => {
-        element.innerHTML = `
-            <div style="display: flex; place-content: center; place-items: center; height: 100vh;">
-                <h1>Welcome ${[user.firstName, user.lastName].join(' ')}</h1>
-            </div>
-        `;
-    };
-
-    // Auto-render in development mode
-    renderExtension('app', defaultEntryPoint).catch(console.error);
-}
+// Development mode initialization is handled by index.html
+// The HTML file loads entry points dynamically via the menu
