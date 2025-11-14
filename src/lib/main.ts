@@ -1,5 +1,5 @@
-import type { Person } from './utils/ct-types';
-import type { ExtensionContext, EntryPoint, CleanupFunction } from './types/extension';
+import type { Person } from '../utils/ct-types';
+import type { ExtensionContext, EntryPoint, CleanupFunction } from '../types/extension';
 import { churchtoolsClient } from '@churchtools/churchtools-client';
 import { EventBus } from './event-bus';
 
@@ -8,7 +8,7 @@ export type { ExtensionContext, EntryPoint, CleanupFunction };
 
 // only import reset.css in development mode to keep the production bundle small and to simulate CT environment
 if (import.meta.env.MODE === 'development') {
-    import('./utils/reset.css');
+    import('../utils/reset.css');
 }
 
 declare const window: Window &

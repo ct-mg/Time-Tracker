@@ -13,11 +13,11 @@
  */
 
 // Core functionality
-export { renderExtension, KEY } from './main';
+export { renderExtension, KEY } from './lib/main';
 
 // Types
 export type { ExtensionContext, EntryPoint, CleanupFunction } from './types/extension';
-export type { ExtensionInstance } from './main';
+export type { ExtensionInstance } from './lib/main';
 
 // Entry point loaders - work in both simple and advanced modes
 // In simple mode: Entry points are bundled, returned immediately
@@ -28,7 +28,7 @@ export {
     hasEntryPoint,
     registerEntryPoint,
     configureExtension,
-} from './loaders';
+} from './lib/loaders';
 
 // Configuration types
-export type { ExtensionConfig } from './loaders';
+export type { ExtensionConfig } from './lib/loaders';

@@ -1,4 +1,4 @@
-import type { EntryPoint } from '../main';
+import type { EntryPoint } from '../lib/main';
 
 /**
  * Simple welcome message entry point

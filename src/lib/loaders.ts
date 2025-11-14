@@ -1,10 +1,12 @@
-import type { EntryPoint } from './types/extension';
-
 /**
- * Entry point registry for dynamic loading
- * Maps entry point names to their loader functions
+ * Entry Point Loader System
+ *
+ * This is library code - you shouldn't need to modify this file.
+ * To add new entry points, edit src/entry-points/index.ts instead.
  */
-type EntryPointLoader = () => Promise<{ default: EntryPoint }>;
+
+import type { EntryPoint } from '../types/extension';
+import { entryPointRegistry } from '../entry-points/index';
 
 /**
  * Configuration for extension loading
@@ -18,19 +20,6 @@ export interface ExtensionConfig {
  * Global configuration set by ChurchTools
  */
 let extensionConfig: ExtensionConfig = {};
-
-/**
- * Entry point registry with relative import paths
- * These paths are relative to the main bundle location
- */
-const entryPointRegistry: Record<string, EntryPointLoader> = {
-    welcome: () => import('./entry-points/welcome'),
-    userInfo: () => import('./entry-points/user-info'),
-    dataViewer: () => import('./entry-points/data-viewer'),
-    calendarAvailability: () => import('./entry-points/calendar-availability'),
-    main: () => import('./entry-points/main'),
-    admin: () => import('./entry-points/admin'),
-};
 
 /**
  * Configure the extension with runtime options
@@ -143,7 +132,10 @@ export function hasEntryPoint(name: string): boolean {
  * registerEntryPoint('customWidget', () => import('./my-custom-widget'));
  * ```
  */
-export function registerEntryPoint(name: string, loader: EntryPointLoader): void {
+export function registerEntryPoint(
+    name: string,
+    loader: () => Promise<{ default: EntryPoint }>
+): void {
     if (entryPointRegistry[name]) {
         console.warn(`Entry point "${name}" already exists and will be overwritten`);
     }
