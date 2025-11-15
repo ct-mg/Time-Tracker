@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>ChurchTools Extension</title>
+    </head>
+    <body>
+        <div id="app"></div>
+        <script type="module">
+            import { renderExtension, loadEntryPoint } from './src/index.ts';
+
+            // Load and render the main entry point
+            (async () => {
+                try {
+                    const entryPoint = await loadEntryPoint('main');
+                    await renderExtension('app', entryPoint, {});
+                } catch (error) {
+                    console.error('Failed to load extension:', error);
+                }
+            })();
+        </script>
+    </body>
+</html>
