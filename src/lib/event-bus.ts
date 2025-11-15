@@ -41,20 +41,23 @@ export class EventBus {
      */
     emit(event: string, ...data: any[]): void {
         // get handlers for '*' event (wildcard) AND specific event
-        let eventHandlers = this.handlers.get(event);
-        const wildcardHandlers = this.handlers.get('*');
-        // Combine both sets of handlers
-        if (wildcardHandlers) {
-            eventHandlers = eventHandlers
-                ? new Set([...eventHandlers, ...wildcardHandlers])
-                : new Set(wildcardHandlers);
-        }
+        const eventHandlers = this.handlers.get(event);
         if (eventHandlers) {
             eventHandlers.forEach(handler => {
                 try {
                     handler(...data);
                 } catch (error) {
                     console.error(`[EventBus] Error in handler for "${event}":`, error);
+                }
+            });
+        }
+        const wildcardHandlers = this.handlers.get('*');
+        if (wildcardHandlers) {
+            wildcardHandlers.forEach(handler => {
+                try {
+                    handler(event, ...data);
+                } catch (error) {
+                    console.error(`[EventBus] Error in wildcard handler for "${event}":`, error);
                 }
             });
         }
@@ -66,6 +69,9 @@ export class EventBus {
      * @param handler - Function to call when event is emitted
      */
     once(event: string, handler: EventHandler): void {
+        if (event === '*') {
+            throw new Error('Cannot use once() with wildcard event "*"');
+        }
         const onceHandler: EventHandler = (...args) => {
             this.off(event, onceHandler);
             handler(...args);

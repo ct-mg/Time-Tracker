@@ -12,17 +12,6 @@ import type { Status, CustomModule, CustomModuleDataCategory, CustomModuleDataVa
  * - Handling route information through MainModuleData
  */
 
-interface PersonsResponse {
-    data: any[];
-    meta: {
-        pagination: {
-            current: number;
-            limit: number;
-            total: number;
-        };
-    };
-}
-
 interface StatusStats {
     status: Status;
     count: number;

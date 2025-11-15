@@ -29,6 +29,12 @@
       "entryPoint": "admin",
       "title": "Extension Settings",
       "description": "Configure extension settings"
+    },
+    {
+      "id": "appointment-dialog-detail",
+      "entryPoint": "appointmentDetails",
+      "title": "Appointment Details",
+      "description": "Shows appointment as json in appointment dialog"
     }
   ],
   "permissions": [

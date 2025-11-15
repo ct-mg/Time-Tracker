@@ -80,6 +80,13 @@
                 line-height: 1.3;
             }
 
+            #content-area {
+                flex: 1;
+                display: flex;
+                flex-direction: column;
+                overflow: hidden;
+            }
+
             #app {
                 flex: 1;
                 overflow: auto;
@@ -149,6 +156,177 @@
             .toast.hiding {
                 animation: slideOut 0.3s ease-out forwards;
             }
+
+            /* Test environment styles */
+            #test-container {
+                flex: 1;
+                display: flex;
+                overflow: hidden;
+            }
+
+            #debug-panel {
+                width: 400px;
+                background: #f8f9fa;
+                border-right: 1px solid #dee2e6;
+                overflow-y: auto;
+                flex-shrink: 0;
+            }
+
+            .debug-section {
+                padding: 1rem;
+                border-bottom: 1px solid #dee2e6;
+            }
+
+            .debug-section h3 {
+                margin: 0 0 0.75rem 0;
+                font-size: 0.9rem;
+                font-weight: 600;
+                color: #495057;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+            }
+
+            .debug-section label {
+                display: block;
+                margin-bottom: 0.5rem;
+                font-size: 0.85rem;
+                font-weight: 500;
+                color: #6c757d;
+            }
+
+            .debug-section textarea {
+                width: 100%;
+                min-height: 120px;
+                padding: 0.5rem;
+                border: 1px solid #ced4da;
+                border-radius: 4px;
+                font-family: 'Courier New', monospace;
+                font-size: 0.8rem;
+                resize: vertical;
+            }
+
+            .debug-section select {
+                width: 100%;
+                padding: 0.5rem;
+                border: 1px solid #ced4da;
+                border-radius: 4px;
+                font-size: 0.85rem;
+                margin-bottom: 0.5rem;
+            }
+
+            .debug-section button {
+                padding: 0.5rem 1rem;
+                background: #007bff;
+                color: white;
+                border: none;
+                border-radius: 4px;
+                cursor: pointer;
+                font-size: 0.85rem;
+                font-weight: 500;
+            }
+
+            .debug-section button:hover {
+                background: #0056b3;
+            }
+
+            .debug-section button:disabled {
+                background: #6c757d;
+                cursor: not-allowed;
+            }
+
+            #event-log {
+                max-height: 300px;
+                overflow-y: auto;
+                background: white;
+                border: 1px solid #dee2e6;
+                border-radius: 4px;
+                padding: 0.5rem;
+            }
+
+            .event-log-entry {
+                padding: 0.5rem;
+                margin-bottom: 0.5rem;
+                background: #f8f9fa;
+                border-left: 3px solid #007bff;
+                border-radius: 4px;
+                font-size: 0.8rem;
+            }
+
+            .event-log-time {
+                color: #6c757d;
+                font-weight: 600;
+            }
+
+            .event-log-name {
+                color: #007bff;
+                font-weight: 600;
+            }
+
+            .event-log-data {
+                margin-top: 0.25rem;
+                padding: 0.25rem;
+                background: white;
+                border-radius: 3px;
+                font-family: 'Courier New', monospace;
+                white-space: pre-wrap;
+                word-break: break-all;
+            }
+
+            #preview-container {
+                flex: 1;
+                display: flex;
+                flex-direction: column;
+                overflow: hidden;
+                background: #e9ecef;
+            }
+
+            #preview-controls {
+                padding: 0.75rem 1rem;
+                background: white;
+                border-bottom: 1px solid #dee2e6;
+                display: flex;
+                align-items: center;
+                gap: 1rem;
+            }
+
+            #preview-controls label {
+                font-size: 0.85rem;
+                font-weight: 500;
+                color: #6c757d;
+            }
+
+            #preview-controls input {
+                width: 80px;
+                padding: 0.25rem 0.5rem;
+                border: 1px solid #ced4da;
+                border-radius: 4px;
+                font-size: 0.85rem;
+            }
+
+            #preview-wrapper {
+                flex: 1;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                padding: 2rem;
+                overflow: auto;
+            }
+
+            #preview-frame {
+                background: white;
+                border: 2px solid #007bff;
+                border-radius: 8px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+                position: relative;
+                resize: both;
+                overflow: auto;
+            }
+
+            #preview-content {
+                width: 100%;
+                height: 100%;
+                overflow: auto;
+            }
         </style>
     </head>
     <body>
@@ -159,14 +337,78 @@
             </div>
             <div id="menu-items"></div>
         </div>
-        <div id="app"></div>
+        <div id="content-area">
+            <!-- Full-width app for main/admin -->
+            <div id="app" style="display: none;"></div>
+
+            <!-- Test environment for other entry points -->
+            <div id="test-container" style="display: none;">
+                <div id="debug-panel">
+                    <div class="debug-section">
+                        <h3>Context Data</h3>
+                        <label>Entry Point Data:</label>
+                        <textarea id="context-data"></textarea>
+                        <button id="reload-btn" style="margin-top: 0.5rem;">Reload Entry Point</button>
+                    </div>
+
+                    <div class="debug-section">
+                        <h3>Event Bus</h3>
+                        <label>Send Event to Extension:</label>
+                        <select id="event-select">
+                            <option value="">Select an event...</option>
+                        </select>
+                        <label>Event Data (JSON):</label>
+                        <textarea id="event-data" style="min-height: 80px;"></textarea>
+                        <button id="send-event-btn" style="margin-top: 0.5rem;">Send Event</button>
+                    </div>
+
+                    <div class="debug-section">
+                        <h3>Event Log</h3>
+                        <button id="clear-log-btn" style="margin-bottom: 0.5rem; background: #6c757d;">Clear Log</button>
+                        <div id="event-log"></div>
+                    </div>
+                </div>
+
+                <div id="preview-container">
+                    <div id="preview-controls">
+                        <label>Width: <input type="number" id="width-input" value="600" min="200" max="2000"></label>
+                        <label>Height: <input type="number" id="height-input" value="400" min="200" max="1200"></label>
+                        <button id="apply-size-btn">Apply Size</button>
+                    </div>
+                    <div id="preview-wrapper">
+                        <div id="preview-frame">
+                            <div id="preview-content"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
         <script type="module" src="/src/index.ts"></script>
         <script type="module">
             import { renderExtension, loadEntryPoint } from '/src/index.ts';
             import manifest from '/manifest.json';
+            import { extensionPointTestData } from '/test/extension-point-test-data.ts';
+            import {
+                AppointmentDialogDetailMetadata,
+                AppointmentDialogTabMetadata,
+                FinanceTabMetadata,
+                MainModuleMetadata,
+                AdminMetadata,
+            } from '@churchtools/extension-points';
+
+            // Map extension point IDs to their metadata
+            const extensionPointMetadata = {
+                [AppointmentDialogDetailMetadata.id]: AppointmentDialogDetailMetadata,
+                [AppointmentDialogTabMetadata.id]: AppointmentDialogTabMetadata,
+                [FinanceTabMetadata.id]: FinanceTabMetadata,
+                [MainModuleMetadata.id]: MainModuleMetadata,
+                [AdminMetadata.id]: AdminMetadata,
+            };
 
             let currentInstance = null;
             let currentActiveMenuItem = null;
+            let currentExtensionPoint = null;
+            let eventLog = [];
 
             // Toast notification function
             function showToast(data) {
@@ -190,7 +432,7 @@
             }
 
             // Get mock data for entry point
-            function getMockData(entryPointId) {
+            function getMockData(entryPointId, extensionPointId) {
                 const commonExtensionInfo = {
                     name: manifest.name,
                     version: manifest.version,
@@ -217,15 +459,122 @@
                         };
 
                     default:
-                        return {};
+                        // Use test data default data if available
+                        const testData = extensionPointTestData[extensionPointId];
+                        return testData?.defaultData || {};
                 }
             }
 
-            // Load an entry point
-            async function loadEntry(extensionPoint, menuItem) {
+            // Check if extension point should use full-width mode
+            function isFullWidthExtensionPoint(extensionPointId) {
+                return extensionPointId === 'main' || extensionPointId === 'admin';
+            }
+
+            // Add event to log
+            function logEvent(eventName, eventData) {
+                const timestamp = new Date().toLocaleTimeString();
+                eventLog.unshift({ timestamp, eventName, eventData });
+
+                const logContainer = document.getElementById('event-log');
+                if (logContainer) {
+                    logContainer.innerHTML = eventLog.map(entry => `
+                        <div class="event-log-entry">
+                            <div><span class="event-log-time">${entry.timestamp}</span> - <span class="event-log-name">${entry.eventName}</span></div>
+                            <div class="event-log-data">${JSON.stringify(entry.eventData, null, 2)}</div>
+                        </div>
+                    `).join('');
+                }
+            }
+
+            // Setup test environment for non-full-width entry points
+            function setupTestEnvironment(extensionPoint, resetContextData = true) {
+                const testData = extensionPointTestData[extensionPoint.id];
+                const metadata = extensionPointMetadata[extensionPoint.id];
+
+                if (!testData) {
+                    console.warn('No test data defined for', extensionPoint.id, '- using defaults');
+                }
+                if (!metadata) {
+                    console.warn('No metadata found for', extensionPoint.id);
+                }
+
+                // Setup context data (only reset if requested)
+                if (resetContextData) {
+                    const contextDataTextarea = document.getElementById('context-data');
+                    const currentData = getMockData(extensionPoint.entryPoint, extensionPoint.id);
+                    contextDataTextarea.value = JSON.stringify(currentData, null, 2);
+                }
+
+                // Setup event select - populate from contract metadata
+                const eventSelect = document.getElementById('event-select');
+                eventSelect.innerHTML = '<option value="">Select an event...</option>';
+
+                // Get event names from metadata (contract)
+                if (metadata && metadata.eventNames && metadata.eventNames.length > 0) {
+                    metadata.eventNames.forEach(eventName => {
+                        const option = document.createElement('option');
+                        option.value = eventName;
+                        option.textContent = eventName;
+                        eventSelect.appendChild(option);
+                    });
+                } else {
+                    // No events defined in contract
+                    const option = document.createElement('option');
+                    option.value = '';
+                    option.textContent = '(No events defined in contract)';
+                    option.disabled = true;
+                    eventSelect.appendChild(option);
+                }
+
+                // Setup event data textarea
+                const eventDataTextarea = document.getElementById('event-data');
+
+                // Clear previous event listeners by cloning and replacing
+                const newEventSelect = eventSelect.cloneNode(true);
+                eventSelect.parentNode.replaceChild(newEventSelect, eventSelect);
+
+                newEventSelect.addEventListener('change', (e) => {
+                    const selectedEvent = e.target.value;
+                    // Pre-fill event data from test data if available
+                    if (selectedEvent && testData && testData.eventsData && testData.eventsData[selectedEvent] !== undefined) {
+                        const defaultData = testData.eventsData[selectedEvent];
+                        eventDataTextarea.value = defaultData ? JSON.stringify(defaultData, null, 2) : '';
+                    } else {
+                        eventDataTextarea.value = '';
+                    }
+                });
+
+                // Setup preview size
+                const widthInput = document.getElementById('width-input');
+                const heightInput = document.getElementById('height-input');
+                const defaultWidth = testData?.defaultSize?.width || 600;
+                const defaultHeight = testData?.defaultSize?.height || 400;
+                widthInput.value = defaultWidth;
+                heightInput.value = defaultHeight;
+                applyPreviewSize(defaultWidth, defaultHeight);
+
+                // Clear event log
+                eventLog = [];
+                document.getElementById('event-log').innerHTML = '';
+            }
+
+            // Apply preview size
+            function applyPreviewSize(width, height) {
+                const previewFrame = document.getElementById('preview-frame');
+                previewFrame.style.width = `${width}px`;
+                previewFrame.style.height = `${height}px`;
+            }
+
+            // Load an entry point (full-width mode)
+            async function loadEntryFullWidth(extensionPoint, menuItem) {
                 try {
-                    // Clear app container
                     const appContainer = document.getElementById('app');
+                    const testContainer = document.getElementById('test-container');
+
+                    // Show full-width app, hide test environment
+                    appContainer.style.display = 'block';
+                    testContainer.style.display = 'none';
+
                     appContainer.innerHTML = '<div style="padding: 2rem; text-align: center; color: #666;"><p>Loading...</p></div>';
 
                     // Cleanup previous instance
@@ -234,18 +583,11 @@
                         currentInstance = null;
                     }
 
-                    // Update active menu item
-                    if (currentActiveMenuItem) {
-                        currentActiveMenuItem.classList.remove('active');
-                    }
-                    menuItem.classList.add('active');
-                    currentActiveMenuItem = menuItem;
-
                     // Load entry point
                     const entryPoint = await loadEntryPoint(extensionPoint.entryPoint);
-                    const data = getMockData(extensionPoint.entryPoint);
+                    const data = getMockData(extensionPoint.entryPoint, extensionPoint.id);
 
-                    // Render extension and get instance
+                    // Render extension
                     const instance = await renderExtension('app', entryPoint, data);
                     currentInstance = instance;
 
@@ -264,6 +606,103 @@
                             <p>${error.message}</p>
                         </div>
                     `;
+                }
+            }
+
+            // Load an entry point (test environment mode)
+            async function loadEntryTestMode(extensionPoint, menuItem, preserveContextData = false) {
+                try {
+                    const appContainer = document.getElementById('app');
+                    const testContainer = document.getElementById('test-container');
+                    const previewFrame = document.getElementById('preview-frame');
+
+                    // Show test environment, hide full-width app
+                    appContainer.style.display = 'none';
+                    testContainer.style.display = 'flex';
+
+                    // Get test data
+                    const testData = extensionPointTestData[extensionPoint.id];
+
+                    // Setup surrounding HTML BEFORE rendering entry point
+                    if (testData && testData.surroundingHtml) {
+                        // Replace entire preview-frame content with surrounding HTML
+                        // (which must include a div with id="preview-content")
+                        previewFrame.innerHTML = testData.surroundingHtml;
+                    } else {
+                        // No surrounding HTML, just use plain preview-content div
+                        previewFrame.innerHTML = '<div id="preview-content"></div>';
+                    }
+
+                    const previewContent = document.getElementById('preview-content');
+                    previewContent.innerHTML = '<div style="padding: 2rem; text-align: center; color: #666;"><p>Loading...</p></div>';
+
+                    // Setup test environment (preserve context data on reload)
+                    setupTestEnvironment(extensionPoint, !preserveContextData);
+
+                    // Cleanup previous instance
+                    if (currentInstance && currentInstance.destroy) {
+                        await currentInstance.destroy();
+                        currentInstance = null;
+                    }
+
+                    // Get context data from textarea
+                    const contextDataTextarea = document.getElementById('context-data');
+                    let contextData;
+                    try {
+                        contextData = JSON.parse(contextDataTextarea.value);
+                    } catch (e) {
+                        console.error('Invalid JSON in context data:', e);
+                        contextData = getMockData(extensionPoint.entryPoint, extensionPoint.id);
+                        contextDataTextarea.value = JSON.stringify(contextData, null, 2);
+                    }
+
+                    // Load entry point
+                    const entryPoint = await loadEntryPoint(extensionPoint.entryPoint);
+
+                    // Render extension into preview-content
+                    const instance = await renderExtension('preview-content', entryPoint, contextData);
+                    currentInstance = instance;
+                    currentExtensionPoint = extensionPoint;
+
+                    if (instance && instance.on) {
+                        instance.on('*', (eventName, eventData) => {
+                            console.log(`[Index] Received event: ${eventName}`, eventData);
+                            logEvent(eventName, eventData);
+
+                            // Special handling for notification:show
+                            if (eventName === 'notification:show') {
+                                showToast(eventData);
+                            }
+                        });
+                    }
+                } catch (error) {
+                    console.error('Failed to load entry point:', error);
+                    const previewContent = document.getElementById('preview-content');
+                    if (previewContent) {
+                        previewContent.innerHTML = `
+                            <div style="padding: 2rem; color: #e74c3c;">
+                                <h2>Error loading extension</h2>
+                                <p>${error.message}</p>
+                            </div>
+                        `;
+                    }
+                }
+            }
+
+            // Load an entry point (dispatcher)
+            async function loadEntry(extensionPoint, menuItem, preserveContextData = false) {
+                // Update active menu item
+                if (currentActiveMenuItem) {
+                    currentActiveMenuItem.classList.remove('active');
+                }
+                menuItem.classList.add('active');
+                currentActiveMenuItem = menuItem;
+
+                // Choose rendering mode
+                if (isFullWidthExtensionPoint(extensionPoint.id)) {
+                    await loadEntryFullWidth(extensionPoint, menuItem);
+                } else {
+                    await loadEntryTestMode(extensionPoint, menuItem, preserveContextData);
                 }
             }
 
@@ -302,6 +741,71 @@
                         </div>
                     `;
                 }
+
+                // Setup test environment controls
+                setupTestEnvironmentControls();
+            }
+
+            // Setup event handlers for test environment controls
+            function setupTestEnvironmentControls() {
+                // Reload button
+                document.getElementById('reload-btn').addEventListener('click', async () => {
+                    if (currentExtensionPoint && currentActiveMenuItem) {
+                        await loadEntry(currentExtensionPoint, currentActiveMenuItem, true);
+                    }
+                });
+
+                // Send event button
+                document.getElementById('send-event-btn').addEventListener('click', () => {
+                    const eventSelect = document.getElementById('event-select');
+                    const eventDataTextarea = document.getElementById('event-data');
+                    const eventName = eventSelect.value;
+
+                    if (!eventName) {
+                        alert('Please select an event to send');
+                        return;
+                    }
+
+                    let eventData;
+                    try {
+                        eventData = eventDataTextarea.value ? JSON.parse(eventDataTextarea.value) : undefined;
+                    } catch (e) {
+                        alert('Invalid JSON in event data: ' + e.message);
+                        return;
+                    }
+
+                    if (currentInstance && currentInstance.emit) {
+                        console.log('[Index] Sending event to extension:', eventName, eventData);
+                        currentInstance.emit(eventName, eventData);
+                        showToast({
+                            message: `Event "${eventName}" sent to extension`,
+                            type: 'info',
+                            duration: 2000
+                        });
+                    }
+                });
+
+                // Clear log button
+                document.getElementById('clear-log-btn').addEventListener('click', () => {
+                    eventLog = [];
+                    document.getElementById('event-log').innerHTML = '<div style="padding: 1rem; text-align: center; color: #6c757d;">No events logged yet</div>';
+                });
+
+                // Apply size button
+                document.getElementById('apply-size-btn').addEventListener('click', () => {
+                    const width = parseInt(document.getElementById('width-input').value, 10);
+                    const height = parseInt(document.getElementById('height-input').value, 10);
+                    applyPreviewSize(width, height);
+                });
+
+                // Allow Enter key in width/height inputs
+                ['width-input', 'height-input'].forEach(id => {
+                    document.getElementById(id).addEventListener('keypress', (e) => {
+                        if (e.key === 'Enter') {
+                            document.getElementById('apply-size-btn').click();
+                        }
+                    });
+                });
             }
 
             init();

@@ -107,7 +107,8 @@ export async function renderExtension<TData = any>(
     const user = await churchtoolsClient.get<Person>('/whoami');
 
     // Create event bus for bidirectional communication
-    const eventBus = new EventBus();
+    const eventBusCTToExtension = new EventBus();
+    const eventBusExtensionToCT = new EventBus();
 
     // Store cleanup function if extension returns one
     let cleanupFunction: CleanupFunction | undefined;
@@ -119,9 +120,9 @@ export async function renderExtension<TData = any>(
         element,
         KEY,
         data: data as TData, // Use provided data or undefined
-        on: (event, handler) => eventBus.on(event, handler),
-        off: (event, handler) => eventBus.off(event, handler),
-        emit: (event, ...args) => eventBus.emit(event, ...args),
+        on: (event, handler) => eventBusCTToExtension.on(event, handler),
+        off: (event, handler) => eventBusCTToExtension.off(event, handler),
+        emit: (event, ...args) => eventBusExtensionToCT.emit(event, ...args),
     };
 
     // Execute entry point and capture cleanup function
@@ -133,20 +134,21 @@ export async function renderExtension<TData = any>(
     // Return extension instance for ChurchTools to interact with
     return {
         // ChurchTools can emit events TO the extension
-        emit: (event: string, ...args: any[]) => eventBus.emit(event, ...args),
+        emit: (event: string, ...args: any[]) => eventBusCTToExtension.emit(event, ...args),
 
         // ChurchTools can listen to events FROM the extension
-        on: (event: string, handler: (...args: any[]) => void) => eventBus.on(event, handler),
+        on: (event: string, handler: (...args: any[]) => void) => eventBusExtensionToCT.on(event, handler),
 
         // ChurchTools can unsubscribe from extension events
-        off: (event: string, handler: (...args: any[]) => void) => eventBus.off(event, handler),
+        off: (event: string, handler: (...args: any[]) => void) => eventBusExtensionToCT.off(event, handler),
 
         // Cleanup: call extension cleanup, clear all event handlers
         destroy: async () => {
             if (cleanupFunction) {
                 await cleanupFunction();
             }
-            eventBus.clear();
+            eventBusCTToExtension.clear();
+            eventBusExtensionToCT.clear();
         },
     };
 }
