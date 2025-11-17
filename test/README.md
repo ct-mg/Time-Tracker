@@ -119,3 +119,11 @@ This means you can test any extension point immediately, even before creating te
 - Changes to test data files take effect immediately with hot reload
 - Event logging captures all events, providing complete visibility into extension behavior
 - Test data is optional but recommended for a better developer experience
+
+## Documentation
+
+For complete documentation on testing and development, see:
+
+- **[Getting Started](../docs/getting-started.md)** - Development server guide
+- **[Entry Points Guide](../docs/entry-points.md)** - Creating and testing entry points
+- **[Communication](../docs/communication.md)** - Testing event communication

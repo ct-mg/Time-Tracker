@@ -14,12 +14,9 @@ src/
 │
 ├── entry-points/           ✏️ Your extension implementation (edit this!)
 │   ├── index.ts           - Entry point registry
-│   ├── main.ts            - Main module entry point
-│   ├── admin.ts           - Admin configuration entry point
-│   ├── calendar-availability.ts
-│   ├── welcome.ts         - Demo entry points
-│   ├── user-info.ts
-│   ├── data-viewer.ts
+│   ├── main.ts            - Main module entry point (delete it, if your extension does not need it)
+│   ├── admin.ts           - Admin configuration entry point (delete it, if your extension does not need it)
+│   ├── ...                - Other entry points that your extension provides
 │   └── README.md          - How to add entry points
 │
 ├── types/                  📝 TypeScript type definitions
@@ -57,7 +54,21 @@ src/
    };
    ```
 
-3. **Build and test**:
+3. **Add to `manifest.json`** (required for `npm run dev` and ChurchTools):
+   ```json
+   {
+     "extensionPoints": [
+       {
+         "id": "some-extension-point-id",
+         "entryPoint": "myFeature",
+         "title": "My Feature",
+         "description": "Description of my feature"
+       }
+     ]
+   }
+   ```
+
+4. **Build and test**:
    ```bash
    npm run build
    npm run dev
@@ -101,11 +112,9 @@ The boilerplate includes two main entry points:
 
 - **`main.ts`** - Standalone module with its own menu entry
   - Use for full-featured extensions
-  - Provides navigation, dashboard, and multiple views
 
 - **`admin.ts`** - Admin configuration panel
   - Use for extension settings
-  - Provides form handling, validation, and save/reset
 
 You can customize these or create your own!
 
@@ -113,31 +122,37 @@ You can customize these or create your own!
 
 1. **Edit entry points** in `src/entry-points/`
 2. **Register them** in `src/entry-points/index.ts`
-3. **Test locally**: `npm run dev`
-4. **Build**: `npm run build`
-5. **Deploy**: `npm run deploy`
+3. **Add to `manifest.json`** (required for testing and ChurchTools)
+4. **Test locally**: `npm run dev`
+5. **Build**: `npm run build`
+6. **Deploy**: `npm run deploy`
 
 ## Type Safety
 
-Use TypeScript interfaces to define your data structures:
+Use TypeScript interfaces from @churchtools/extension-points for type-safe access to data and events:
 
 ```typescript
-// Define data contract
-interface MyData {
-    userId: number;
-    settings: {
-        enabled: boolean;
-    };
-}
+import type { EntryPoint } from '../lib/main';
+import type { SomeExtensionPointData } from '@churchtools/extension-points/some-extension-point';
 
 // Use in entry point
-const myEntryPoint: EntryPoint<MyData> = ({ data }) => {
+const myEntryPoint: EntryPoint<SomeExtensionPointData> = ({ data }) => {
     console.log(data.userId);  // ✅ Type-safe!
 };
 ```
 
-## Questions?
+## Complete Documentation
 
-- See `src/entry-points/README.md` for entry point examples
-- See `src/lib/README.md` for library documentation
-- Check the root `README.md` for general documentation
+For comprehensive documentation, see the `docs/` folder:
+
+- **[Getting Started](../docs/getting-started.md)** - Complete setup guide and tutorial
+- **[Core Concepts](../docs/core-concepts.md)** - Understanding extension architecture
+- **[Entry Points Guide](../docs/entry-points.md)** - Creating and managing entry points
+- **[Communication](../docs/communication.md)** - Event-based communication
+- **[Build & Deploy](../docs/build-and-deploy.md)** - Building and deployment
+- **[API Reference](../docs/api-reference.md)** - Complete API documentation
+
+See also:
+- `src/entry-points/README.md` - Entry point examples
+- `src/lib/README.md` - Library documentation
+- Root `README.md` - Quick start guide

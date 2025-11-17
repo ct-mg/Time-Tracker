@@ -1,262 +1,475 @@
 # ChurchTools Extension Boilerplate
 
-This project provides a boilerplate for building your own extension for [ChurchTools](https://www.church.tools).
+A modern, TypeScript-based boilerplate for building ChurchTools extensions with full type safety, hot-reload development, and flexible deployment options.
+
+## What are ChurchTools Extensions?
+
+ChurchTools is a church management system that allows you to extend its functionality through custom extensions. Extensions can:
+
+- **Add new modules** with standalone interfaces and navigation
+- **Enhance existing features** by injecting content into specific UI locations
+- **Integrate external services** to sync data or provide additional functionality
+- **Customize workflows** to match your organization's specific needs
+
+Extensions are built with modern web technologies (TypeScript, React, Vue, etc.) and communicate with ChurchTools through a well-defined API.
 
 ## Features
 
-- 🎯 **Flexible Rendering**: Render extensions to any DIV element via `renderExtension(divId, entryPoint)`
-- 🔌 **Entry Points**: Define multiple entry points for different UI locations
-- 🏗️ **Multi-Extension Support**: Multiple extensions can coexist on the same page without namespace collisions
-- 📦 **Multiple Formats**: Builds both ES modules and UMD bundles
-- 🔒 **Type-Safe**: Full TypeScript support with comprehensive type definitions
-- 🚀 **Development Mode**: Hot-reload development server with auto-login
-- ⚡ **Dual Build Modes**: Choose between simple (single bundle) or advanced (code splitting) mode
-- 📁 **Flexible Deployment**: Built with relative paths - deploy to any URL structure without rebuilding
+- **🎯 Extension Points** - Integrate your code at specific locations in ChurchTools UI
+- **🔌 Entry Points** - Define multiple entry points for different UI locations
+- **🔄 Event Communication** - Bidirectional event-based communication with ChurchTools
+- **🏗️ Multi-Extension Support** - Multiple extensions can coexist without conflicts
+- **📦 Build Modes** - Simple (single bundle) or Advanced (code splitting) modes
+- **🔒 Type-Safe** - Full TypeScript support with extension point contracts
+- **🚀 Development Mode** - Hot-reload development server with test environment
+- **📁 Flexible Deployment** - Built with relative paths for any URL structure
 
-## Documentation
+## Quick Start
 
-- **[MANIFEST.md](MANIFEST.md)** - 📋 Extension manifest guide (name, version, extension points)
-- **[EXTENSION_COMMUNICATION.md](EXTENSION_COMMUNICATION.md)** - 🔄 Event-based bidirectional communication
-- **[BUILD_MODES.md](BUILD_MODES.md)** - ⭐ Complete guide for choosing and using build modes (simple vs advanced)
-- **[EXAMPLES.md](EXAMPLES.md)** - 📚 Practical examples and comparisons of both build modes
-- **[CHURCHTOOLS_ASSET_PATH.md](CHURCHTOOLS_ASSET_PATH.md)** - 🔧 Asset path handling and deployment flexibility
-- **[USAGE.md](USAGE.md)** - General usage guide and API reference
-- **[INTEGRATION_EXAMPLE.md](INTEGRATION_EXAMPLE.md)** - Integration examples for ChurchTools
-- **[MULTI_EXTENSION_GUIDE.md](MULTI_EXTENSION_GUIDE.md)** - Guide for loading multiple extensions
-
-## Getting Started
-
-### Prerequisites
-
--   Node.js (version compatible with the project)
--   npm or yarn
-
-### Installation
-
-1. Clone the repository
-2. Install dependencies:
-    ```bash
-    npm install
-    ```
-
-### Optional: Using Dev Container
-
-This project includes a dev container configuration. If you use VS Code with the "Dev Containers" extension, you can:
-
-1. Clone the repository
-2. Open it in VS Code
-3. Click the Remote Indicator in the bottom-left corner of VS Code status bar
-4. Select "Reopen in Container"
-
-The container includes the tools mentioned in the prerequisites pre-installed and also runs `npm install` on startup.
-
-## Configuration
-
-Copy `.env-example` to `.env` and fill in your data.
-
-In the `.env` file, configure the necessary constants for your project:
+### 1. Installation
 
 ```bash
-# Extension key (required)
-VITE_KEY=my-extension
+# Clone the boilerplate
+git clone https://github.com/churchtools/extension-boilerplate.git my-extension
+cd my-extension
 
-# Build mode: "simple" or "advanced" (optional, defaults to "simple")
-# - simple: Single bundle with all entry points (best for small extensions)
-# - advanced: Code splitting with lazy loading (best for large extensions)
-VITE_BUILD_MODE=simple
-
-# ChurchTools connection for development
-VITE_BASE_URL=https://your.church.tools
-VITE_USERNAME=youruser
-VITE_PASSWORD=yourpass
+# Install dependencies
+npm install
 ```
 
-**Build Mode Selection:**
-- Use `simple` mode (default) for small to medium extensions (< 100KB)
-- Use `advanced` mode for large extensions with many entry points (> 100KB)
-- See [BUILD_MODES.md](BUILD_MODES.md) for detailed comparison
+### 2. Configuration
 
-This file is included in `.gitignore` to prevent sensitive data from being committed to version control.
+Create a `.env` file from the example:
 
-### Extension Manifest
+```bash
+cp .env-example .env
+```
 
-Edit `manifest.json` to configure your extension metadata:
+Edit `.env` with your settings:
+
+```bash
+# Your extension's unique identifier
+VITE_KEY=my-extension
+
+# ChurchTools instance for development
+VITE_BASE_URL=https://your.church.tools
+VITE_USERNAME=your-username
+VITE_PASSWORD=your-password
+
+# Build mode (optional, defaults to "simple")
+VITE_BUILD_MODE=simple
+```
+
+### 3. Configure Your Extension
+
+Edit `manifest.json` to define your extension:
 
 ```json
 {
   "name": "My Extension",
   "key": "my-extension",
   "version": "1.0.0",
-  "description": "What your extension does",
+  "description": "My first ChurchTools extension",
   "author": {
     "name": "Your Name",
     "email": "you@example.com"
   },
   "extensionPoints": [
     {
-      "id": "calendar-dialog-availability",
-      "entryPoint": "calendarAvailability"
+      "id": "main",
+      "entryPoint": "main",
+      "title": "My Extension Module",
+      "description": "A standalone module with custom functionality"
     }
   ]
 }
 ```
 
-The manifest tells ChurchTools:
-- ✅ Extension name and version
-- ✅ Which extension points you support
-- ✅ Which entry points to load
-- ✅ Permissions required
-- ✅ Compatibility requirements
-
-See [MANIFEST.md](MANIFEST.md) for complete documentation.
-
-## Development and Deployment
-
-### Development Server
-
-Start a development server with hot-reload:
+### 4. Start Development
 
 ```bash
 npm run dev
 ```
 
-> **Note:** For local development, make sure to configure CORS in your ChurchTools
-> instance to allow requests from your local development server
-> (typically `http://localhost:5173`).
-> This can be done in the ChurchTools admin settings under:
-> "System Settings" > "Integrations" > "API" > "Cross-Origin Resource Sharing"
->
-> If login works in Chrome but not in Safari, the issue is usually that Safari has stricter cookie handling:
-> - Safari blocks `Secure; SameSite=None` cookies on `http://localhost` (Chrome allows them in dev).
-> - Safari also blocks cookies if the API is on another domain (third‑party cookies).
->
-> **Fix:**
-> 1. Use a Vite proxy so API calls go through your local server (`/api → https://xyz.church.tools`). This makes cookies look first‑party.
-> 2. Run your dev server with **HTTPS**. You can generate a local trusted certificate with [mkcert](https://github.com/FiloSottile/mkcert).
->
-> With proxy + HTTPS, Safari will accept and store cookies just like Chrome.
+This starts a development server at `http://localhost:5173` with:
+- Hot-reload on code changes
+- Auto-login to your ChurchTools instance
+- Test environment for all extension points
+- Event logging and debugging tools
 
-### Building for Production
-
-Build your extension using the mode configured in `.env`:
+### 5. Build for Production
 
 ```bash
 npm run build
 ```
 
-Or explicitly choose a build mode:
+This creates production-ready files in `dist/`:
+- `extension.es.js` - ES module bundle
+- `extension.umd.js` - UMD bundle (for script tags)
+- `manifest.json` - Extension manifest
 
-```bash
-# Build in simple mode (single bundle)
-npm run build:simple
-
-# Build in advanced mode (code splitting)
-npm run build:advanced
-```
-
-**What gets built:**
-- Simple mode: `dist/extension.es.js` and `dist/extension.umd.js`
-- Advanced mode: Main bundle + separate chunks for each entry point
-
-See [BUILD_MODES.md](BUILD_MODES.md) for details on choosing the right mode.
-
-### Preview Production Build
-
-To preview the production build locally:
-
-```bash
-npm run preview
-```
-
-### Deployment
-
-To build and package your extension for deployment:
+### 6. Package for Deployment
 
 ```bash
 npm run deploy
 ```
 
-This command will:
+Creates a ZIP file in `releases/` ready to upload to ChurchTools.
 
-1. Build the project
-2. Package it using the `scripts/package.js` script
+## Documentation
 
-You can find the package in the `releases` directory.
+- **[Getting Started](docs/getting-started.md)** - Complete setup guide and first extension
+- **[Core Concepts](docs/core-concepts.md)** - Understanding extensions, entry points, and contracts
+- **[Entry Points Guide](docs/entry-points.md)** - Creating and registering entry points
+- **[Communication](docs/communication.md)** - Event-based bidirectional communication
+- **[Build & Deploy](docs/build-and-deploy.md)** - Building, testing, and deployment
+- **[Manifest Reference](docs/manifest.md)** - Complete manifest.json documentation
+- **[API Reference](docs/api-reference.md)** - Complete API documentation
 
-## Usage
+## Project Structure
+
+```
+extension-boilerplate/
+├── src/
+│   ├── entry-points/          # Your extension code (edit this!)
+│   │   ├── main.ts           # Main module entry point (if your extension has a main view)
+│   │   ├── admin.ts          # Admin configuration (if your extension has one)
+│   │   ├── ...               # Other entry points
+│   │   └── index.ts          # Entry point registry
+│   ├── lib/                   # Framework code (don't modify)
+│   │   ├── main.ts           # Core rendering system
+│   │   ├── event-bus.ts      # Event communication
+│   │   └── loaders.ts        # Entry point loader
+│   └── index.ts              # Main entry (exports everything)
+├── test/                      # Test data and environment
+├── docs/                      # Extension developer documentation
+├── manifest.json             # Extension configuration
+├── vite.config.ts            # Build configuration
+└── package.json              # Project dependencies
+```
+
+## Development Workflow
+
+### 1. Create an Entry Point
+
+```typescript
+// src/entry-points/my-feature.ts
+import type { EntryPoint } from '../lib/main';
+import type { ExtensionPointXYZData } from '@churchtools/extension-points';
+
+const myFeatureEntryPoint: EntryPoint<ExtensionPointXYZData> = ({
+  data,
+  element,
+  churchtoolsClient,
+  on,
+  emit
+}) => {
+  // Render your UI
+  element.innerHTML = `
+    <div>
+      <h1>My Feature</h1>
+      <p>Welcome to ChurchTools Extensions!</p>
+    </div>
+  `;
+
+  // Listen to events from ChurchTools
+  on('data:updated', (newData) => {
+    console.log('Received update:', newData);
+  });
+
+  // Emit events to ChurchTools
+  emit('feature:ready', { initialized: true });
+
+  // Return cleanup function
+  return () => {
+    console.log('Cleaning up...');
+  };
+};
+
+export default myFeatureEntryPoint;
+```
+
+### 2. Register the Entry Point
+
+```typescript
+// src/entry-points/index.ts
+export const entryPointRegistry = {
+  main: () => import('./main'),
+  admin: () => import('./admin'),
+  myFeature: () => import('./my-feature'), // Add your entry point
+};
+```
+
+### 3. Add to manifest.json
+
+```json
+{
+  "extensionPoints": [
+    {
+      "id": "some-extension-point-id",
+      "entryPoint": "myFeature",
+      "title": "My Feature",
+      "description": "Description of my feature"
+    }
+  ]
+}
+```
+
+### 4. Test in Development Server
+
+```bash
+npm run dev
+```
+
+The test environment provides:
+- Interactive extension point selector
+- Context data editor
+- Event bus tester with event log
+- Resizable preview window
+- Real-time debugging
+
+### 4. Build and Deploy
+
+```bash
+# Build
+npm run build
+
+# Create deployment package
+npm run deploy
+```
+
+Upload the generated ZIP file to your ChurchTools instance.
+
+## Examples
+
+### Simple Entry Point
+
+```typescript
+const simpleEntry: EntryPoint = ({ element, user }) => {
+  element.innerHTML = `<h1>Hello, ${user.firstName}!</h1>`;
+};
+```
+
+### Entry Point with API Calls
+
+```typescript
+const dataEntry: EntryPoint = async ({ element, churchtoolsClient }) => {
+  element.innerHTML = '<p>Loading...</p>';
+
+  try {
+    const data = await churchtoolsClient.get('/api/persons');
+    element.innerHTML = `
+      <div>
+        <h2>Persons</h2>
+        <ul>${data.map(p => `<li>${p.firstName} ${p.lastName}</li>`).join('')}</ul>
+      </div>
+    `;
+  } catch (error) {
+    element.innerHTML = `<p>Error: ${error.message}</p>`;
+  }
+};
+```
+
+### Entry Point with Event Communication
+
+```typescript
+const communicatingEntry: EntryPoint<CalendarData> = ({ data, on, emit, element }) => {
+  // Render based on initial data
+  function render() {
+    element.innerHTML = `
+      <div>
+        <p>Selected Date: ${data.selectedDate}</p>
+        <button id="suggest-btn">Suggest Time</button>
+      </div>
+    `;
+
+    document.getElementById('suggest-btn').onclick = () => {
+      emit('time:suggest', { time: '14:00', reason: 'Better availability' });
+    };
+  }
+
+  render();
+
+  // Listen to updates from ChurchTools
+  on('date:changed', (newDate) => {
+    data.selectedDate = newDate;
+    render();
+  });
+
+  // Cleanup
+  return () => {
+    console.log('Cleanup');
+  };
+};
+```
+
+## Build Modes
 
 ### Simple Mode (Default)
 
-```javascript
-// ChurchTools loads the extension (simple mode)
-import { renderExtension, welcomeEntryPoint } from '/ccm/your-key/extension.es.js';
+Single bundle with all entry points. Best for small extensions.
 
-// All entry points are immediately available
-await renderExtension('my-div-id', welcomeEntryPoint);
+```bash
+VITE_BUILD_MODE=simple
+npm run build
 ```
 
-### Advanced Mode (Code Splitting)
+**When to use:**
+- Extension < 100KB
+- Few entry points (< 10)
+- All features are commonly used
 
-```javascript
-// ChurchTools loads the extension (advanced mode)
-import { renderExtension, loadEntryPoint } from '/ccm/your-key/extension.es.js';
+### Advanced Mode
 
-// Load entry point dynamically (only when needed)
-const entryPoint = await loadEntryPoint('welcome');
-await renderExtension('my-div-id', entryPoint);
+Code splitting with lazy-loaded entry points. Best for large extensions.
+
+```bash
+VITE_BUILD_MODE=advanced
+npm run build
 ```
 
-### Custom Entry Point
+**When to use:**
+- Extension > 100KB
+- Many entry points (> 10)
+- Different pages use different features
 
-```javascript
-import { renderExtension } from '/ccm/your-key/extension.es.js';
+See [Build & Deploy](docs/build-and-deploy.md) for detailed comparison.
 
-// Define a custom entry point
-const myEntryPoint = ({ user, element, churchtoolsClient }) => {
+## Framework Support
+
+The boilerplate works with any UI framework:
+
+### React
+
+```typescript
+import React from 'react';
+import ReactDOM from 'react-dom/client';
+
+const MyComponent = ({ user }) => <h1>Hello, {user.firstName}!</h1>;
+
+const reactEntry: EntryPoint = ({ element, user }) => {
+  const root = ReactDOM.createRoot(element);
+  root.render(<MyComponent user={user} />);
+};
+```
+
+### Vue
+
+```typescript
+import { createApp } from 'vue';
+
+const vueEntry: EntryPoint = ({ element, user }) => {
+  createApp({
+    data: () => ({ user }),
+    template: '<h1>Hello, {{ user.firstName }}!</h1>'
+  }).mount(element);
+};
+```
+
+### Vanilla TypeScript
+
+```typescript
+const vanillaEntry: EntryPoint = ({ element, user }) => {
   element.innerHTML = `<h1>Hello, ${user.firstName}!</h1>`;
 };
-
-await renderExtension('my-div-id', myEntryPoint);
 ```
 
-See [BUILD_MODES.md](BUILD_MODES.md) and [USAGE.md](USAGE.md) for complete documentation.
+## Testing
 
-### Multi-Extension Support
+The development server includes a comprehensive test environment:
 
-Each extension is built with a unique `KEY` that becomes part of its UMD global namespace:
+1. **Extension Point Selector** - Switch between different extension points
+2. **Context Data Editor** - Modify initial data to test different scenarios
+3. **Event Bus Tester** - Send events to your extension and monitor responses
+4. **Event Log** - Real-time log of all events with data inspection
+5. **Preview Resizing** - Test your extension at different sizes
 
-```html
-<!-- Load multiple extensions -->
-<script src="/ccm/calendar/extension.umd.js"></script>
-<script src="/ccm/events/extension.umd.js"></script>
+See [Getting Started](docs/getting-started.md) for a complete guide.
 
-<script>
-  // Each has its own global: ChurchToolsExtension_{KEY}
-  ChurchToolsExtension_calendar.renderExtension('cal-div', calendarEntry);
-  ChurchToolsExtension_events.renderExtension('events-div', eventsEntry);
-</script>
+## ChurchTools API Client
+
+The ChurchTools client is automatically configured:
+
+```typescript
+const myEntry: EntryPoint = async ({ churchtoolsClient }) => {
+  // GET request
+  const persons = await churchtoolsClient.get('/api/persons');
+
+  // POST request
+  const result = await churchtoolsClient.post('/api/events', {
+    name: 'New Event',
+    startDate: '2025-11-20'
+  });
+
+  // PUT request
+  await churchtoolsClient.put('/api/events/123', { name: 'Updated Event' });
+
+  // DELETE request
+  await churchtoolsClient.delete('/api/events/123');
+};
 ```
 
-See [MULTI_EXTENSION_GUIDE.md](MULTI_EXTENSION_GUIDE.md) for complete details.
+See [API Reference](docs/api-reference.md) for complete documentation.
 
-## API
+## TypeScript Support
 
-Following endpoints are available. Permissions are possible per route. Types are documented in `src/utils/ct-types.d.ts` (CustomModuleCreate, CustomModuleDataCategoryCreate, CustomModuleDataValueCreate)
+Full type safety with extension point contracts:
 
-GET `/custommodules` get all extensions  
-GET `/custommodules/{extensionKey}` get an extensions by its key  
-GET `/custommodules/{extensionId}` get an extension by its ID
+```typescript
+import type { EntryPoint } from './lib/main';
+import type {
+  MainModuleData,
+  CalendarDialogData,
+  PersonDetailsData
+} from '@churchtools/extension-points';
 
-GET `/custommodules/{extensionId}/customdatacategories`  
-POST `/custommodules/{extensionId}/customdatacategories`  
-PUT `/custommodules/{extensionId}/customdatacategories/{dataCategoryId}`  
-DELETE `/custommodules/{extensionId}/customdatacategories/{dataCategoryId}`
+// Type-safe entry points
+const mainEntry: EntryPoint<MainModuleData> = ({ data }) => {
+  console.log(data.userId); // ✓ Type-safe!
+};
 
-GET `/custommodules/{extensionId}/customdatacategories/{dataCategoryId}/customdatavalues`  
-POST `/custommodules/{extensionId}/customdatacategories/{dataCategoryId}/customdatavalues`  
-PUT `/custommodules/{extensionId}/customdatacategories/{dataCategoryId}/customdatavalues/{valueId}`  
-DELETE `/custommodules/{extensionId}/customdatacategories/{dataCategoryId}/customdatavalues/{valueId}`
+const calendarEntry: EntryPoint<CalendarDialogData> = ({ data }) => {
+  console.log(data.selectedDate); // ✓ Type-safe!
+};
+```
+
+## Troubleshooting
+
+### Development server won't start
+
+1. Check your `.env` file is configured correctly
+2. Verify ChurchTools credentials are valid
+3. Ensure CORS is enabled in ChurchTools admin settings
+
+### Extension not loading in ChurchTools
+
+1. Verify `manifest.json` is valid
+2. Check extension key matches in `.env` and `manifest.json`
+3. Ensure entry points are registered in `src/entry-points/index.ts`
+4. Check browser console for errors
+
+### Build errors
+
+1. Run `npm install` to ensure dependencies are installed
+2. Check TypeScript errors with `npm run build`
+3. Verify all entry points export correctly
 
 ## Support
 
-For questions about the ChurchTools API, visit the [Forum](https://forum.church.tools).
+- **Documentation**: See `docs/` folder for comprehensive guides
+- **Forum**: Visit [ChurchTools Forum](https://forum.church.tools)
+- **Issues**: Report bugs on GitHub Issues
+- **API Docs**: [ChurchTools API Documentation](https://<yourchurch>.church.tools/api)
+- **Get Help**: send mail to extensions@churchtools.de
+
+## License
+
+MIT - See LICENSE file for details
+
+## Contributing
+
+Contributions are welcome! Please read the contributing guidelines before submitting PRs.
+
+---
+
+**Ready to build your first extension?** Start with [Getting Started](docs/getting-started.md)!

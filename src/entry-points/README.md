@@ -11,13 +11,10 @@ Create a new TypeScript file in this directory (e.g., `my-feature.ts`):
 ```typescript
 import type { EntryPoint } from '../lib/main';
 
-// Define your data interface (optional, but recommended for type safety)
-interface MyFeatureData {
-    userId: number;
-    someSettings: any;
-}
+// Import the data interface from @churchtools/extension-points (optional, but recommended for type safety)
+import type { SomeExtensionPointData } from '@churchtools/extension-points/some-extension-point';
 
-const myFeatureEntryPoint: EntryPoint<MyFeatureData> = ({
+const myFeatureEntryPoint: EntryPoint<SomeExtensionPointData> = ({
     data,
     on,
     off,
@@ -69,7 +66,29 @@ export const entryPointRegistry: Record<string, EntryPointLoader> = {
 };
 ```
 
-### 3. That's it!
+### 3. Add to manifest.json
+
+**Important:** You must add your entry point to `manifest.json` in the root directory for it to be recognized by `npm run dev` and ChurchTools:
+
+```json
+{
+  "extensionPoints": [
+    {
+      "id": "some-extension-point-id",
+      "entryPoint": "myFeature",
+      "title": "My Feature",
+      "description": "Description of my feature"
+    }
+  ]
+}
+```
+
+Where:
+- `id` is the ChurchTools extension point ID (e.g., `main`, `admin`, `appointment-dialog-tab`)
+- `entryPoint` must match the key in your entry point registry (`myFeature`)
+- `title` and `description` are displayed in development UI
+
+### 4. That's it!
 
 Your entry point is now ready to use:
 
@@ -87,12 +106,9 @@ await renderExtension('my-div', entryPoint, {
 
 This directory contains several example entry points:
 
-- **`welcome.ts`** - Simple welcome screen
-- **`user-info.ts`** - Displays current user information
-- **`data-viewer.ts`** - Fetches and displays data from ChurchTools API
-- **`calendar-availability.ts`** - Calendar integration with events
-- **`main.ts`** - Full-featured module with navigation
+- **`main.ts`** - Main view with a dashboard
 - **`admin.ts`** - Admin configuration panel
+- **`appointment-details.ts`** - Additional data display in appointment edit dialog
 
 Feel free to study these examples and modify or remove them for your extension.
 
@@ -103,13 +119,11 @@ Every entry point should follow this pattern:
 ```typescript
 import type { EntryPoint } from '../lib/main';
 
-// 1. Define data interface (optional but recommended)
-interface MyData {
-    // ...
-}
+// 1. Import the correct data interface from @churchtools/extension-points (optional, but recommended for type safety)
+import type { SomeExtensionPointData } from '@churchtools/extension-points/some-extension-point';
 
 // 2. Create entry point function
-const myEntryPoint: EntryPoint<MyData> = (context) => {
+const myEntryPoint: EntryPoint<SomeExtensionPointData> = (context) => {
     const { data, on, off, emit, element, user, churchtoolsClient } = context;
 
     // 3. Render UI
@@ -135,3 +149,12 @@ export default myEntryPoint;
 - **Return cleanup functions** - Properly clean up event listeners and resources
 - **Use TypeScript types** - Better developer experience and fewer bugs
 - **Test with both build modes** - Run `npm run build:simple` and `npm run build:advanced`
+
+## Complete Documentation
+
+For comprehensive guides, see the `docs/` folder:
+
+- **[Getting Started](../../docs/getting-started.md)** - Tutorial with complete examples
+- **[Entry Points Guide](../../docs/entry-points.md)** - Detailed entry points documentation
+- **[Communication](../../docs/communication.md)** - Event communication patterns
+- **[API Reference](../../docs/api-reference.md)** - Full API documentation
