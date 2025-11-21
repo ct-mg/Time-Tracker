@@ -115,12 +115,6 @@ export async function getCustomDataCategories<T extends object>(
 
         let parsedData: T;
 
-        if (data == null) {
-            throw new Error(
-                `Category ${category.id} has null or undefined 'data' field.`,
-            );
-        }
-
         parsedData = safeParseJSON(data, {} as T);
 
         return {
