@@ -1,5 +1,6 @@
 import type { EntryPoint } from '../lib/main';
 import type { MainModuleData } from '@churchtools/extension-points/main';
+import type { Absence } from '../utils/ct-types';
 import {
     getModule,
     getCustomDataCategory,
@@ -45,7 +46,7 @@ interface Settings {
 
 const mainEntryPoint: EntryPoint<MainModuleData> = ({
     element,
-    churchtoolsClient: _churchtoolsClient,
+    churchtoolsClient,
     user,
     KEY,
 }) => {
@@ -56,6 +57,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
     let workCategories: WorkCategory[] = [];
     let settings: Settings = { defaultHoursPerDay: 8, defaultHoursPerWeek: 40 };
     let currentEntry: TimeEntry | null = null;
+    let absences: Absence[] = [];
     let isLoading = true;
     let errorMessage = '';
     let moduleId: number | null = null;
@@ -86,6 +88,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                 loadWorkCategories(),
                 loadSettings(),
                 loadTimeEntries(),
+                loadAbsences(),
             ]);
 
             // Check if there's a currently active entry
@@ -175,6 +178,26 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
         }
     }
 
+    // Load absences from ChurchTools API
+    async function loadAbsences(): Promise<void> {
+        if (!user?.id) {
+            absences = [];
+            return;
+        }
+
+        try {
+            // Get absences for the current user
+            const response = await churchtoolsClient.get<Absence[]>(
+                `/persons/${user.id}/absences`
+            );
+            absences = response || [];
+            console.log('[TimeTracker] Loaded absences:', absences.length);
+        } catch (error) {
+            console.error('[TimeTracker] Failed to load absences:', error);
+            absences = [];
+        }
+    }
+
     // Clock in
     async function clockIn(categoryId: string, description: string) {
         if (!user?.id || currentEntry) return;
@@ -224,25 +247,41 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
 
             // Update in KV store
             const cat = await getCustomDataCategory<object>('timeentries');
-            if (cat) {
-                // Find the active entry by userId and null endTime
-                const allValues = await getCustomDataValues<TimeEntry>(cat.id, moduleId!);
-                const existingValue = allValues.find(
-                    (v) => v.userId === currentEntry!.userId &&
-                           v.startTime === currentEntry!.startTime &&
-                           v.endTime === null
-                );
+            if (!cat) {
+                throw new Error('Time entries category not found');
+            }
 
-                if (existingValue) {
-                    // Get the KV store ID from the raw value object
-                    const kvStoreId = (existingValue as any).id;
-                    await updateCustomDataValue(
-                        cat.id,
-                        kvStoreId,
-                        { value: JSON.stringify(currentEntry) },
-                        moduleId!
-                    );
-                }
+            // Find the active entry by userId and null endTime
+            const allValues = await getCustomDataValues<TimeEntry>(cat.id, moduleId!);
+            const existingValue = allValues.find(
+                (v) => v.userId === currentEntry!.userId &&
+                       v.startTime === currentEntry!.startTime &&
+                       v.endTime === null
+            );
+
+            if (!existingValue) {
+                throw new Error('Could not find active time entry in database');
+            }
+
+            // Get the KV store ID - it should be in the metadata after our fix
+            const kvStoreId = (existingValue as any).id;
+            if (!kvStoreId || typeof kvStoreId !== 'number') {
+                console.error('[TimeTracker] Invalid KV store ID:', kvStoreId, 'Entry:', existingValue);
+                throw new Error(`Invalid KV store ID: ${kvStoreId}`);
+            }
+
+            console.log('[TimeTracker] Updating time entry with KV store ID:', kvStoreId);
+            await updateCustomDataValue(
+                cat.id,
+                kvStoreId,
+                { value: JSON.stringify(currentEntry) },
+                moduleId!
+            );
+
+            // Update local state
+            const entryIndex = timeEntries.findIndex(e => e.startTime === currentEntry!.startTime);
+            if (entryIndex !== -1) {
+                timeEntries[entryIndex] = { ...currentEntry };
             }
 
             stopTimerUpdate();
@@ -251,6 +290,10 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
         } catch (error) {
             console.error('[TimeTracker] Clock out failed:', error);
             alert('Failed to clock out. Please try again.');
+            // Reload to get fresh state
+            await loadTimeEntries();
+            currentEntry = timeEntries.find((entry) => entry.endTime === null && entry.userId === user?.id) || null;
+            render();
         }
     }
 
@@ -291,7 +334,12 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
             (new Date(filterDateTo).getTime() - new Date(filterDateFrom).getTime()) /
                 (1000 * 60 * 60 * 24)
         );
-        const expectedHours = (workDays / 7) * settings.defaultHoursPerWeek;
+
+        // Calculate absence hours in the filtered period
+        const absenceHours = calculateAbsenceHours();
+
+        // Expected hours = work days * hours per week / 7 - absence hours
+        const expectedHours = (workDays / 7) * settings.defaultHoursPerWeek - absenceHours;
         const overtime = totalHours - expectedHours;
 
         return {
@@ -299,7 +347,49 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
             expectedHours: expectedHours.toFixed(2),
             overtime: overtime.toFixed(2),
             entriesCount: filtered.length,
+            absenceHours: absenceHours.toFixed(2),
+            absenceDays: (absenceHours / settings.defaultHoursPerDay).toFixed(1),
         };
+    }
+
+    // Calculate absence hours in the filtered date range
+    function calculateAbsenceHours(): number {
+        const fromDate = new Date(filterDateFrom);
+        const toDate = new Date(filterDateTo);
+
+        let totalAbsenceHours = 0;
+
+        for (const absence of absences) {
+            // Determine if absence is all-day or has specific times
+            const isAllDay = absence.startTime === null || absence.endTime === null;
+
+            const absenceStart = new Date(absence.startDate);
+            const absenceEnd = new Date(absence.endDate);
+
+            // Check if absence overlaps with filter period
+            if (absenceEnd < fromDate || absenceStart > toDate) {
+                continue;
+            }
+
+            // Calculate overlap
+            const overlapStart = absenceStart > fromDate ? absenceStart : fromDate;
+            const overlapEnd = absenceEnd < toDate ? absenceEnd : toDate;
+
+            if (isAllDay) {
+                // For all-day absences, count full days
+                const daysMs = overlapEnd.getTime() - overlapStart.getTime();
+                const days = Math.ceil(daysMs / (1000 * 60 * 60 * 24)) + 1; // +1 because both start and end are inclusive
+                totalAbsenceHours += days * settings.defaultHoursPerDay;
+            } else {
+                // For timed absences, calculate actual hours
+                const startTime = new Date(absence.startTime!);
+                const endTime = new Date(absence.endTime!);
+                const hoursMs = endTime.getTime() - startTime.getTime();
+                totalAbsenceHours += hoursMs / (1000 * 60 * 60);
+            }
+        }
+
+        return totalAbsenceHours;
     }
 
     // Get filtered entries
@@ -473,7 +563,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
             </div>
 
             <!-- Quick Stats -->
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
                 <div style="background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
                     <div style="color: #666; font-size: 0.9rem; margin-bottom: 0.5rem;">Total Hours (Period)</div>
                     <div style="font-size: 2rem; font-weight: 700; color: #007bff;">${stats.totalHours}h</div>
@@ -481,6 +571,11 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                 <div style="background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
                     <div style="color: #666; font-size: 0.9rem; margin-bottom: 0.5rem;">Expected Hours</div>
                     <div style="font-size: 2rem; font-weight: 700; color: #6c757d;">${stats.expectedHours}h</div>
+                </div>
+                <div style="background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                    <div style="color: #666; font-size: 0.9rem; margin-bottom: 0.5rem;">Absence Hours</div>
+                    <div style="font-size: 1.5rem; font-weight: 700; color: #ffc107;">${stats.absenceHours}h</div>
+                    <div style="color: #999; font-size: 0.8rem; margin-top: 0.25rem;">(${stats.absenceDays} days)</div>
                 </div>
                 <div style="background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
                     <div style="color: #666; font-size: 0.9rem; margin-bottom: 0.5rem;">Overtime</div>
@@ -666,16 +761,21 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
             </div>
 
             <!-- Summary Stats -->
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
                 <div style="background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
                     <div style="color: #666; font-size: 0.9rem; margin-bottom: 0.5rem;">Total Worked Hours</div>
                     <div style="font-size: 2.5rem; font-weight: 700; color: #007bff;">${stats.totalHours}h</div>
                     <div style="color: #999; font-size: 0.85rem; margin-top: 0.5rem;">${stats.entriesCount} entries</div>
                 </div>
                 <div style="background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                    <div style="color: #666; font-size: 0.9rem; margin-bottom: 0.5rem;">Absence Hours</div>
+                    <div style="font-size: 2.5rem; font-weight: 700; color: #ffc107;">${stats.absenceHours}h</div>
+                    <div style="color: #999; font-size: 0.85rem; margin-top: 0.5rem;">${stats.absenceDays} days off</div>
+                </div>
+                <div style="background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
                     <div style="color: #666; font-size: 0.9rem; margin-bottom: 0.5rem;">Expected Hours</div>
                     <div style="font-size: 2.5rem; font-weight: 700; color: #6c757d;">${stats.expectedHours}h</div>
-                    <div style="color: #999; font-size: 0.85rem; margin-top: 0.5rem;">Based on ${settings.defaultHoursPerWeek}h/week</div>
+                    <div style="color: #999; font-size: 0.85rem; margin-top: 0.5rem;">Adjusted for absences</div>
                 </div>
                 <div style="background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
                     <div style="color: #666; font-size: 0.9rem; margin-bottom: 0.5rem;">Overtime / Undertime</div>
@@ -720,6 +820,60 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                         .join('')}
                 </div>
             </div>
+
+            <!-- Absences in Period -->
+            ${absences.length > 0 ? `
+            <div style="background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                <h2 style="margin: 0 0 1rem 0; font-size: 1.2rem; color: #333;">Absences in Period</h2>
+                <div style="overflow-x: auto;">
+                    <table style="width: 100%; border-collapse: collapse;">
+                        <thead>
+                            <tr style="background: #f8f9fa; border-bottom: 2px solid #dee2e6;">
+                                <th style="padding: 0.75rem; text-align: left; font-weight: 600; color: #495057;">From</th>
+                                <th style="padding: 0.75rem; text-align: left; font-weight: 600; color: #495057;">To</th>
+                                <th style="padding: 0.75rem; text-align: left; font-weight: 600; color: #495057;">Reason</th>
+                                <th style="padding: 0.75rem; text-align: left; font-weight: 600; color: #495057;">Hours</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${absences.filter(absence => {
+                                const absenceStart = new Date(absence.startDate);
+                                const absenceEnd = new Date(absence.endDate);
+                                const fromDate = new Date(filterDateFrom);
+                                const toDate = new Date(filterDateTo);
+                                return !(absenceEnd < fromDate || absenceStart > toDate);
+                            }).map(absence => {
+                                const isAllDay = absence.startTime === null || absence.endTime === null;
+                                const start = new Date(absence.startDate);
+                                const end = new Date(absence.endDate);
+
+                                let hours = 0;
+                                if (isAllDay) {
+                                    const days = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+                                    hours = days * settings.defaultHoursPerDay;
+                                } else {
+                                    const startTime = new Date(absence.startTime!);
+                                    const endTime = new Date(absence.endTime!);
+                                    hours = (endTime.getTime() - startTime.getTime()) / (1000 * 60 * 60);
+                                }
+
+                                return `
+                                <tr style="border-bottom: 1px solid #dee2e6;">
+                                    <td style="padding: 0.75rem;">${start.toLocaleDateString()}${!isAllDay ? ' ' + new Date(absence.startTime!).toLocaleTimeString() : ''}</td>
+                                    <td style="padding: 0.75rem;">${end.toLocaleDateString()}${!isAllDay ? ' ' + new Date(absence.endTime!).toLocaleTimeString() : ''}</td>
+                                    <td style="padding: 0.75rem;">
+                                        <span style="background: #ffc107; color: #333; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.85rem;">
+                                            ${absence.absenceReason?.name || 'Unknown'}
+                                        </span>
+                                    </td>
+                                    <td style="padding: 0.75rem; font-weight: 600;">${hours.toFixed(2)}h</td>
+                                </tr>
+                            `}).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            ` : ''}
 
             <!-- Export Options -->
             <div style="background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">

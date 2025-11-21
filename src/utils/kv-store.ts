@@ -217,7 +217,7 @@ export async function getCustomDataValues<T extends object>(
         );
 
     return values.map((val) => {
-        const { value, ...rest } = val;
+        const { value, ...metadata } = val;
 
         if (value == null) {
             throw new Error(
@@ -227,9 +227,11 @@ export async function getCustomDataValues<T extends object>(
 
         let parsedData = safeParseJSON(value, {} as T);
 
+        // Metadata (id, dataCategoryId) comes AFTER parsedData to ensure
+        // KV store fields are not overwritten by data fields
         return {
-            ...rest,
             ...parsedData,
+            ...metadata,
         };
     });
 }
