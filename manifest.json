@@ -1,45 +1,37 @@
 {
   "$schema": "./manifest.schema.json",
-  "name": "Extension Boilerplate",
-  "key": "extension-boilerplate",
+  "name": "Time Tracker",
+  "key": "timetracker",
   "version": "1.0.0",
-  "description": "A boilerplate extension demonstrating ChurchTools extension capabilities",
+  "description": "Comprehensive time tracking tool for church employees with clock in/out, manual entries, reports, and absence integration",
   "author": {
-    "name": "Your Name",
-    "email": "your.email@example.com",
-    "url": "https://your-website.com"
+    "name": "ChurchTools Innovations GmbH",
+    "email": "info@church.tools",
+    "url": "https://church.tools"
   },
-  "homepage": "https://github.com/yourname/extension-boilerplate",
+  "homepage": "https://github.com/churchtools/timetracker-extension",
   "repository": {
     "type": "git",
-    "url": "https://github.com/yourname/extension-boilerplate.git"
+    "url": "https://github.com/churchtools/timetracker-extension.git"
   },
   "license": "MIT",
-  "icon": "https://your-website.com/extension-icon.png",
-  "images": ["https://your-website.com/screenshot1.png"],
   "extensionPoints": [
     {
       "id": "main",
       "entryPoint": "main",
-      "title": "Statistics Dashboard",
-      "description": "Person statistics by status"
+      "title": "Time Tracker",
+      "description": "Track working hours, view reports, and manage time entries"
     },
     {
       "id": "admin",
       "entryPoint": "admin",
-      "title": "Extension Settings",
-      "description": "Configure extension settings"
-    },
-    {
-      "id": "appointment-dialog-detail",
-      "entryPoint": "appointmentDetails",
-      "title": "Appointment Details",
-      "description": "Shows appointment as json in appointment dialog"
+      "title": "Time Tracker Settings",
+      "description": "Configure work categories, default hours, and overtime rules"
     }
   ],
   "permissions": [
-    "churchcal view",
-    "churchdb view"
+    "churchdb view",
+    "churchdb edit"
   ],
   "minChurchToolsVersion": "3.0.0"
 }

@@ -33,10 +33,4 @@ export const entryPointRegistry: Record<string, EntryPointLoader> = {
 
     // Main module entry point
     main: () => import('./main'),
-
-    // Appointment details entry point
-    appointmentDetails: () => import('./appointment-details'),
-
-    // Add your custom entry points here:
-    // myFeature: () => import('./my-feature'),
 };
