@@ -1123,6 +1123,15 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                 alert('Failed to add manual entry. Please try again.');
             }
         });
+
+        // Prevent browser extension interference with input fields
+        // Stop focusin event propagation to prevent extension errors
+        element.addEventListener('focusin', (event) => {
+            const target = event.target as HTMLElement;
+            if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT') {
+                event.stopPropagation();
+            }
+        }, true); // Use capture phase to ensure we catch it first
     }
 
     // Initialize
