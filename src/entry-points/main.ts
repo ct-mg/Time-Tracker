@@ -545,13 +545,22 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                             Not currently tracking time
                         </div>
                         <div style="max-width: 500px; margin: 0 auto;">
-                            <label style="display: block; margin-bottom: 0.5rem; color: #333; font-weight: 500; text-align: left;">Category</label>
-                            <select id="clock-in-category" style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 4px; margin-bottom: 1rem; font-size: 1rem;">
+                            <label for="clock-in-category" style="display: block; margin-bottom: 0.5rem; color: #333; font-weight: 500; text-align: left;">Category</label>
+                            <select id="clock-in-category" name="category" style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 4px; margin-bottom: 1rem; font-size: 1rem;">
                                 ${workCategories.map((cat) => `<option value="${cat.id}">${cat.name}</option>`).join('')}
                             </select>
 
-                            <label style="display: block; margin-bottom: 0.5rem; color: #333; font-weight: 500; text-align: left;">Description (optional)</label>
-                            <input type="text" id="clock-in-description" placeholder="What are you working on?" style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 4px; margin-bottom: 1.5rem; font-size: 1rem;" />
+                            <label for="clock-in-description" style="display: block; margin-bottom: 0.5rem; color: #333; font-weight: 500; text-align: left;">Description (optional)</label>
+                            <input
+                                type="text"
+                                id="clock-in-description"
+                                name="description"
+                                autocomplete="off"
+                                data-lpignore="true"
+                                data-1p-ignore="true"
+                                placeholder="What are you working on?"
+                                style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 4px; margin-bottom: 1.5rem; font-size: 1rem;"
+                            />
 
                             <button id="clock-in-btn" style="width: 100%; padding: 1rem 2rem; background: #28a745; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 1.1rem; font-weight: 600; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">
                                 ▶️ Clock In
@@ -608,16 +617,28 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
             <div style="background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1rem;">
                     <div>
-                        <label style="display: block; margin-bottom: 0.5rem; color: #333; font-weight: 500;">From Date</label>
-                        <input type="date" id="filter-date-from" value="${filterDateFrom}" style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;" />
+                        <label for="filter-date-from" style="display: block; margin-bottom: 0.5rem; color: #333; font-weight: 500;">From Date</label>
+                        <input
+                            type="date"
+                            id="filter-date-from"
+                            name="filter-from"
+                            value="${filterDateFrom}"
+                            style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;"
+                        />
                     </div>
                     <div>
-                        <label style="display: block; margin-bottom: 0.5rem; color: #333; font-weight: 500;">To Date</label>
-                        <input type="date" id="filter-date-to" value="${filterDateTo}" style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;" />
+                        <label for="filter-date-to" style="display: block; margin-bottom: 0.5rem; color: #333; font-weight: 500;">To Date</label>
+                        <input
+                            type="date"
+                            id="filter-date-to"
+                            name="filter-to"
+                            value="${filterDateTo}"
+                            style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;"
+                        />
                     </div>
                     <div>
-                        <label style="display: block; margin-bottom: 0.5rem; color: #333; font-weight: 500;">Category</label>
-                        <select id="filter-category" style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;">
+                        <label for="filter-category" style="display: block; margin-bottom: 0.5rem; color: #333; font-weight: 500;">Category</label>
+                        <select id="filter-category" name="filter-category" style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;">
                             <option value="all">All Categories</option>
                             ${workCategories.map((cat) => `<option value="${cat.id}" ${filterCategory === cat.id ? 'selected' : ''}>${cat.name}</option>`).join('')}
                         </select>
@@ -638,24 +659,53 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                     <h3 style="margin: 0 0 1rem 0; color: #333;">Add Manual Entry</h3>
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
                         <div>
-                            <label style="display: block; margin-bottom: 0.5rem; color: #333; font-weight: 500;">Start Date & Time</label>
-                            <input type="datetime-local" id="manual-start" style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;" />
+                            <label for="manual-start" style="display: block; margin-bottom: 0.5rem; color: #333; font-weight: 500;">Start Date & Time</label>
+                            <input
+                                type="datetime-local"
+                                id="manual-start"
+                                name="start-time"
+                                autocomplete="off"
+                                data-lpignore="true"
+                                data-1p-ignore="true"
+                                style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;"
+                            />
                         </div>
                         <div>
-                            <label style="display: block; margin-bottom: 0.5rem; color: #333; font-weight: 500;">End Date & Time</label>
-                            <input type="datetime-local" id="manual-end" style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;" />
+                            <label for="manual-end" style="display: block; margin-bottom: 0.5rem; color: #333; font-weight: 500;">End Date & Time</label>
+                            <input
+                                type="datetime-local"
+                                id="manual-end"
+                                name="end-time"
+                                autocomplete="off"
+                                data-lpignore="true"
+                                data-1p-ignore="true"
+                                style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;"
+                            />
                         </div>
                     </div>
                     <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 1rem; margin-bottom: 1rem;">
                         <div>
-                            <label style="display: block; margin-bottom: 0.5rem; color: #333; font-weight: 500;">Category</label>
-                            <select id="manual-category" style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;">
+                            <label for="manual-category" style="display: block; margin-bottom: 0.5rem; color: #333; font-weight: 500;">Category</label>
+                            <select
+                                id="manual-category"
+                                name="manual-category"
+                                style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;"
+                            >
                                 ${workCategories.map((cat) => `<option value="${cat.id}">${cat.name}</option>`).join('')}
                             </select>
                         </div>
                         <div>
-                            <label style="display: block; margin-bottom: 0.5rem; color: #333; font-weight: 500;">Description</label>
-                            <input type="text" id="manual-description" placeholder="What did you work on?" style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;" />
+                            <label for="manual-description" style="display: block; margin-bottom: 0.5rem; color: #333; font-weight: 500;">Description</label>
+                            <input
+                                type="text"
+                                id="manual-description"
+                                name="manual-description"
+                                autocomplete="off"
+                                data-lpignore="true"
+                                data-1p-ignore="true"
+                                placeholder="What did you work on?"
+                                style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;"
+                            />
                         </div>
                     </div>
                     <div style="display: flex; gap: 0.5rem;">
@@ -749,12 +799,24 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                 <h2 style="margin: 0 0 1rem 0; font-size: 1.2rem; color: #333;">Report Period</h2>
                 <div style="display: grid; grid-template-columns: 1fr 1fr auto; gap: 1rem; align-items: end;">
                     <div>
-                        <label style="display: block; margin-bottom: 0.5rem; color: #333; font-weight: 500;">From Date</label>
-                        <input type="date" id="report-date-from" value="${filterDateFrom}" style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;" />
+                        <label for="report-date-from" style="display: block; margin-bottom: 0.5rem; color: #333; font-weight: 500;">From Date</label>
+                        <input
+                            type="date"
+                            id="report-date-from"
+                            name="report-from"
+                            value="${filterDateFrom}"
+                            style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;"
+                        />
                     </div>
                     <div>
-                        <label style="display: block; margin-bottom: 0.5rem; color: #333; font-weight: 500;">To Date</label>
-                        <input type="date" id="report-date-to" value="${filterDateTo}" style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;" />
+                        <label for="report-date-to" style="display: block; margin-bottom: 0.5rem; color: #333; font-weight: 500;">To Date</label>
+                        <input
+                            type="date"
+                            id="report-date-to"
+                            name="report-to"
+                            value="${filterDateTo}"
+                            style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;"
+                        />
                     </div>
                     <button id="apply-report-filters-btn" style="padding: 0.5rem 1rem; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">Update Report</button>
                 </div>
