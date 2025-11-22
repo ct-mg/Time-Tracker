@@ -1168,6 +1168,32 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
         return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
     }
 
+    // Get ISO week number (KW)
+    function getISOWeek(date: Date): number {
+        const target = new Date(date.valueOf());
+        const dayNr = (date.getDay() + 6) % 7; // Monday = 0, Sunday = 6
+        target.setDate(target.getDate() - dayNr + 3); // Nearest Thursday
+        const firstThursday = target.valueOf();
+        target.setMonth(0, 1); // January 1st
+        if (target.getDay() !== 4) {
+            target.setMonth(0, 1 + ((4 - target.getDay()) + 7) % 7);
+        }
+        return 1 + Math.ceil((firstThursday - target.valueOf()) / 604800000); // 604800000 = 7 * 24 * 3600 * 1000
+    }
+
+    // Get ISO week year
+    function getISOWeekYear(date: Date): number {
+        const target = new Date(date.valueOf());
+        target.setDate(target.getDate() + 3 - (target.getDay() + 6) % 7);
+        return target.getFullYear();
+    }
+
+    // Format hours as decimal (e.g., 8.5h)
+    function formatHours(ms: number): string {
+        const hours = ms / (1000 * 60 * 60);
+        return hours.toFixed(1) + 'h';
+    }
+
     // Format date
     function formatDate(isoString: string): string {
         return new Date(isoString).toLocaleString();
@@ -1759,111 +1785,211 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
             return '<p style="color: #666; text-align: center; padding: 2rem;">No entries found.</p>';
         }
 
-        // Apply pagination
-        const startIndex = (entriesPage - 1) * ENTRIES_PER_PAGE;
-        const endIndex = startIndex + ENTRIES_PER_PAGE;
-        const paginatedEntries = entries.slice(startIndex, endIndex);
+        // Group entries by calendar week, then by day
+        type WeekGroup = {
+            weekNumber: number;
+            year: number;
+            days: Map<string, TimeEntry[]>; // key: YYYY-MM-DD
+        };
 
-        return `
-            <div style="overflow-x: auto;">
-                <table style="width: 100%; border-collapse: collapse;">
-                    <thead>
-                        <tr style="background: #f8f9fa; border-bottom: 2px solid #dee2e6;">
-                            <th style="padding: 0.75rem; text-align: left; font-weight: 600; color: #495057;">Date</th>
-                            <th style="padding: 0.75rem; text-align: left; font-weight: 600; color: #495057;">Start</th>
-                            <th style="padding: 0.75rem; text-align: left; font-weight: 600; color: #495057;">End</th>
-                            <th style="padding: 0.75rem; text-align: left; font-weight: 600; color: #495057;">Duration</th>
-                            <th style="padding: 0.75rem; text-align: left; font-weight: 600; color: #495057;">Category</th>
-                            <th style="padding: 0.75rem; text-align: left; font-weight: 600; color: #495057;">Description</th>
-                            <th style="padding: 0.75rem; text-align: left; font-weight: 600; color: #495057;">Type</th>
-                            <th style="padding: 0.75rem; text-align: left; font-weight: 600; color: #495057;">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${paginatedEntries
-                            .map((entry) => {
-                                const start = new Date(entry.startTime);
-                                const end = entry.endTime ? new Date(entry.endTime) : new Date();
-                                const duration = formatDuration(end.getTime() - start.getTime());
-                                const category = workCategories.find((c) => c.id === entry.categoryId);
+        const weekGroups = new Map<string, WeekGroup>(); // key: "YYYY-WW"
 
-                                return `
-                                <tr style="border-bottom: 1px solid #dee2e6;">
-                                    <td style="padding: 0.75rem;">${start.toLocaleDateString()}</td>
-                                    <td style="padding: 0.75rem;">${start.toLocaleTimeString()}</td>
-                                    <td style="padding: 0.75rem;">${entry.endTime ? end.toLocaleTimeString() : '<span style="color: #28a745; font-weight: 600;">Active</span>'}</td>
-                                    <td style="padding: 0.75rem; font-weight: 600;">${duration}</td>
-                                    <td style="padding: 0.75rem;">
-                                        <span style="background: ${category?.color || '#6c757d'}; color: white; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.85rem;">
-                                            ${entry.categoryName}
-                                        </span>
-                                    </td>
-                                    <td style="padding: 0.75rem;">${entry.description || '-'}</td>
-                                    <td style="padding: 0.75rem;">
-                                        <div style="display: flex; flex-direction: column; gap: 0.25rem;">
-                                            <span style="color: ${entry.isManual ? '#ffc107' : '#6c757d'}; font-size: 0.85rem;">
-                                                <span style="display: inline-flex; align-items: center; gap: 0.25rem;">
-                                                    ${entry.isManual ? `
-                                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        entries.forEach(entry => {
+            const date = new Date(entry.startTime);
+            const weekNum = getISOWeek(date);
+            const yearNum = getISOWeekYear(date);
+            const weekKey = `${yearNum}-${String(weekNum).padStart(2, '0')}`;
+            const dayKey = date.toISOString().split('T')[0]; // YYYY-MM-DD
+
+            if (!weekGroups.has(weekKey)) {
+                weekGroups.set(weekKey, {
+                    weekNumber: weekNum,
+                    year: yearNum,
+                    days: new Map()
+                });
+            }
+
+            const week = weekGroups.get(weekKey)!;
+            if (!week.days.has(dayKey)) {
+                week.days.set(dayKey, []);
+            }
+            week.days.get(dayKey)!.push(entry);
+        });
+
+        // Convert to array and sort by week (newest first)
+        const sortedWeeks = Array.from(weekGroups.entries())
+            .sort((a, b) => b[0].localeCompare(a[0]));
+
+        let html = '<div style="display: flex; flex-direction: column; gap: 1.5rem;">';
+
+        for (const [weekKey, week] of sortedWeeks) {
+            // Calculate week totals
+            const weekWorkEntries = Array.from(week.days.values())
+                .flat()
+                .filter(e => !e.isBreak && e.endTime);
+            const weekIstMs = weekWorkEntries.reduce((sum, e) => {
+                const start = new Date(e.startTime).getTime();
+                const end = new Date(e.endTime!).getTime();
+                return sum + (end - start);
+            }, 0);
+            const weekIst = formatHours(weekIstMs);
+            const weekSoll = formatHours(settings.defaultHoursPerWeek * 3600000); // Convert hours to ms
+
+            html += `
+                <div style="background: #f8f9fa; border: 2px solid #dee2e6; border-radius: 8px; padding: 1rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                        <h3 style="margin: 0; color: #333; font-size: 1.1rem;">
+                            KW ${week.weekNumber} (${week.year})
+                        </h3>
+                        <div style="display: flex; gap: 1rem; font-size: 0.9rem;">
+                            <span style="color: #666;">
+                                <strong>Woche IST:</strong> <span style="color: ${weekIstMs >= settings.defaultHoursPerWeek * 3600000 ? '#28a745' : '#dc3545'}; font-weight: 600;">${weekIst}</span>
+                            </span>
+                            <span style="color: #666;">
+                                <strong>Woche SOLL:</strong> <span style="font-weight: 600;">${weekSoll}</span>
+                            </span>
+                        </div>
+                    </div>`;
+
+            // Sort days (newest first)
+            const sortedDays = Array.from(week.days.entries())
+                .sort((a, b) => b[0].localeCompare(a[0]));
+
+            for (const [dayKey, dayEntries] of sortedDays) {
+                const date = new Date(dayKey);
+                const dayName = date.toLocaleDateString('de-DE', { weekday: 'long' });
+                const dateStr = date.toLocaleDateString('de-DE', { year: 'numeric', month: 'long', day: 'numeric' });
+
+                // Calculate day totals (excluding breaks)
+                const dayWorkEntries = dayEntries.filter(e => !e.isBreak && e.endTime);
+                const dayIstMs = dayWorkEntries.reduce((sum, e) => {
+                    const start = new Date(e.startTime).getTime();
+                    const end = new Date(e.endTime!).getTime();
+                    return sum + (end - start);
+                }, 0);
+                const dayIst = formatHours(dayIstMs);
+
+                // Determine day SOLL (only workdays Monday-Friday)
+                const dayOfWeek = date.getDay(); // 0 = Sunday, 6 = Saturday
+                const isWorkday = dayOfWeek >= 1 && dayOfWeek <= 5; // Monday to Friday
+                const daySoll = isWorkday ? formatHours(settings.defaultHoursPerDay * 3600000) : '0h';
+
+                html += `
+                    <div style="background: white; border: 1px solid #dee2e6; border-radius: 6px; padding: 0.75rem; margin-bottom: 0.75rem;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; padding-bottom: 0.5rem; border-bottom: 1px solid #e9ecef;">
+                            <h4 style="margin: 0; color: #495057; font-size: 0.95rem; font-weight: 600;">
+                                ${dayName}, ${dateStr}
+                            </h4>
+                            <div style="display: flex; gap: 1rem; font-size: 0.85rem;">
+                                <span style="color: #666;">
+                                    <strong>Tag IST:</strong> <span style="color: ${dayIstMs >= settings.defaultHoursPerDay * 3600000 ? '#28a745' : (isWorkday ? '#dc3545' : '#6c757d')}; font-weight: 600;">${dayIst}</span>
+                                </span>
+                                <span style="color: #666;">
+                                    <strong>Tag SOLL:</strong> <span style="font-weight: 600;">${daySoll}</span>
+                                </span>
+                            </div>
+                        </div>
+                        <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
+                            <thead>
+                                <tr style="background: #f8f9fa; border-bottom: 1px solid #dee2e6;">
+                                    <th style="padding: 0.5rem; text-align: left; font-weight: 600; color: #495057; font-size: 0.85rem;">Start</th>
+                                    <th style="padding: 0.5rem; text-align: left; font-weight: 600; color: #495057; font-size: 0.85rem;">End</th>
+                                    <th style="padding: 0.5rem; text-align: left; font-weight: 600; color: #495057; font-size: 0.85rem;">Duration</th>
+                                    <th style="padding: 0.5rem; text-align: left; font-weight: 600; color: #495057; font-size: 0.85rem;">Category</th>
+                                    <th style="padding: 0.5rem; text-align: left; font-weight: 600; color: #495057; font-size: 0.85rem;">Description</th>
+                                    <th style="padding: 0.5rem; text-align: left; font-weight: 600; color: #495057; font-size: 0.85rem;">Type</th>
+                                    <th style="padding: 0.5rem; text-align: center; font-weight: 600; color: #495057; font-size: 0.85rem;">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${dayEntries.map(entry => {
+                                    const start = new Date(entry.startTime);
+                                    const end = entry.endTime ? new Date(entry.endTime) : new Date();
+                                    const duration = formatDuration(end.getTime() - start.getTime());
+                                    const category = workCategories.find((c) => c.id === entry.categoryId);
+
+                                    return `
+                                        <tr style="border-bottom: 1px solid #e9ecef;">
+                                            <td style="padding: 0.5rem;">${start.toLocaleTimeString()}</td>
+                                            <td style="padding: 0.5rem;">${entry.endTime ? end.toLocaleTimeString() : '<span style="color: #28a745; font-weight: 600;">Active</span>'}</td>
+                                            <td style="padding: 0.5rem; font-weight: 600;">${duration}</td>
+                                            <td style="padding: 0.5rem;">
+                                                <span style="background: ${category?.color || '#6c757d'}; color: white; padding: 0.2rem 0.4rem; border-radius: 3px; font-size: 0.8rem;">
+                                                    ${entry.categoryName}
+                                                </span>
+                                            </td>
+                                            <td style="padding: 0.5rem; font-size: 0.85rem;">${entry.description || '-'}</td>
+                                            <td style="padding: 0.5rem;">
+                                                <div style="display: flex; flex-direction: column; gap: 0.15rem;">
+                                                    <span style="color: ${entry.isManual ? '#ffc107' : '#6c757d'}; font-size: 0.75rem;">
+                                                        <span style="display: inline-flex; align-items: center; gap: 0.2rem;">
+                                                            ${entry.isManual ? `
+                                                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                                                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                                                                </svg>
+                                                                Manual
+                                                            ` : `
+                                                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                                    <circle cx="12" cy="12" r="10"></circle>
+                                                                    <polyline points="12 6 12 12 16 14"></polyline>
+                                                                </svg>
+                                                                Tracked
+                                                            `}
+                                                        </span>
+                                                    </span>
+                                                    ${entry.isBreak ? `
+                                                        <span style="color: #17a2b8; font-size: 0.75rem;">
+                                                            <span style="display: inline-flex; align-items: center; gap: 0.2rem;">
+                                                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                                    <circle cx="12" cy="12" r="10"></circle>
+                                                                    <line x1="8" y1="12" x2="16" y2="12"></line>
+                                                                    <line x1="12" y1="8" x2="12" y2="16"></line>
+                                                                </svg>
+                                                                Break
+                                                            </span>
+                                                        </span>
+                                                    ` : ''}
+                                                </div>
+                                            </td>
+                                            <td style="padding: 0.5rem; text-align: center;">
+                                                ${entry.endTime ? `
+                                                    <div style="display: flex; gap: 0.2rem; justify-content: center;">
+                                                        <button
+                                                            class="edit-entry-btn"
+                                                            data-entry-start="${entry.startTime}"
+                                                            style="padding: 0.2rem 0.4rem; background: #ffc107; color: #333; border: none; border-radius: 3px; cursor: pointer; font-size: 0.75rem;"
+                                                            title="Edit"
+                                                        ><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                                             <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
                                                             <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-                                                        </svg>
-                                                        Manual
-                                                    ` : `
-                                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                                            <circle cx="12" cy="12" r="10"></circle>
-                                                            <polyline points="12 6 12 12 16 14"></polyline>
-                                                        </svg>
-                                                        Tracked
-                                                    `}
-                                                </span>
-                                            </span>
-                                            ${entry.isBreak ? `
-                                                <span style="color: #17a2b8; font-size: 0.85rem;">
-                                                    <span style="display: inline-flex; align-items: center; gap: 0.25rem;">
-                                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                                            <circle cx="12" cy="12" r="10"></circle>
-                                                            <line x1="8" y1="12" x2="16" y2="12"></line>
-                                                            <line x1="12" y1="8" x2="12" y2="16"></line>
-                                                        </svg>
-                                                        Break
-                                                    </span>
-                                                </span>
-                                            ` : ''}
-                                        </div>
-                                    </td>
-                                    <td style="padding: 0.75rem;">
-                                        ${entry.endTime ? `
-                                        <div style="display: flex; gap: 0.25rem;">
-                                            <button
-                                                class="edit-entry-btn"
-                                                data-entry-start="${entry.startTime}"
-                                                style="padding: 0.25rem 0.5rem; background: #ffc107; color: #333; border: none; border-radius: 3px; cursor: pointer; font-size: 0.85rem;"
-                                                title="Edit"
-                                            ><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-                                            </svg></button>
-                                            <button
-                                                class="delete-entry-btn"
-                                                data-entry-start="${entry.startTime}"
-                                                style="padding: 0.25rem 0.5rem; background: #dc3545; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 0.85rem;"
-                                                title="Delete"
-                                            ><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                                <polyline points="3 6 5 6 21 6"></polyline>
-                                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                                            </svg></button>
-                                        </div>
-                                        ` : '<span style="color: #999; font-size: 0.85rem;">-</span>'}
-                                    </td>
-                                </tr>
-                            `;
-                            })
-                            .join('')}
-                    </tbody>
-                </table>
-            </div>
-        `;
+                                                        </svg></button>
+                                                        <button
+                                                            class="delete-entry-btn"
+                                                            data-entry-start="${entry.startTime}"
+                                                            style="padding: 0.2rem 0.4rem; background: #dc3545; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 0.75rem;"
+                                                            title="Delete"
+                                                        ><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                            <polyline points="3 6 5 6 21 6"></polyline>
+                                                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                                        </svg></button>
+                                                    </div>
+                                                ` : '<span style="color: #999; font-size: 0.75rem;">-</span>'}
+                                            </td>
+                                        </tr>
+                                    `;
+                                }).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+            }
+
+            html += `</div>`; // Close week group
+        }
+
+        html += '</div>'; // Close main container
+        return html;
     }
 
     function renderAbsences(): string {
