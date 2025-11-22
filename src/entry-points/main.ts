@@ -2192,16 +2192,9 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                                             <td style="padding: 0.5rem;">${entry.endTime ? end.toLocaleTimeString() : '<span style="color: #28a745; font-weight: 600;">Active</span>'}</td>
                                             <td style="padding: 0.5rem; font-weight: 600;">${duration}</td>
                                             <td style="padding: 0.5rem;">
-                                                <div style="display: flex; align-items: center; gap: 0.3rem; flex-wrap: wrap;">
-                                                    <span style="background: ${category?.color || '#6c757d'}; color: white; padding: 0.2rem 0.4rem; border-radius: 3px; font-size: 0.8rem;">
-                                                        ${entry.categoryName}
-                                                    </span>
-                                                    ${entry.isBreak ? `
-                                                        <span style="background: #17a2b8; color: white; padding: 0.2rem 0.4rem; border-radius: 3px; font-size: 0.75rem; font-weight: 600; display: inline-flex; align-items: center; gap: 0.2rem;">
-                                                            ⏸ Pause
-                                                        </span>
-                                                    ` : ''}
-                                                </div>
+                                                <span style="background: ${category?.color || '#6c757d'}; color: white; padding: 0.2rem 0.4rem; border-radius: 3px; font-size: 0.8rem;">
+                                                    ${entry.categoryName}
+                                                </span>
                                             </td>
                                             <td style="padding: 0.5rem; font-size: 0.85rem;">${entry.description || '-'}</td>
                                             <td style="padding: 0.5rem;">
@@ -3269,6 +3262,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
             if (entry) {
                 editingEntry = entry;
                 showAddManualEntry = false;
+                currentView = 'entries'; // Switch to entries view to show edit form
                 render();
             }
             return;
