@@ -1289,8 +1289,11 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                         <div style="color: #6c757d; font-size: 0.9rem; margin-bottom: 1.5rem;">
                             Started at ${formatDate(currentEntry.startTime)}
                         </div>
-                        <button id="clock-out-btn" style="padding: 1rem 2rem; background: #dc3545; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 1.1rem; font-weight: 600; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">
-                            ⏹️ Clock Out
+                        <button id="clock-out-btn" style="padding: 1rem 2rem; background: #dc3545; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 1.1rem; font-weight: 600; box-shadow: 0 2px 4px rgba(0,0,0,0.2); display: inline-flex; align-items: center; gap: 0.5rem; justify-content: center;">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                                <rect x="6" y="4" width="12" height="16" rx="2"></rect>
+                            </svg>
+                            Clock Out
                         </button>
                     </div>
                 `
@@ -1317,8 +1320,12 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                                 style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 4px; margin-bottom: 1.5rem; font-size: 1rem;"
                             />
 
-                            <button id="clock-in-btn" style="width: 100%; padding: 1rem 2rem; background: #28a745; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 1.1rem; font-weight: 600; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">
-                                ▶️ Clock In
+                            <button id="clock-in-btn" style="width: 100%; padding: 1rem 2rem; background: #28a745; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 1.1rem; font-weight: 600; box-shadow: 0 2px 4px rgba(0,0,0,0.2); display: inline-flex; align-items: center; gap: 0.5rem; justify-content: center;">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                                    <circle cx="12" cy="12" r="10"></circle>
+                                    <polygon points="10 8 16 12 10 16 10 8" fill="white"></polygon>
+                                </svg>
+                                Clock In
                             </button>
                         </div>
                     </div>
@@ -1373,7 +1380,15 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
             <!-- Bulk Entry Form -->
             <div style="background: #e7e3ff; border: 2px solid #6f42c1; border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-                    <h3 style="margin: 0; color: #333;">📋 Bulk Add Time Entries</h3>
+                    <h3 style="margin: 0; color: #333; display: flex; align-items: center; gap: 0.5rem;">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
+                            <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
+                            <line x1="12" y1="11" x2="12" y2="17"></line>
+                            <line x1="9" y1="14" x2="15" y2="14"></line>
+                        </svg>
+                        Bulk Add Time Entries
+                    </h3>
                     <button id="close-bulk-entry-btn" style="padding: 0.25rem 0.5rem; background: #6c757d; color: white; border: none; border-radius: 3px; cursor: pointer;">✕ Close</button>
                 </div>
 
@@ -1468,7 +1483,10 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                                             data-row-id="${row.id}"
                                             style="padding: 0.25rem 0.5rem; background: #dc3545; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 0.85rem;"
                                             title="Remove"
-                                        >🗑️</button>
+                                        ><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                <polyline points="3 6 5 6 21 6"></polyline>
+                                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                            </svg></button>
                                     </td>
                                 </tr>
                             `).join('')}
@@ -1480,14 +1498,34 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                 ${settings.excelImportEnabled ? `
                 <div style="background: #fff3cd; border: 1px solid #ffc107; border-radius: 6px; padding: 1rem; margin-bottom: 1rem;">
                     <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
-                        <span style="font-size: 1.2rem;">📊</span>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#856404" stroke-width="2">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                            <polyline points="14 2 14 8 20 8"></polyline>
+                            <line x1="16" y1="13" x2="8" y2="13"></line>
+                            <line x1="16" y1="17" x2="8" y2="17"></line>
+                            <polyline points="10 9 9 9 8 9"></polyline>
+                        </svg>
                         <strong style="color: #856404;">Excel Import/Export</strong>
                         <span style="background: #ff9800; color: white; padding: 0.125rem 0.5rem; border-radius: 3px; font-size: 0.75rem; margin-left: 0.5rem; font-weight: 700;">ALPHA</span>
                     </div>
                     <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center;">
-                        <button id="download-excel-template-btn" style="padding: 0.5rem 1rem; background: #17a2b8; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600;">⬇️ Download Template</button>
+                        <button id="download-excel-template-btn" style="padding: 0.5rem 1rem; background: #17a2b8; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; display: inline-flex; align-items: center; gap: 0.5rem;">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                <polyline points="7 10 12 15 17 10"></polyline>
+                                <line x1="12" y1="15" x2="12" y2="3"></line>
+                            </svg>
+                            Download Template
+                        </button>
                         <input type="file" id="import-excel-input" accept=".xlsx,.xls" style="display: none;" />
-                        <button id="import-excel-btn" style="padding: 0.5rem 1rem; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600;">📤 Import from Excel</button>
+                        <button id="import-excel-btn" style="padding: 0.5rem 1rem; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; display: inline-flex; align-items: center; gap: 0.5rem;">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                <polyline points="17 8 12 3 7 8"></polyline>
+                                <line x1="12" y1="3" x2="12" y2="15"></line>
+                            </svg>
+                            Import from Excel
+                        </button>
                         <span style="color: #856404; font-size: 0.85rem; font-style: italic;">Import will replace existing entries in the table</span>
                     </div>
                 </div>
@@ -1502,7 +1540,14 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                         Add Row
                     </button>
                     <div style="display: flex; gap: 0.5rem;">
-                        <button id="save-bulk-entries-btn" ${bulkEntryRows.length === 0 ? 'disabled' : ''} style="padding: 0.5rem 1.5rem; background: ${bulkEntryRows.length === 0 ? '#6c757d' : '#28a745'}; color: white; border: none; border-radius: 4px; cursor: ${bulkEntryRows.length === 0 ? 'not-allowed' : 'pointer'}; font-weight: 600;">💾 Save All Entries (${bulkEntryRows.length})</button>
+                        <button id="save-bulk-entries-btn" ${bulkEntryRows.length === 0 ? 'disabled' : ''} style="padding: 0.5rem 1.5rem; background: ${bulkEntryRows.length === 0 ? '#6c757d' : '#28a745'}; color: white; border: none; border-radius: 4px; cursor: ${bulkEntryRows.length === 0 ? 'not-allowed' : 'pointer'}; font-weight: 600; display: inline-flex; align-items: center; gap: 0.5rem;">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                                <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                                <polyline points="7 3 7 8 15 8"></polyline>
+                            </svg>
+                            Save All Entries (${bulkEntryRows.length})
+                        </button>
                     </div>
                 </div>
             </div>
@@ -1544,9 +1589,30 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                 </div>
                 <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
                     <button id="apply-filters-btn" style="padding: 0.5rem 1rem; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">Apply Filters</button>
-                    <button id="export-csv-btn" style="padding: 0.5rem 1rem; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer;">📥 Export CSV</button>
-                    <button id="add-manual-entry-btn" style="padding: 0.5rem 1rem; background: #ffc107; color: #333; border: none; border-radius: 4px; cursor: pointer; font-weight: 600;">➕ Add Manual Entry</button>
-                    <button id="bulk-add-entries-btn" style="padding: 0.5rem 1rem; background: #6f42c1; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600;">📋 Bulk Add Entries</button>
+                    <button id="export-csv-btn" style="padding: 0.5rem 1rem; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; display: inline-flex; align-items: center; gap: 0.5rem;">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                            <polyline points="7 10 12 15 17 10"></polyline>
+                            <line x1="12" y1="15" x2="12" y2="3"></line>
+                        </svg>
+                        Export CSV
+                    </button>
+                    <button id="add-manual-entry-btn" style="padding: 0.5rem 1rem; background: #ffc107; color: #333; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; display: inline-flex; align-items: center; gap: 0.5rem;">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="12" y1="5" x2="12" y2="19"></line>
+                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                        </svg>
+                        Add Manual Entry
+                    </button>
+                    <button id="bulk-add-entries-btn" style="padding: 0.5rem 1rem; background: #6f42c1; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; display: inline-flex; align-items: center; gap: 0.5rem;">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
+                            <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
+                            <line x1="12" y1="11" x2="12" y2="17"></line>
+                            <line x1="9" y1="14" x2="15" y2="14"></line>
+                        </svg>
+                        Bulk Add Entries
+                    </button>
                 </div>
             </div>
 
@@ -1557,7 +1623,21 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                     ? `
                 <!-- Add/Edit Manual Entry Form -->
                 <div style="background: ${editingEntry ? '#d1ecf1' : '#fff3cd'}; border: 1px solid ${editingEntry ? '#17a2b8' : '#ffc107'}; border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem;">
-                    <h3 style="margin: 0 0 1rem 0; color: #333;">${editingEntry ? '✏️ Edit Entry' : '➕ Add Manual Entry'}</h3>
+                    <h3 style="margin: 0 0 1rem 0; color: #333; display: flex; align-items: center; gap: 0.5rem;">
+                        ${editingEntry ? `
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                            </svg>
+                            Edit Entry
+                        ` : `
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="12" y1="5" x2="12" y2="19"></line>
+                                <line x1="5" y1="12" x2="19" y2="12"></line>
+                            </svg>
+                            Add Manual Entry
+                        `}
+                    </h3>
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
                         <div>
                             <label for="manual-start" style="display: block; margin-bottom: 0.5rem; color: #333; font-weight: 500;">Start Date & Time</label>
@@ -1613,7 +1693,14 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                         </div>
                     </div>
                     <div style="display: flex; gap: 0.5rem;">
-                        <button id="save-manual-entry-btn" style="padding: 0.5rem 1rem; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer;">${editingEntry ? '💾 Update Entry' : '💾 Save Entry'}</button>
+                        <button id="save-manual-entry-btn" style="padding: 0.5rem 1rem; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; display: inline-flex; align-items: center; gap: 0.5rem;">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                                <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                                <polyline points="7 3 7 8 15 8"></polyline>
+                            </svg>
+                            ${editingEntry ? 'Update Entry' : 'Save Entry'}
+                        </button>
                         <button id="cancel-manual-entry-btn" style="padding: 0.5rem 1rem; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer;">Cancel</button>
                     </div>
                 </div>
@@ -1685,7 +1772,21 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                                     <td style="padding: 0.75rem;">${entry.description || '-'}</td>
                                     <td style="padding: 0.75rem;">
                                         <span style="color: ${entry.isManual ? '#ffc107' : '#6c757d'}; font-size: 0.85rem;">
-                                            ${entry.isManual ? '📝 Manual' : '⏱️ Tracked'}
+                                            <span style="display: inline-flex; align-items: center; gap: 0.25rem;">
+                                                ${entry.isManual ? `
+                                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                                                    </svg>
+                                                    Manual
+                                                ` : `
+                                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                        <circle cx="12" cy="12" r="10"></circle>
+                                                        <polyline points="12 6 12 12 16 14"></polyline>
+                                                    </svg>
+                                                    Tracked
+                                                `}
+                                            </span>
                                         </span>
                                     </td>
                                     <td style="padding: 0.75rem;">
@@ -1729,7 +1830,21 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                     ? `
             <!-- Add/Edit Absence Form -->
             <div style="background: ${editingAbsence ? '#d1ecf1' : '#d4edda'}; border: 1px solid ${editingAbsence ? '#17a2b8' : '#28a745'}; border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem;">
-                <h3 style="margin: 0 0 1rem 0; color: #333;">${editingAbsence ? '✏️ Edit Absence' : '➕ Add Absence'}</h3>
+                <h3 style="margin: 0 0 1rem 0; color: #333; display: flex; align-items: center; gap: 0.5rem;">
+                    ${editingAbsence ? `
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                        </svg>
+                        Edit Absence
+                    ` : `
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="12" y1="5" x2="12" y2="19"></line>
+                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                        </svg>
+                        Add Absence
+                    `}
+                </h3>
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
                     <div>
                         <label for="absence-start-date" style="display: block; margin-bottom: 0.5rem; color: #333; font-weight: 500;">Start Date</label>
@@ -1807,7 +1922,14 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                     >${editingAbsence ? editingAbsence.comment || '' : ''}</textarea>
                 </div>
                 <div style="display: flex; gap: 0.5rem;">
-                    <button id="save-absence-btn" style="padding: 0.5rem 1rem; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer;">${editingAbsence ? '💾 Update Absence' : '💾 Save Absence'}</button>
+                    <button id="save-absence-btn" style="padding: 0.5rem 1rem; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; display: inline-flex; align-items: center; gap: 0.5rem;">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                            <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                            <polyline points="7 3 7 8 15 8"></polyline>
+                        </svg>
+                        ${editingAbsence ? 'Update Absence' : 'Save Absence'}
+                    </button>
                     <button id="cancel-absence-btn" style="padding: 0.5rem 1rem; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer;">Cancel</button>
                 </div>
             </div>
@@ -1819,7 +1941,13 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
             <div style="background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
                     <h2 style="margin: 0; font-size: 1.2rem; color: #333;">My Absences (${absences.length})</h2>
-                    <button id="add-absence-btn" style="padding: 0.5rem 1rem; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600;">➕ Add Absence</button>
+                    <button id="add-absence-btn" style="padding: 0.5rem 1rem; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; display: inline-flex; align-items: center; gap: 0.5rem;">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="12" y1="5" x2="12" y2="19"></line>
+                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                        </svg>
+                        Add Absence
+                    </button>
                 </div>
                 ${absences.length === 0 ? '<p style="color: #666; text-align: center; padding: 2rem;">No absences found.</p>' : `
                 <div style="overflow-x: auto;">
@@ -1902,16 +2030,37 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                 <h2 style="margin: 0 0 1rem 0; font-size: 1.2rem; color: #333;">Quick Period Selection</h2>
                 <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
                     <button id="report-period-week" style="padding: 0.75rem 1.5rem; border: ${reportPeriod === 'week' ? '2px' : '1px'} solid ${reportPeriod === 'week' ? '#007bff' : '#ddd'}; background: ${reportPeriod === 'week' ? '#e7f3ff' : '#fff'}; color: ${reportPeriod === 'week' ? '#007bff' : '#666'}; border-radius: 4px; cursor: pointer; font-weight: ${reportPeriod === 'week' ? '600' : '400'};">
-                        📅 This Week
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle;">
+                            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                            <line x1="16" y1="2" x2="16" y2="6"></line>
+                            <line x1="8" y1="2" x2="8" y2="6"></line>
+                            <line x1="3" y1="10" x2="21" y2="10"></line>
+                        </svg>
+                        This Week
                     </button>
                     <button id="report-period-month" style="padding: 0.75rem 1.5rem; border: ${reportPeriod === 'month' ? '2px' : '1px'} solid ${reportPeriod === 'month' ? '#007bff' : '#ddd'}; background: ${reportPeriod === 'month' ? '#e7f3ff' : '#fff'}; color: ${reportPeriod === 'month' ? '#007bff' : '#666'}; border-radius: 4px; cursor: pointer; font-weight: ${reportPeriod === 'month' ? '600' : '400'};">
-                        📆 This Month
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle;">
+                            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                            <line x1="16" y1="2" x2="16" y2="6"></line>
+                            <line x1="8" y1="2" x2="8" y2="6"></line>
+                            <line x1="3" y1="10" x2="21" y2="10"></line>
+                        </svg>
+                        This Month
                     </button>
                     <button id="report-period-year" style="padding: 0.75rem 1.5rem; border: ${reportPeriod === 'year' ? '2px' : '1px'} solid ${reportPeriod === 'year' ? '#007bff' : '#ddd'}; background: ${reportPeriod === 'year' ? '#e7f3ff' : '#fff'}; color: ${reportPeriod === 'year' ? '#007bff' : '#666'}; border-radius: 4px; cursor: pointer; font-weight: ${reportPeriod === 'year' ? '600' : '400'};">
-                        📊 This Year
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle;">
+                            <line x1="12" y1="20" x2="12" y2="10"></line>
+                            <line x1="18" y1="20" x2="18" y2="4"></line>
+                            <line x1="6" y1="20" x2="6" y2="16"></line>
+                        </svg>
+                        This Year
                     </button>
                     <button id="report-period-custom" style="padding: 0.75rem 1.5rem; border: ${reportPeriod === 'custom' ? '2px' : '1px'} solid ${reportPeriod === 'custom' ? '#007bff' : '#ddd'}; background: ${reportPeriod === 'custom' ? '#e7f3ff' : '#fff'}; color: ${reportPeriod === 'custom' ? '#007bff' : '#666'}; border-radius: 4px; cursor: pointer; font-weight: ${reportPeriod === 'custom' ? '600' : '400'};">
-                        🔧 Custom Period
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle;">
+                            <circle cx="12" cy="12" r="3"></circle>
+                            <path d="M12 1v6m0 6v6m9-9h-6M8 12H2m15.36-6.36l-4.24 4.24m0 4.24l4.24 4.24M6.64 17.64l4.24-4.24m0-4.24L6.64 6.64"></path>
+                        </svg>
+                        Custom Period
                     </button>
                 </div>
             </div>
@@ -2027,7 +2176,33 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
 
                         <div style="padding: 1rem; background: ${isOverTarget ? '#d4edda' : (percentage >= 80 ? '#fff3cd' : '#f8d7da')}; border-radius: 6px; border-left: 4px solid ${progressColor};">
                             <div style="font-weight: 600; color: ${isOverTarget ? '#155724' : (percentage >= 80 ? '#856404' : '#721c24')}; margin-bottom: 0.25rem;">
-                                ${isOverTarget ? '✅ Target Achieved!' : (percentage >= 80 ? '⚠️ Close to Target' : '❌ Below Target')}
+                                ${isOverTarget ? `
+                                    <span style="display: inline-flex; align-items: center; gap: 0.25rem;">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                                            <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                                        </svg>
+                                        Target Achieved!
+                                    </span>
+                                ` : (percentage >= 80 ? `
+                                    <span style="display: inline-flex; align-items: center; gap: 0.25rem;">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                                            <line x1="12" y1="9" x2="12" y2="13"></line>
+                                            <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                                        </svg>
+                                        Close to Target
+                                    </span>
+                                ` : `
+                                    <span style="display: inline-flex; align-items: center; gap: 0.25rem;">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <circle cx="12" cy="12" r="10"></circle>
+                                            <line x1="15" y1="9" x2="9" y2="15"></line>
+                                            <line x1="9" y1="9" x2="15" y2="15"></line>
+                                        </svg>
+                                        Below Target
+                                    </span>
+                                `)}
                             </div>
                             <div style="color: ${isOverTarget ? '#155724' : (percentage >= 80 ? '#856404' : '#721c24')}; font-size: 0.9rem;">
                                 ${isOverTarget
@@ -2130,8 +2305,13 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
             <!-- Export Options -->
             <div style="background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
                 <h2 style="margin: 0 0 1rem 0; font-size: 1.2rem; color: #333;">Export Report</h2>
-                <button id="export-report-csv-btn" style="padding: 0.75rem 1.5rem; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600;">
-                    📥 Export to CSV
+                <button id="export-report-csv-btn" style="padding: 0.75rem 1.5rem; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; display: inline-flex; align-items: center; gap: 0.5rem;">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="7 10 12 15 17 10"></polyline>
+                        <line x1="12" y1="15" x2="12" y2="3"></line>
+                    </svg>
+                    Export to CSV
                 </button>
             </div>
         `;
