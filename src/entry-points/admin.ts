@@ -10,6 +10,7 @@ import {
     updateCustomDataValue,
     deleteCustomDataValue,
 } from '../utils/kv-store';
+import { churchtoolsClient } from '@churchtools/churchtools-client';
 
 /**
  * Time Tracker Admin Configuration
@@ -24,6 +25,7 @@ interface WorkCategory {
     id: string;
     name: string;
     color: string;
+    kvStoreId?: number; // KV-Store ID for updates/deletes
 }
 
 interface Settings {
@@ -32,9 +34,6 @@ interface Settings {
 }
 
 const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) => {
-    console.log('[TimeTracker Admin] Initializing');
-    console.log('[TimeTracker Admin] Extension info:', data.extensionInfo);
-
     let moduleId: number | null = null;
     let workCategoriesCategory: CustomModuleDataCategory | null = null;
     let settingsCategory: CustomModuleDataCategory | null = null;
@@ -46,6 +45,12 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
     let errorMessage = '';
     let showAddCategory = false;
     let editingCategory: WorkCategory | null = null;
+
+    // Deletion dialog state
+    let showDeleteDialog = false;
+    let categoryToDelete: WorkCategory | null = null;
+    let replacementCategoryId: string = '';
+    let affectedEntriesCount: number = 0;
 
     // Initialize and load settings
     async function initialize() {
@@ -60,7 +65,6 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                 data.extensionInfo?.description || 'Time tracking for church employees'
             );
             moduleId = extensionModule.id;
-            console.log('[TimeTracker Admin] Extension module:', extensionModule);
 
             // Get or create categories
             workCategoriesCategory = await getOrCreateCategory(
@@ -73,6 +77,9 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                 'Settings',
                 'Extension configuration settings'
             );
+
+            // One-time cleanup: Remove old default categories
+            await removeOldDefaultCategories();
 
             // Load data
             await Promise.all([loadWorkCategories(), loadSettings()]);
@@ -99,8 +106,6 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
             return existing;
         }
 
-        console.log(`[TimeTracker Admin] Creating category: ${shorty}`);
-
         const created = await createCustomDataCategory(
             {
                 customModuleId: moduleId!,
@@ -118,43 +123,67 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
         return created;
     }
 
-    // Load work categories
-    async function loadWorkCategories(): Promise<void> {
+    // One-time cleanup: Remove old default categories
+    async function removeOldDefaultCategories(): Promise<void> {
         try {
             const values = await getCustomDataValues<WorkCategory>(
                 workCategoriesCategory!.id,
                 moduleId!
             );
 
-            if (values.length > 0) {
-                workCategories = values;
-            } else {
-                // Create default categories
-                const defaultCategories = [
-                    { id: 'office', name: 'Office Work', color: '#007bff' },
-                    { id: 'pastoral', name: 'Pastoral Care', color: '#28a745' },
-                    { id: 'event', name: 'Event Preparation', color: '#ffc107' },
-                    { id: 'administration', name: 'Administration', color: '#6c757d' },
-                ];
+            const categoriesToRemove = ['Office Work', 'Pastoral Care', 'Event Preparation', 'Administration'];
+            let removedCount = 0;
 
-                // Save default categories
-                for (const category of defaultCategories) {
-                    await createCustomDataValue(
-                        {
-                            dataCategoryId: workCategoriesCategory!.id,
-                            value: JSON.stringify(category),
-                        },
-                        moduleId!
-                    );
+            for (const value of values) {
+                if (categoriesToRemove.includes(value.name)) {
+                    const kvStoreId = (value as any).id;
+                    if (kvStoreId && typeof kvStoreId === 'number') {
+                        try {
+                            await deleteCustomDataValue(
+                                workCategoriesCategory!.id,
+                                kvStoreId,
+                                moduleId!
+                            );
+                            console.log(`[TimeTracker Admin] Removed old default category: ${value.name} (ID: ${kvStoreId})`);
+                            removedCount++;
+                        } catch (deleteError) {
+                            console.error(`[TimeTracker Admin] Failed to delete ${value.name}:`, deleteError);
+                        }
+                    }
                 }
-
-                // IMPORTANT: Reload from KV store to get the proper IDs
-                const reloadedValues = await getCustomDataValues<WorkCategory>(
-                    workCategoriesCategory!.id,
-                    moduleId!
-                );
-                workCategories = reloadedValues;
             }
+
+            if (removedCount > 0) {
+                console.log(`[TimeTracker Admin] Cleanup complete. Removed ${removedCount} old default categories.`);
+            }
+        } catch (error) {
+            console.error('[TimeTracker Admin] Failed to remove old categories:', error);
+        }
+    }
+
+    // Load work categories
+    async function loadWorkCategories(): Promise<void> {
+        try {
+            // Call API directly to get raw values (we need the unparsed "value" field)
+            const rawValues: Array<{ id: number; dataCategoryId: number; value: string }> =
+                await (churchtoolsClient as any).get(
+                    `/custommodules/${moduleId}/customdatacategories/${workCategoriesCategory!.id}/customdatavalues`
+                );
+
+            // Parse each value and preserve both string ID and numeric kvStoreId
+            workCategories = rawValues.map(rawVal => {
+                const kvStoreId = rawVal.id; // Numeric KV-Store ID
+                const parsedCategory = JSON.parse(rawVal.value) as WorkCategory;
+
+                return {
+                    id: parsedCategory.id, // String ID from stored data
+                    name: parsedCategory.name,
+                    color: parsedCategory.color,
+                    kvStoreId: kvStoreId // Numeric KV-Store ID for updates/deletes
+                };
+            });
+
+            console.log('[TimeTracker Admin] Loaded categories:', workCategories);
         } catch (error) {
             console.error('[TimeTracker Admin] Failed to load categories:', error);
             workCategories = [];
@@ -225,30 +254,26 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
     // Add or update category
     async function saveCategory(category: WorkCategory): Promise<void> {
         try {
-            const values = await getCustomDataValues<WorkCategory>(
-                workCategoriesCategory!.id,
-                moduleId!
-            );
+            // Prepare data without kvStoreId (that's metadata, not part of the stored value)
+            const { kvStoreId, ...categoryData } = category;
+            const valueData = JSON.stringify(categoryData);
 
-            const valueData = JSON.stringify(category);
-            const existing = values.find((v) => v.id === category.id);
-
-            if (existing) {
-                // Update existing
+            if (kvStoreId) {
+                // Update existing - we have a kvStoreId
                 await updateCustomDataValue(
                     workCategoriesCategory!.id,
-                    (existing as any).id,
+                    kvStoreId,
                     { value: valueData },
                     moduleId!
                 );
 
                 // Update in local array
-                const index = workCategories.findIndex((c) => c.id === category.id);
+                const index = workCategories.findIndex((c) => c.kvStoreId === kvStoreId);
                 if (index !== -1) {
                     workCategories[index] = category;
                 }
             } else {
-                // Create new
+                // Create new - no kvStoreId yet
                 await createCustomDataValue(
                     {
                         dataCategoryId: workCategoriesCategory!.id,
@@ -257,7 +282,8 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                     moduleId!
                 );
 
-                workCategories.push(category);
+                // Reload to get the kvStoreId from the database
+                await loadWorkCategories();
             }
         } catch (error) {
             console.error('[TimeTracker Admin] Failed to save category:', error);
@@ -265,25 +291,168 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
         }
     }
 
-    // Delete category
-    async function deleteCategory(categoryId: string): Promise<void> {
+    // Check how many time entries use a specific category
+    async function countEntriesUsingCategory(categoryId: string): Promise<number> {
         try {
-            const values = await getCustomDataValues<WorkCategory>(
-                workCategoriesCategory!.id,
+            const timeEntriesCategory = await getCustomDataCategory<object>('timeentries');
+            if (!timeEntriesCategory) return 0;
+
+            const timeEntries = await getCustomDataValues<{ categoryId: string }>(
+                timeEntriesCategory.id,
                 moduleId!
             );
 
-            const existing = values.find((v) => v.id === categoryId);
+            return timeEntries.filter(entry => entry.categoryId === categoryId).length;
+        } catch (error) {
+            console.error('[TimeTracker Admin] Failed to count entries:', error);
+            return 0;
+        }
+    }
 
-            if (existing) {
+    // Reassign all time entries from one category to another
+    async function reassignTimeEntries(fromCategoryId: string, toCategoryId: string): Promise<void> {
+        try {
+            const timeEntriesCategory = await getCustomDataCategory<object>('timeentries');
+            if (!timeEntriesCategory) return;
+
+            // Get raw values to access kvStoreId
+            const rawValues: Array<{ id: number; dataCategoryId: number; value: string }> =
+                await (churchtoolsClient as any).get(
+                    `/custommodules/${moduleId}/customdatacategories/${timeEntriesCategory.id}/customdatavalues`
+                );
+
+            const toCategory = workCategories.find(c => c.id === toCategoryId);
+            if (!toCategory) {
+                throw new Error('Replacement category not found');
+            }
+
+            let updatedCount = 0;
+
+            for (const rawVal of rawValues) {
+                const entry = JSON.parse(rawVal.value);
+
+                if (entry.categoryId === fromCategoryId) {
+                    // Update the entry with new category
+                    entry.categoryId = toCategoryId;
+                    entry.categoryName = toCategory.name;
+
+                    await updateCustomDataValue(
+                        timeEntriesCategory.id,
+                        rawVal.id,
+                        { value: JSON.stringify(entry) },
+                        moduleId!
+                    );
+
+                    updatedCount++;
+                }
+            }
+
+            console.log(`[TimeTracker Admin] Reassigned ${updatedCount} entries from ${fromCategoryId} to ${toCategoryId}`);
+        } catch (error) {
+            console.error('[TimeTracker Admin] Failed to reassign entries:', error);
+            throw error;
+        }
+    }
+
+    // Initiate category deletion (check for usage first)
+    async function initiateDeleteCategory(categoryId: string): Promise<void> {
+        try {
+            const category = workCategories.find((c) => c.id === categoryId);
+            if (!category) {
+                throw new Error('Category not found');
+            }
+
+            // Check if any entries use this category
+            affectedEntriesCount = await countEntriesUsingCategory(categoryId);
+
+            if (affectedEntriesCount > 0) {
+                // Show dialog to select replacement category
+                categoryToDelete = category;
+                showDeleteDialog = true;
+                replacementCategoryId = workCategories.find(c => c.id !== categoryId)?.id || '';
+                render();
+            } else {
+                // No entries using this category, delete immediately
+                await deleteCategory(categoryId);
+                emit('notification', {
+                    message: 'Category deleted successfully!',
+                    type: 'success',
+                    duration: 3000,
+                });
+                render();
+            }
+        } catch (error) {
+            console.error('[TimeTracker Admin] Failed to initiate delete:', error);
+            emit('notification', {
+                message: 'Failed to delete category',
+                type: 'error',
+                duration: 3000,
+            });
+        }
+    }
+
+    // Confirm deletion with reassignment
+    async function confirmDeleteCategory(): Promise<void> {
+        try {
+            if (!categoryToDelete || !replacementCategoryId) {
+                throw new Error('Missing category information');
+            }
+
+            // Reassign all entries first
+            await reassignTimeEntries(categoryToDelete.id, replacementCategoryId);
+
+            // Then delete the category
+            await deleteCategory(categoryToDelete.id);
+
+            // Reset dialog state
+            showDeleteDialog = false;
+            categoryToDelete = null;
+            replacementCategoryId = '';
+            affectedEntriesCount = 0;
+
+            emit('notification', {
+                message: 'Category deleted and entries reassigned successfully!',
+                type: 'success',
+                duration: 3000,
+            });
+
+            render();
+        } catch (error) {
+            console.error('[TimeTracker Admin] Failed to confirm delete:', error);
+            emit('notification', {
+                message: 'Failed to delete category',
+                type: 'error',
+                duration: 3000,
+            });
+        }
+    }
+
+    // Cancel deletion
+    function cancelDeleteCategory(): void {
+        showDeleteDialog = false;
+        categoryToDelete = null;
+        replacementCategoryId = '';
+        affectedEntriesCount = 0;
+        render();
+    }
+
+    // Delete category (internal function - only called after checks)
+    async function deleteCategory(categoryId: string): Promise<void> {
+        try {
+            // Find the category in our local array (which has kvStoreId)
+            const category = workCategories.find((c) => c.id === categoryId);
+
+            if (category && category.kvStoreId) {
                 await deleteCustomDataValue(
                     workCategoriesCategory!.id,
-                    (existing as any).id,
+                    category.kvStoreId,
                     moduleId!
                 );
 
                 // Remove from local array
                 workCategories = workCategories.filter((c) => c.id !== categoryId);
+            } else {
+                throw new Error('Category not found or missing kvStoreId');
             }
         } catch (error) {
             console.error('[TimeTracker Admin] Failed to delete category:', error);
@@ -494,6 +663,58 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                         : ''
                 }
 
+                ${
+                    showDeleteDialog && categoryToDelete
+                        ? `
+                    <!-- Delete Confirmation Dialog -->
+                    <div style="background: #fff3cd; border: 2px solid #ffc107; border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem;">
+                        <h3 style="margin: 0 0 1rem 0; color: #856404;">
+                            ⚠️ Kategorie wird verwendet
+                        </h3>
+
+                        <p style="color: #856404; margin-bottom: 1rem;">
+                            Die Kategorie <strong>"${categoryToDelete.name}"</strong> wird von <strong>${affectedEntriesCount}</strong>
+                            ${affectedEntriesCount === 1 ? 'Zeiteintrag' : 'Zeiteinträgen'} verwendet.
+                        </p>
+
+                        <p style="color: #856404; margin-bottom: 1rem;">
+                            Bitte wähle eine Ersatzkategorie aus, der diese Einträge zugewiesen werden sollen, bevor die Kategorie gelöscht wird:
+                        </p>
+
+                        <div style="margin-bottom: 1rem;">
+                            <label style="display: block; margin-bottom: 0.5rem; color: #856404; font-weight: 600;">
+                                Ersatzkategorie
+                            </label>
+                            <select
+                                id="replacement-category-select"
+                                style="width: 100%; padding: 0.75rem; border: 1px solid #ffc107; border-radius: 4px; background: white;"
+                            >
+                                ${workCategories
+                                    .filter(c => c.id !== categoryToDelete!.id)
+                                    .map(c => `<option value="${c.id}" ${c.id === replacementCategoryId ? 'selected' : ''}>${c.name}</option>`)
+                                    .join('')}
+                            </select>
+                        </div>
+
+                        <div style="display: flex; gap: 0.5rem;">
+                            <button
+                                id="confirm-delete-btn"
+                                style="padding: 0.75rem 1.5rem; background: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600;"
+                            >
+                                🗑️ Kategorie löschen und Einträge neu zuweisen
+                            </button>
+                            <button
+                                id="cancel-delete-btn"
+                                style="padding: 0.75rem 1.5rem; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer;"
+                            >
+                                Abbrechen
+                            </button>
+                        </div>
+                    </div>
+                `
+                        : ''
+                }
+
                 <!-- Categories List -->
                 ${
                     workCategories.length === 0
@@ -585,6 +806,74 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                 colorPicker.value = color;
             }
         });
+
+        // Edit/Delete category buttons
+        const editCategoryBtns = element.querySelectorAll('.edit-category-btn');
+        const deleteCategoryBtns = element.querySelectorAll('.delete-category-btn');
+
+        editCategoryBtns.forEach((btn) => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                e.preventDefault();
+
+                const target = e.currentTarget as HTMLElement;
+                const categoryId = target.dataset.categoryId;
+                console.log('[TimeTracker Admin] Edit button clicked, categoryId:', categoryId);
+                console.log('[TimeTracker Admin] Available categories:', workCategories);
+
+                const category = workCategories.find((c) => c.id === categoryId);
+                console.log('[TimeTracker Admin] Found category:', category);
+
+                if (category) {
+                    editingCategory = { ...category }; // Create a copy
+                    showAddCategory = false;
+                    render();
+                } else {
+                    console.error('[TimeTracker Admin] Category not found for ID:', categoryId);
+                    alert('Category not found. Please refresh the page.');
+                }
+            });
+        });
+
+        deleteCategoryBtns.forEach((btn) => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                e.preventDefault();
+
+                const target = e.currentTarget as HTMLElement;
+                const categoryId = target.dataset.categoryId;
+                console.log('[TimeTracker Admin] Delete button clicked, categoryId:', categoryId);
+
+                if (categoryId) {
+                    initiateDeleteCategory(categoryId);
+                } else {
+                    console.error('[TimeTracker Admin] Category ID not found');
+                    alert('Category not found. Please refresh the page.');
+                }
+            });
+        });
+
+        // Delete dialog handlers
+        const confirmDeleteBtn = element.querySelector('#confirm-delete-btn');
+        if (confirmDeleteBtn) {
+            confirmDeleteBtn.addEventListener('click', () => {
+                confirmDeleteCategory();
+            });
+        }
+
+        const cancelDeleteBtn = element.querySelector('#cancel-delete-btn');
+        if (cancelDeleteBtn) {
+            cancelDeleteBtn.addEventListener('click', () => {
+                cancelDeleteCategory();
+            });
+        }
+
+        const replacementCategorySelect = element.querySelector('#replacement-category-select') as HTMLSelectElement;
+        if (replacementCategorySelect) {
+            replacementCategorySelect.addEventListener('change', (e) => {
+                replacementCategoryId = (e.target as HTMLSelectElement).value;
+            });
+        }
     }
 
     // Handle save general settings
@@ -687,6 +976,7 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                 id: categoryId,
                 name: nameInput.value.trim(),
                 color: colorInput.value,
+                kvStoreId: editingCategory?.kvStoreId, // Preserve kvStoreId for updates
             };
 
             await saveCategory(category);
@@ -733,70 +1023,9 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
     // Initialize on load
     initialize();
 
-    // Setup event delegation for edit/delete category buttons
-    // This MUST be after initialize() so the element is populated
-    // Using setTimeout to ensure DOM is ready
-    setTimeout(() => {
-        element.addEventListener('click', (e) => {
-            const target = e.target as HTMLElement;
-
-            console.log('[TimeTracker Admin] Click detected on:', target);
-
-            // Check if clicked element or its parent is an edit button
-            const editBtn = target.closest('.edit-category-btn') as HTMLElement;
-            if (editBtn) {
-                console.log('[TimeTracker Admin] Edit button clicked');
-                const categoryId = editBtn.dataset.categoryId;
-                console.log('[TimeTracker Admin] Category ID:', categoryId);
-                const category = workCategories.find((c) => c.id === categoryId);
-                if (category) {
-                    console.log('[TimeTracker Admin] Found category:', category);
-                    editingCategory = category;
-                    showAddCategory = false;
-                    render();
-                }
-                e.stopPropagation();
-                e.preventDefault();
-                return;
-            }
-
-            // Check if clicked element or its parent is a delete button
-            const deleteBtn = target.closest('.delete-category-btn') as HTMLElement;
-            if (deleteBtn) {
-                console.log('[TimeTracker Admin] Delete button clicked');
-                const categoryId = deleteBtn.dataset.categoryId;
-                const category = workCategories.find((c) => c.id === categoryId);
-
-                if (
-                    category &&
-                    confirm(
-                        `Are you sure you want to delete the category "${category.name}"?\n\nNote: Existing time entries with this category will not be deleted.`
-                    )
-                ) {
-                    console.log('[TimeTracker Admin] Deleting category:', categoryId);
-                    deleteCategory(categoryId!).then(() => {
-                        emit('notification:show', {
-                            message: 'Category deleted successfully!',
-                            type: 'success',
-                            duration: 3000,
-                        });
-                        render();
-                    }).catch((error) => {
-                        console.error('[TimeTracker Admin] Delete failed:', error);
-                        alert('Failed to delete category. Please try again.');
-                    });
-                }
-                e.stopPropagation();
-                e.preventDefault();
-                return;
-            }
-        });
-        console.log('[TimeTracker Admin] Event delegation setup complete');
-    }, 100);
-
     // Cleanup function
     return () => {
-        console.log('[TimeTracker Admin] Cleaning up');
+        // No cleanup needed
     };
 };
 

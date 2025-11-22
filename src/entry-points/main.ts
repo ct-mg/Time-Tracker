@@ -1,6 +1,7 @@
 import type { EntryPoint } from '../lib/main';
 import type { MainModuleData } from '@churchtools/extension-points/main';
-import type { Absence } from '../utils/ct-types';
+import type { Absence, AbsenceReason } from '../utils/ct-types';
+import * as XLSX from 'xlsx';
 import {
     getModule,
     getCustomDataCategory,
@@ -38,6 +39,7 @@ interface WorkCategory {
     id: string;
     name: string;
     color: string;
+    kvStoreId?: number; // Optional: KV-Store ID (used in admin)
 }
 
 interface Settings {
@@ -51,14 +53,13 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
     user,
     KEY,
 }) => {
-    console.log('[TimeTracker] Initializing for user:', user?.id);
-
     // State
     let timeEntries: TimeEntry[] = [];
     let workCategories: WorkCategory[] = [];
     let settings: Settings = { defaultHoursPerDay: 8, defaultHoursPerWeek: 40 };
     let currentEntry: TimeEntry | null = null;
     let absences: Absence[] = [];
+    let absenceReasons: AbsenceReason[] = [];
     let isLoading = true;
     let errorMessage = '';
     let moduleId: number | null = null;
@@ -74,6 +75,32 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
     let currentView: 'dashboard' | 'entries' | 'absences' | 'reports' = 'dashboard';
     let showAddManualEntry = false;
     let editingEntry: TimeEntry | null = null;
+    let showBulkEntry = false;
+    let reportPeriod: 'week' | 'month' | 'year' | 'custom' = 'custom';
+    let showAddAbsence = false;
+    let editingAbsence: Absence | null = null;
+
+    // Bulk entry rows
+    interface BulkEntryRow {
+        id: number;
+        startDate: string;
+        startTime: string;
+        endDate: string;
+        endTime: string;
+        categoryId: string;
+        description: string;
+    }
+    let bulkEntryRows: BulkEntryRow[] = [];
+    let nextBulkRowId = 1;
+
+    // Pagination for entries
+    let entriesPage = 1;
+    const ENTRIES_PER_PAGE = 50;
+
+    // Cache for filtered entries and stats
+    let cachedFilteredEntries: TimeEntry[] | null = null;
+    let cachedStats: any | null = null;
+    let lastFilterState = '';
 
     // Initialize
     async function initialize() {
@@ -91,6 +118,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                 loadSettings(),
                 loadTimeEntries(),
                 loadAbsences(),
+                loadAbsenceReasons(),
             ]);
 
             // Check if there's a currently active entry
@@ -119,8 +147,21 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
         try {
             const category = await getCustomDataCategory<object>('workcategories');
             if (category) {
-                const values = await getCustomDataValues<WorkCategory>(category.id, moduleId!);
-                workCategories = values;
+                // Call API directly to get raw values (we need the unparsed "value" field)
+                const rawValues: Array<{ id: number; dataCategoryId: number; value: string }> =
+                    await churchtoolsClient.get(
+                        `/custommodules/${moduleId}/customdatacategories/${category.id}/customdatavalues`
+                    );
+
+                // Parse each value and preserve the string ID
+                workCategories = rawValues.map(rawVal => {
+                    const parsedCategory = JSON.parse(rawVal.value) as WorkCategory;
+                    return {
+                        id: parsedCategory.id, // String ID from stored data
+                        name: parsedCategory.name,
+                        color: parsedCategory.color
+                    };
+                });
             } else {
                 // Default categories if none exist
                 workCategories = [
@@ -156,8 +197,24 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
         try {
             const category = await getCustomDataCategory<object>('timeentries');
             if (category) {
-                const values = await getCustomDataValues<TimeEntry>(category.id, moduleId!);
-                timeEntries = values.sort(
+                // Call API directly to get raw values to preserve correct data
+                const rawValues: Array<{ id: number; dataCategoryId: number; value: string }> =
+                    await churchtoolsClient.get(
+                        `/custommodules/${moduleId}/customdatacategories/${category.id}/customdatavalues`
+                    );
+
+                // Parse each value and update categoryName from current categories
+                timeEntries = rawValues.map(rawVal => {
+                    const entry = JSON.parse(rawVal.value) as TimeEntry;
+
+                    // Update categoryName from current categories (in case it was renamed)
+                    const currentCategory = workCategories.find(c => c.id === entry.categoryId);
+                    if (currentCategory) {
+                        entry.categoryName = currentCategory.name;
+                    }
+
+                    return entry;
+                }).sort(
                     (a, b) =>
                         new Date(b.startTime).getTime() - new Date(a.startTime).getTime()
                 );
@@ -193,10 +250,112 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                 `/persons/${user.id}/absences`
             );
             absences = response || [];
-            console.log('[TimeTracker] Loaded absences:', absences.length);
         } catch (error) {
             console.error('[TimeTracker] Failed to load absences:', error);
             absences = [];
+        }
+    }
+
+    // Load absence reasons from ChurchTools API
+    async function loadAbsenceReasons(): Promise<void> {
+        try {
+            const response = await churchtoolsClient.get<AbsenceReason[]>('/absencereasons');
+            absenceReasons = response || [];
+        } catch (error) {
+            console.error('[TimeTracker] Failed to load absence reasons:', error);
+            absenceReasons = [];
+        }
+    }
+
+    // Create absence
+    async function createAbsence(data: {
+        absenceReasonId: number;
+        comment: string;
+        startDate: string;
+        endDate: string;
+        startTime?: string;
+        endTime?: string;
+    }) {
+        if (!user?.id) return;
+
+        try {
+            const isAllDay = !data.startTime || !data.endTime;
+            const payload: any = {
+                personId: user.id,
+                absenceReasonId: data.absenceReasonId,
+                comment: data.comment || null,
+                startDate: data.startDate,
+                endDate: data.endDate,
+            };
+
+            if (!isAllDay) {
+                payload.startTime = data.startTime;
+                payload.endTime = data.endTime;
+            }
+
+            await churchtoolsClient.post(`/persons/${user.id}/absences`, payload);
+            await loadAbsences();
+            showAddAbsence = false;
+            render();
+            alert('Absence created successfully!');
+        } catch (error) {
+            console.error('[TimeTracker] Failed to create absence:', error);
+            alert('Failed to create absence. Please try again.');
+        }
+    }
+
+    // Update absence
+    async function updateAbsence(
+        absenceId: number,
+        data: {
+            absenceReasonId: number;
+            comment: string;
+            startDate: string;
+            endDate: string;
+            startTime?: string;
+            endTime?: string;
+        }
+    ) {
+        if (!user?.id) return;
+
+        try {
+            const isAllDay = !data.startTime || !data.endTime;
+            const payload: any = {
+                absenceReasonId: data.absenceReasonId,
+                comment: data.comment || null,
+                startDate: data.startDate,
+                endDate: data.endDate,
+            };
+
+            if (!isAllDay) {
+                payload.startTime = data.startTime;
+                payload.endTime = data.endTime;
+            }
+
+            await churchtoolsClient.put(`/persons/${user.id}/absences/${absenceId}`, payload);
+            await loadAbsences();
+            editingAbsence = null;
+            render();
+            alert('Absence updated successfully!');
+        } catch (error) {
+            console.error('[TimeTracker] Failed to update absence:', error);
+            alert('Failed to update absence. Please try again.');
+        }
+    }
+
+    // Delete absence
+    async function deleteAbsence(absenceId: number) {
+        if (!user?.id) return;
+
+        try {
+            // Use the generic request method with DELETE
+            await (churchtoolsClient as any).request('DELETE', `/persons/${user.id}/absences/${absenceId}`);
+            await loadAbsences();
+            render();
+            alert('Absence deleted successfully!');
+        } catch (error) {
+            console.error('[TimeTracker] Failed to delete absence:', error);
+            alert('Failed to delete absence. Please try again.');
         }
     }
 
@@ -272,7 +431,6 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                 throw new Error(`Invalid KV store ID: ${kvStoreId}`);
             }
 
-            console.log('[TimeTracker] Updating time entry with KV store ID:', kvStoreId);
             await updateCustomDataValue(
                 cat.id,
                 kvStoreId,
@@ -328,6 +486,441 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
         }
     }
 
+    // Bulk entry management
+    function addBulkEntryRow() {
+        const now = new Date();
+        const dateStr = now.toISOString().split('T')[0];
+        const timeStr = now.toTimeString().slice(0, 5);
+
+        bulkEntryRows.push({
+            id: nextBulkRowId++,
+            startDate: dateStr,
+            startTime: timeStr,
+            endDate: dateStr,
+            endTime: timeStr,
+            categoryId: workCategories[0]?.id || '',
+            description: '',
+        });
+        render();
+    }
+
+    function removeBulkEntryRow(rowId: number) {
+        bulkEntryRows = bulkEntryRows.filter(row => row.id !== rowId);
+        render();
+    }
+
+    function updateBulkEntryRow(rowId: number, field: keyof BulkEntryRow, value: string) {
+        const row = bulkEntryRows.find(r => r.id === rowId);
+        if (row && field !== 'id') {
+            (row as any)[field] = value;
+        }
+    }
+
+    async function saveBulkEntries() {
+        if (bulkEntryRows.length === 0) {
+            showNotification('No entries to save.', 'warning');
+            return;
+        }
+
+        // Validate all rows
+        const invalidRows: number[] = [];
+        const invalidCategories: string[] = [];
+
+        for (let i = 0; i < bulkEntryRows.length; i++) {
+            const row = bulkEntryRows[i];
+
+            // Check required fields
+            if (!row.startDate || !row.startTime || !row.endDate || !row.endTime) {
+                showNotification('All date and time fields are required.', 'error');
+                return;
+            }
+
+            // Check time validity
+            const start = new Date(`${row.startDate}T${row.startTime}`);
+            const end = new Date(`${row.endDate}T${row.endTime}`);
+
+            if (end <= start) {
+                showNotification('End time must be after start time for all entries.', 'error');
+                return;
+            }
+
+            // Check if category exists
+            const category = workCategories.find((c) => c.id === row.categoryId);
+            if (!category) {
+                invalidRows.push(i + 1);
+                if (!invalidCategories.includes(row.categoryId)) {
+                    invalidCategories.push(row.categoryId);
+                }
+            }
+        }
+
+        // If there are invalid categories, show error
+        if (invalidRows.length > 0) {
+            const availableCategoryIds = workCategories.map(c => `"${c.id}"`).join(', ');
+            showNotification(
+                `Invalid category IDs in row(s) ${invalidRows.join(', ')}: ${invalidCategories.join(', ')}. Available: ${availableCategoryIds}`,
+                'error',
+                7000
+            );
+            return;
+        }
+
+        try {
+            const cat = await getCustomDataCategory<object>('timeentries');
+            if (!cat) {
+                throw new Error('Time entries category not found');
+            }
+
+            let savedCount = 0;
+
+            // Save all entries
+            for (const row of bulkEntryRows) {
+                const category = workCategories.find((c) => c.id === row.categoryId);
+                const newEntry: TimeEntry = {
+                    userId: user?.id!,
+                    startTime: new Date(`${row.startDate}T${row.startTime}`).toISOString(),
+                    endTime: new Date(`${row.endDate}T${row.endTime}`).toISOString(),
+                    categoryId: row.categoryId,
+                    categoryName: category!.name, // We know category exists due to validation above
+                    description: row.description,
+                    isManual: true,
+                    createdAt: new Date().toISOString(),
+                };
+
+                console.log('[TimeTracker] Saving bulk entry:', newEntry);
+
+                await createCustomDataValue(
+                    {
+                        dataCategoryId: cat.id,
+                        value: JSON.stringify(newEntry),
+                    },
+                    moduleId!
+                );
+
+                savedCount++;
+            }
+
+            // Clear bulk entries and close form
+            bulkEntryRows = [];
+            showBulkEntry = false;
+
+            // Reload all entries from database to ensure consistency
+            await loadTimeEntries();
+
+            render();
+
+            // Only show success message if entries were actually saved
+            if (savedCount > 0) {
+                showNotification(`Successfully saved ${savedCount} ${savedCount === 1 ? 'entry' : 'entries'}!`, 'success');
+            } else {
+                showNotification('No entries were saved.', 'warning');
+            }
+        } catch (error) {
+            console.error('[TimeTracker] Failed to save bulk entries:', error);
+            showNotification('Failed to save entries. Please try again.', 'error');
+        }
+    }
+
+    // Download Excel template
+    function downloadExcelTemplate() {
+        if (workCategories.length === 0) {
+            showNotification('No categories available. Please create categories in the Admin panel first.', 'error');
+            return;
+        }
+
+        // Create worksheet data with headers and example row
+        const firstCategoryId = workCategories[0]?.id || '';
+        const worksheetData = [
+            ['Start Date', 'Start Time', 'End Date', 'End Time', 'Category ID', 'Description'],
+            ['2025-01-20', '09:00', '2025-01-20', '17:00', firstCategoryId, 'Example work entry'],
+        ];
+
+        // Create worksheet
+        const worksheet = XLSX.utils.aoa_to_sheet(worksheetData);
+
+        // Set column widths
+        worksheet['!cols'] = [
+            { wch: 15 },  // Start Date
+            { wch: 12 },  // Start Time
+            { wch: 15 },  // End Date
+            { wch: 12 },  // End Time
+            { wch: 20 },  // Category ID
+            { wch: 40 },  // Description
+        ];
+
+        // Create workbook
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, 'Time Entries');
+
+        // Add a second sheet with category reference (for copy/paste)
+        const categoriesData = [
+            ['Category Name', 'Category ID (copy this to Time Entries sheet)', 'Color'],
+            ...workCategories.map(cat => [cat.name, cat.id, cat.color])
+        ];
+        const categoriesSheet = XLSX.utils.aoa_to_sheet(categoriesData);
+        categoriesSheet['!cols'] = [{ wch: 25 }, { wch: 45 }, { wch: 15 }];
+        XLSX.utils.book_append_sheet(workbook, categoriesSheet, 'Available Categories');
+
+        // Generate Excel file and trigger download
+        XLSX.writeFile(workbook, `TimeTracker_Template_${new Date().toISOString().split('T')[0]}.xlsx`);
+
+        showNotification('Excel template downloaded! Check the "Available Categories" sheet for valid category IDs.', 'success', 5000);
+    }
+
+    // Import from Excel
+    function importFromExcel(file: File) {
+        const reader = new FileReader();
+
+        reader.onload = (e) => {
+            try {
+                const data = e.target?.result;
+                const workbook = XLSX.read(data, { type: 'binary' });
+
+                // Read first sheet
+                const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                const rows = XLSX.utils.sheet_to_json<any>(firstSheet, { header: 1 });
+
+                // Skip header row
+                const dataRows = rows.slice(1);
+
+                if (dataRows.length === 0) {
+                    showNotification('No data found in Excel file.', 'error');
+                    return;
+                }
+
+                // Clear existing rows and ensure bulk entry is shown
+                bulkEntryRows = [];
+                nextBulkRowId = 1;
+                showBulkEntry = true;
+                showAddManualEntry = false;
+                editingEntry = null;
+
+                // Parse each row
+                let importedCount = 0;
+                let skippedCount = 0;
+
+                for (const row of dataRows) {
+                    // Skip empty rows
+                    if (!row[0] && !row[1] && !row[2] && !row[3]) continue;
+
+                    const startDate = row[0] ? String(row[0]) : '';
+                    const startTime = row[1] ? String(row[1]) : '';
+                    const endDate = row[2] ? String(row[2]) : '';
+                    const endTime = row[3] ? String(row[3]) : '';
+                    const categoryIdOrName = row[4] ? String(row[4]).trim() : '';
+                    const description = row[5] ? String(row[5]) : '';
+
+                    // Validate required fields
+                    if (!startDate || !startTime || !endDate || !endTime) {
+                        skippedCount++;
+                        continue;
+                    }
+
+                    // Parse date if it's an Excel serial date
+                    let parsedStartDate = startDate;
+                    let parsedEndDate = endDate;
+
+                    // Check if it's a number (Excel serial date)
+                    if (!isNaN(Number(startDate))) {
+                        const date = XLSX.SSF.parse_date_code(Number(startDate));
+                        parsedStartDate = `${date.y}-${String(date.m).padStart(2, '0')}-${String(date.d).padStart(2, '0')}`;
+                    } else if (startDate.includes('/')) {
+                        // Convert MM/DD/YYYY or DD/MM/YYYY to YYYY-MM-DD
+                        const parts = startDate.split('/');
+                        if (parts.length === 3) {
+                            parsedStartDate = `${parts[2]}-${parts[0].padStart(2, '0')}-${parts[1].padStart(2, '0')}`;
+                        }
+                    }
+
+                    if (!isNaN(Number(endDate))) {
+                        const date = XLSX.SSF.parse_date_code(Number(endDate));
+                        parsedEndDate = `${date.y}-${String(date.m).padStart(2, '0')}-${String(date.d).padStart(2, '0')}`;
+                    } else if (endDate.includes('/')) {
+                        const parts = endDate.split('/');
+                        if (parts.length === 3) {
+                            parsedEndDate = `${parts[2]}-${parts[0].padStart(2, '0')}-${parts[1].padStart(2, '0')}`;
+                        }
+                    }
+
+                    // Parse time if needed (handle HH:MM:SS or HH:MM format)
+                    let parsedStartTime = startTime;
+                    let parsedEndTime = endTime;
+
+                    if (startTime.includes(':')) {
+                        const timeParts = startTime.split(':');
+                        parsedStartTime = `${timeParts[0].padStart(2, '0')}:${timeParts[1].padStart(2, '0')}`;
+                    }
+
+                    if (endTime.includes(':')) {
+                        const timeParts = endTime.split(':');
+                        parsedEndTime = `${timeParts[0].padStart(2, '0')}:${timeParts[1].padStart(2, '0')}`;
+                    }
+
+                    // Find category by ID or name (case-insensitive)
+                    let categoryId = categoryIdOrName;
+                    const categoryMatch = workCategories.find(
+                        c => c.name.toLowerCase() === categoryIdOrName.toLowerCase() ||
+                             c.id.toLowerCase() === categoryIdOrName.toLowerCase()
+                    );
+                    if (categoryMatch) {
+                        categoryId = categoryMatch.id;
+                    } else if (categoryIdOrName) {
+                        // If a category was specified but not found, keep it (will be caught by validation)
+                        categoryId = categoryIdOrName;
+                    } else if (workCategories.length > 0) {
+                        // Default to first category if no category specified
+                        categoryId = workCategories[0].id;
+                    }
+
+                    bulkEntryRows.push({
+                        id: nextBulkRowId++,
+                        startDate: parsedStartDate,
+                        startTime: parsedStartTime,
+                        endDate: parsedEndDate,
+                        endTime: parsedEndTime,
+                        categoryId: categoryId,
+                        description: description,
+                    });
+
+                    importedCount++;
+                }
+
+                render();
+
+                if (skippedCount > 0) {
+                    showNotification(`Successfully imported ${importedCount} entries. ${skippedCount} rows were skipped due to missing required fields.`, 'success', 5000);
+                } else {
+                    showNotification(`Successfully imported ${importedCount} entries from Excel!`, 'success');
+                }
+            } catch (error) {
+                console.error('[TimeTracker] Failed to import Excel:', error);
+                showNotification('Failed to import Excel file. Please make sure it uses the correct template format.', 'error');
+            }
+        };
+
+        reader.onerror = () => {
+            showNotification('Failed to read Excel file. Please try again.', 'error');
+        };
+
+        reader.readAsBinaryString(file);
+    }
+
+    // Show notification toast
+    function showNotification(message: string, type: 'success' | 'error' | 'warning' = 'success', duration: number = 3000) {
+        // Create or get notification container
+        let container = document.getElementById('notification-container');
+        if (!container) {
+            container = document.createElement('div');
+            container.id = 'notification-container';
+            container.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                z-index: 10000;
+                display: flex;
+                flex-direction: column;
+                gap: 10px;
+                pointer-events: none;
+            `;
+            document.body.appendChild(container);
+        }
+
+        // Create notification element
+        const notification = document.createElement('div');
+        notification.style.cssText = `
+            padding: 1rem 1.5rem;
+            padding-right: ${type !== 'success' ? '3rem' : '1.5rem'};
+            background: ${type === 'success' ? '#28a745' : type === 'error' ? '#dc3545' : '#ffc107'};
+            color: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            font-weight: 600;
+            max-width: 400px;
+            animation: slideIn 0.3s ease-out;
+            position: relative;
+            pointer-events: auto;
+        `;
+        // Add close button for errors and warnings
+        if (type !== 'success') {
+            const closeButton = document.createElement('button');
+            closeButton.innerHTML = '✕';
+            closeButton.style.cssText = `
+                position: absolute;
+                top: 0.5rem;
+                right: 0.5rem;
+                background: transparent;
+                border: none;
+                color: white;
+                font-size: 1.2rem;
+                cursor: pointer;
+                padding: 0.25rem 0.5rem;
+                line-height: 1;
+                opacity: 0.8;
+                transition: opacity 0.2s;
+            `;
+            closeButton.onmouseover = () => closeButton.style.opacity = '1';
+            closeButton.onmouseout = () => closeButton.style.opacity = '0.8';
+            closeButton.onclick = () => {
+                notification.style.animation = 'slideOut 0.3s ease-out';
+                setTimeout(() => {
+                    if (container?.contains(notification)) {
+                        container.removeChild(notification);
+                    }
+                }, 300);
+            };
+            notification.appendChild(closeButton);
+        }
+
+        // Add message text
+        const messageSpan = document.createElement('span');
+        messageSpan.textContent = message;
+        messageSpan.style.cssText = 'display: block;';
+        notification.appendChild(messageSpan);
+
+        // Add animation styles (only once)
+        if (!document.head.querySelector('style[data-notification-styles]')) {
+            const style = document.createElement('style');
+            style.setAttribute('data-notification-styles', 'true');
+            style.textContent = `
+                @keyframes slideIn {
+                    from {
+                        transform: translateX(400px);
+                        opacity: 0;
+                    }
+                    to {
+                        transform: translateX(0);
+                        opacity: 1;
+                    }
+                }
+                @keyframes slideOut {
+                    from {
+                        transform: translateX(0);
+                        opacity: 1;
+                    }
+                    to {
+                        transform: translateX(400px);
+                        opacity: 0;
+                    }
+                }
+            `;
+            document.head.appendChild(style);
+        }
+
+        container.appendChild(notification);
+
+        // Auto-remove only for success messages
+        if (type === 'success') {
+            setTimeout(() => {
+                notification.style.animation = 'slideOut 0.3s ease-out';
+                setTimeout(() => {
+                    if (container?.contains(notification)) {
+                        container.removeChild(notification);
+                    }
+                }, 300);
+            }, duration);
+        }
+    }
+
     // Timer update interval
     let timerInterval: number | null = null;
 
@@ -351,8 +944,15 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
         }
     }
 
-    // Calculate statistics
+    // Calculate statistics (with caching)
     function calculateStats() {
+        const currentFilterState = getFilterState();
+
+        // Return cached if available and filters haven't changed
+        if (cachedStats && lastFilterState === currentFilterState) {
+            return cachedStats;
+        }
+
         const filtered = getFilteredEntries();
         const totalMs = filtered.reduce((sum, entry) => {
             const start = new Date(entry.startTime).getTime();
@@ -373,7 +973,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
         const expectedHours = (workDays / 7) * settings.defaultHoursPerWeek - absenceHours;
         const overtime = totalHours - expectedHours;
 
-        return {
+        cachedStats = {
             totalHours: totalHours.toFixed(2),
             expectedHours: expectedHours.toFixed(2),
             overtime: overtime.toFixed(2),
@@ -381,6 +981,54 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
             absenceHours: absenceHours.toFixed(2),
             absenceDays: (absenceHours / settings.defaultHoursPerDay).toFixed(1),
         };
+
+        return cachedStats;
+    }
+
+    // Set report period dates
+    function setReportPeriod(period: 'week' | 'month' | 'year' | 'custom') {
+        reportPeriod = period;
+        const now = new Date();
+
+        switch (period) {
+            case 'week':
+                // Current week (Monday to Sunday)
+                const dayOfWeek = now.getDay();
+                const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+                const monday = new Date(now);
+                monday.setDate(now.getDate() + mondayOffset);
+                monday.setHours(0, 0, 0, 0);
+
+                const sunday = new Date(monday);
+                sunday.setDate(monday.getDate() + 6);
+                sunday.setHours(23, 59, 59, 999);
+
+                filterDateFrom = monday.toISOString().split('T')[0];
+                filterDateTo = sunday.toISOString().split('T')[0];
+                break;
+
+            case 'month':
+                // Current month
+                const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+                const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+
+                filterDateFrom = firstDay.toISOString().split('T')[0];
+                filterDateTo = lastDay.toISOString().split('T')[0];
+                break;
+
+            case 'year':
+                // Current year
+                const yearStart = new Date(now.getFullYear(), 0, 1);
+                const yearEnd = new Date(now.getFullYear(), 11, 31);
+
+                filterDateFrom = yearStart.toISOString().split('T')[0];
+                filterDateTo = yearEnd.toISOString().split('T')[0];
+                break;
+
+            case 'custom':
+                // Keep current dates
+                break;
+        }
     }
 
     // Calculate absence hours in the filtered date range
@@ -423,9 +1071,22 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
         return totalAbsenceHours;
     }
 
-    // Get filtered entries
+    // Get current filter state for cache invalidation
+    function getFilterState(): string {
+        return `${filterDateFrom}|${filterDateTo}|${filterCategory}|${timeEntries.length}`;
+    }
+
+    // Get filtered entries (with caching)
     function getFilteredEntries(): TimeEntry[] {
-        return timeEntries.filter((entry) => {
+        const currentFilterState = getFilterState();
+
+        // Return cached if available and filters haven't changed
+        if (cachedFilteredEntries && lastFilterState === currentFilterState) {
+            return cachedFilteredEntries;
+        }
+
+        // Calculate filtered entries
+        cachedFilteredEntries = timeEntries.filter((entry) => {
             // Filter by user
             if (entry.userId !== user?.id) return false;
 
@@ -438,6 +1099,9 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
 
             return true;
         });
+
+        lastFilterState = currentFilterState;
+        return cachedFilteredEntries;
     }
 
     // Format duration
@@ -645,6 +1309,140 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
         `;
     }
 
+    function renderBulkEntryForm(): string {
+        if (!showBulkEntry) return '';
+
+        return `
+            <!-- Bulk Entry Form -->
+            <div style="background: #e7e3ff; border: 2px solid #6f42c1; border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                    <h3 style="margin: 0; color: #333;">📋 Bulk Add Time Entries</h3>
+                    <button id="close-bulk-entry-btn" style="padding: 0.25rem 0.5rem; background: #6c757d; color: white; border: none; border-radius: 3px; cursor: pointer;">✕ Close</button>
+                </div>
+
+                <div style="overflow-x: auto; margin-bottom: 1rem;">
+                    <table style="width: 100%; border-collapse: collapse; background: white; border-radius: 4px; overflow: hidden;">
+                        <thead>
+                            <tr style="background: #6f42c1; color: white;">
+                                <th style="padding: 0.75rem; text-align: left; font-weight: 600;">Start Date</th>
+                                <th style="padding: 0.75rem; text-align: left; font-weight: 600;">Start Time</th>
+                                <th style="padding: 0.75rem; text-align: left; font-weight: 600;">End Date</th>
+                                <th style="padding: 0.75rem; text-align: left; font-weight: 600;">End Time</th>
+                                <th style="padding: 0.75rem; text-align: left; font-weight: 600;">Category</th>
+                                <th style="padding: 0.75rem; text-align: left; font-weight: 600;">Description</th>
+                                <th style="padding: 0.75rem; text-align: center; font-weight: 600;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${bulkEntryRows.length === 0 ? `
+                                <tr>
+                                    <td colspan="7" style="padding: 2rem; text-align: center; color: #666;">
+                                        No entries yet. Click "Add Row" to start.
+                                    </td>
+                                </tr>
+                            ` : bulkEntryRows.map(row => `
+                                <tr style="border-bottom: 1px solid #dee2e6;" data-row-id="${row.id}">
+                                    <td style="padding: 0.5rem;">
+                                        <input
+                                            type="date"
+                                            class="bulk-input"
+                                            data-row-id="${row.id}"
+                                            data-field="startDate"
+                                            value="${row.startDate}"
+                                            style="width: 100%; padding: 0.375rem; border: 1px solid #ddd; border-radius: 3px;"
+                                        />
+                                    </td>
+                                    <td style="padding: 0.5rem;">
+                                        <input
+                                            type="time"
+                                            class="bulk-input"
+                                            data-row-id="${row.id}"
+                                            data-field="startTime"
+                                            value="${row.startTime}"
+                                            style="width: 100%; padding: 0.375rem; border: 1px solid #ddd; border-radius: 3px;"
+                                        />
+                                    </td>
+                                    <td style="padding: 0.5rem;">
+                                        <input
+                                            type="date"
+                                            class="bulk-input"
+                                            data-row-id="${row.id}"
+                                            data-field="endDate"
+                                            value="${row.endDate}"
+                                            style="width: 100%; padding: 0.375rem; border: 1px solid #ddd; border-radius: 3px;"
+                                        />
+                                    </td>
+                                    <td style="padding: 0.5rem;">
+                                        <input
+                                            type="time"
+                                            class="bulk-input"
+                                            data-row-id="${row.id}"
+                                            data-field="endTime"
+                                            value="${row.endTime}"
+                                            style="width: 100%; padding: 0.375rem; border: 1px solid #ddd; border-radius: 3px;"
+                                        />
+                                    </td>
+                                    <td style="padding: 0.5rem;">
+                                        <select
+                                            class="bulk-input"
+                                            data-row-id="${row.id}"
+                                            data-field="categoryId"
+                                            style="width: 100%; padding: 0.375rem; border: 1px solid #ddd; border-radius: 3px;"
+                                        >
+                                            ${workCategories.map(cat => `
+                                                <option value="${cat.id}" ${row.categoryId === cat.id ? 'selected' : ''}>${cat.name}</option>
+                                            `).join('')}
+                                        </select>
+                                    </td>
+                                    <td style="padding: 0.5rem;">
+                                        <input
+                                            type="text"
+                                            class="bulk-input"
+                                            data-row-id="${row.id}"
+                                            data-field="description"
+                                            value="${row.description}"
+                                            placeholder="Description..."
+                                            style="width: 100%; padding: 0.375rem; border: 1px solid #ddd; border-radius: 3px;"
+                                        />
+                                    </td>
+                                    <td style="padding: 0.5rem; text-align: center;">
+                                        <button
+                                            class="remove-bulk-row-btn"
+                                            data-row-id="${row.id}"
+                                            style="padding: 0.25rem 0.5rem; background: #dc3545; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 0.85rem;"
+                                            title="Remove"
+                                        >🗑️</button>
+                                    </td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Excel Import/Export -->
+                <div style="background: #fff3cd; border: 1px solid #ffc107; border-radius: 6px; padding: 1rem; margin-bottom: 1rem;">
+                    <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                        <span style="font-size: 1.2rem;">📊</span>
+                        <strong style="color: #856404;">Excel Import/Export</strong>
+                    </div>
+                    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center;">
+                        <button id="download-excel-template-btn" style="padding: 0.5rem 1rem; background: #17a2b8; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600;">⬇️ Download Template</button>
+                        <input type="file" id="import-excel-input" accept=".xlsx,.xls" style="display: none;" />
+                        <button id="import-excel-btn" style="padding: 0.5rem 1rem; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600;">📤 Import from Excel</button>
+                        <span style="color: #856404; font-size: 0.85rem; font-style: italic;">Import will replace existing entries in the table</span>
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: 0.5rem; justify-content: space-between; flex-wrap: wrap;">
+                    <button id="add-bulk-row-btn" style="padding: 0.5rem 1rem; background: #6f42c1; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600;">➕ Add Row</button>
+                    <div style="display: flex; gap: 0.5rem;">
+                        <button id="save-bulk-entries-btn" ${bulkEntryRows.length === 0 ? 'disabled' : ''} style="padding: 0.5rem 1.5rem; background: ${bulkEntryRows.length === 0 ? '#6c757d' : '#28a745'}; color: white; border: none; border-radius: 4px; cursor: ${bulkEntryRows.length === 0 ? 'not-allowed' : 'pointer'}; font-weight: 600;">💾 Save All Entries (${bulkEntryRows.length})</button>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
     function renderEntries(): string {
         return `
             <!-- Filters -->
@@ -678,12 +1476,15 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                         </select>
                     </div>
                 </div>
-                <div style="display: flex; gap: 0.5rem;">
+                <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
                     <button id="apply-filters-btn" style="padding: 0.5rem 1rem; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">Apply Filters</button>
                     <button id="export-csv-btn" style="padding: 0.5rem 1rem; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer;">📥 Export CSV</button>
                     <button id="add-manual-entry-btn" style="padding: 0.5rem 1rem; background: #ffc107; color: #333; border: none; border-radius: 4px; cursor: pointer; font-weight: 600;">➕ Add Manual Entry</button>
+                    <button id="bulk-add-entries-btn" style="padding: 0.5rem 1rem; background: #6f42c1; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600;">📋 Bulk Add Entries</button>
                 </div>
             </div>
+
+            ${renderBulkEntryForm()}
 
             ${
                 showAddManualEntry || editingEntry
@@ -756,7 +1557,16 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
 
             <!-- Entries List -->
             <div style="background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                <h2 style="margin: 0 0 1rem 0; font-size: 1.2rem; color: #333;">Time Entries (${getFilteredEntries().length})</h2>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                    <h2 style="margin: 0; font-size: 1.2rem; color: #333;">Time Entries (${getFilteredEntries().length})</h2>
+                    ${getFilteredEntries().length > ENTRIES_PER_PAGE ? `
+                        <div style="display: flex; gap: 0.5rem; align-items: center;">
+                            <span style="color: #666; font-size: 0.9rem;">Page ${entriesPage} of ${Math.ceil(getFilteredEntries().length / ENTRIES_PER_PAGE)}</span>
+                            <button id="entries-prev-page" ${entriesPage === 1 ? 'disabled' : ''} style="padding: 0.25rem 0.5rem; background: ${entriesPage === 1 ? '#e9ecef' : '#007bff'}; color: ${entriesPage === 1 ? '#6c757d' : 'white'}; border: none; border-radius: 3px; cursor: ${entriesPage === 1 ? 'not-allowed' : 'pointer'};">‹ Prev</button>
+                            <button id="entries-next-page" ${entriesPage >= Math.ceil(getFilteredEntries().length / ENTRIES_PER_PAGE) ? 'disabled' : ''} style="padding: 0.25rem 0.5rem; background: ${entriesPage >= Math.ceil(getFilteredEntries().length / ENTRIES_PER_PAGE) ? '#e9ecef' : '#007bff'}; color: ${entriesPage >= Math.ceil(getFilteredEntries().length / ENTRIES_PER_PAGE) ? '#6c757d' : 'white'}; border: none; border-radius: 3px; cursor: ${entriesPage >= Math.ceil(getFilteredEntries().length / ENTRIES_PER_PAGE) ? 'not-allowed' : 'pointer'};">Next ›</button>
+                        </div>
+                    ` : ''}
+                </div>
                 ${renderEntriesList(getFilteredEntries())}
             </div>
         `;
@@ -766,6 +1576,11 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
         if (entries.length === 0) {
             return '<p style="color: #666; text-align: center; padding: 2rem;">No entries found.</p>';
         }
+
+        // Apply pagination
+        const startIndex = (entriesPage - 1) * ENTRIES_PER_PAGE;
+        const endIndex = startIndex + ENTRIES_PER_PAGE;
+        const paginatedEntries = entries.slice(startIndex, endIndex);
 
         return `
             <div style="overflow-x: auto;">
@@ -783,7 +1598,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                         </tr>
                     </thead>
                     <tbody>
-                        ${entries
+                        ${paginatedEntries
                             .map((entry) => {
                                 const start = new Date(entry.startTime);
                                 const end = entry.endTime ? new Date(entry.endTime) : new Date();
@@ -837,6 +1652,93 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
 
     function renderAbsences(): string {
         return `
+            ${
+                showAddAbsence || editingAbsence
+                    ? `
+            <!-- Add/Edit Absence Form -->
+            <div style="background: ${editingAbsence ? '#d1ecf1' : '#d4edda'}; border: 1px solid ${editingAbsence ? '#17a2b8' : '#28a745'}; border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem;">
+                <h3 style="margin: 0 0 1rem 0; color: #333;">${editingAbsence ? '✏️ Edit Absence' : '➕ Add Absence'}</h3>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                    <div>
+                        <label for="absence-start-date" style="display: block; margin-bottom: 0.5rem; color: #333; font-weight: 500;">Start Date</label>
+                        <input
+                            type="date"
+                            id="absence-start-date"
+                            value="${editingAbsence ? editingAbsence.startDate : ''}"
+                            style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;"
+                        />
+                    </div>
+                    <div>
+                        <label for="absence-end-date" style="display: block; margin-bottom: 0.5rem; color: #333; font-weight: 500;">End Date</label>
+                        <input
+                            type="date"
+                            id="absence-end-date"
+                            value="${editingAbsence ? editingAbsence.endDate : ''}"
+                            style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;"
+                        />
+                    </div>
+                </div>
+                <div style="margin-bottom: 1rem;">
+                    <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                        <input
+                            type="checkbox"
+                            id="absence-all-day"
+                            ${!editingAbsence || !editingAbsence.startTime ? 'checked' : ''}
+                            style="cursor: pointer;"
+                        />
+                        <span style="color: #333; font-weight: 500;">All-day absence</span>
+                    </label>
+                </div>
+                <div id="absence-time-fields" style="display: ${!editingAbsence || !editingAbsence.startTime ? 'none' : 'grid'}; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                    <div>
+                        <label for="absence-start-time" style="display: block; margin-bottom: 0.5rem; color: #333; font-weight: 500;">Start Time</label>
+                        <input
+                            type="time"
+                            id="absence-start-time"
+                            value="${editingAbsence && editingAbsence.startTime ? new Date(editingAbsence.startTime).toTimeString().slice(0, 5) : ''}"
+                            style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;"
+                        />
+                    </div>
+                    <div>
+                        <label for="absence-end-time" style="display: block; margin-bottom: 0.5rem; color: #333; font-weight: 500;">End Time</label>
+                        <input
+                            type="time"
+                            id="absence-end-time"
+                            value="${editingAbsence && editingAbsence.endTime ? new Date(editingAbsence.endTime).toTimeString().slice(0, 5) : ''}"
+                            style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;"
+                        />
+                    </div>
+                </div>
+                <div style="margin-bottom: 1rem;">
+                    <label for="absence-reason" style="display: block; margin-bottom: 0.5rem; color: #333; font-weight: 500;">Reason</label>
+                    <select
+                        id="absence-reason"
+                        style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;"
+                    >
+                        ${absenceReasons.map(reason => `
+                            <option value="${reason.id}" ${editingAbsence && editingAbsence.absenceReason.id === reason.id ? 'selected' : ''}>${reason.name}</option>
+                        `).join('')}
+                    </select>
+                </div>
+                <div style="margin-bottom: 1rem;">
+                    <label for="absence-comment" style="display: block; margin-bottom: 0.5rem; color: #333; font-weight: 500;">Comment (optional)</label>
+                    <textarea
+                        id="absence-comment"
+                        rows="3"
+                        placeholder="Add additional details..."
+                        style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px; resize: vertical;"
+                    >${editingAbsence ? editingAbsence.comment || '' : ''}</textarea>
+                </div>
+                <div style="display: flex; gap: 0.5rem;">
+                    <button id="save-absence-btn" style="padding: 0.5rem 1rem; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer;">${editingAbsence ? '💾 Update Absence' : '💾 Save Absence'}</button>
+                    <button id="cancel-absence-btn" style="padding: 0.5rem 1rem; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer;">Cancel</button>
+                </div>
+            </div>
+            `
+                    : ''
+            }
+
+            <!-- Absences List -->
             <div style="background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
                     <h2 style="margin: 0; font-size: 1.2rem; color: #333;">My Absences (${absences.length})</h2>
@@ -852,6 +1754,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                                 <th style="padding: 0.75rem; text-align: left; font-weight: 600; color: #495057;">Reason</th>
                                 <th style="padding: 0.75rem; text-align: left; font-weight: 600; color: #495057;">Note</th>
                                 <th style="padding: 0.75rem; text-align: left; font-weight: 600; color: #495057;">Type</th>
+                                <th style="padding: 0.75rem; text-align: left; font-weight: 600; color: #495057;">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -870,6 +1773,22 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                                     </td>
                                     <td style="padding: 0.75rem;">${absence.comment || '-'}</td>
                                     <td style="padding: 0.75rem;">${isAllDay ? 'All-day' : 'Timed'}</td>
+                                    <td style="padding: 0.75rem;">
+                                        <div style="display: flex; gap: 0.25rem;">
+                                            <button
+                                                class="edit-absence-btn"
+                                                data-absence-id="${absence.id}"
+                                                style="padding: 0.25rem 0.5rem; background: #ffc107; color: #333; border: none; border-radius: 3px; cursor: pointer; font-size: 0.85rem;"
+                                                title="Edit"
+                                            >✏️</button>
+                                            <button
+                                                class="delete-absence-btn"
+                                                data-absence-id="${absence.id}"
+                                                style="padding: 0.25rem 0.5rem; background: #dc3545; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 0.85rem;"
+                                                title="Delete"
+                                            >🗑️</button>
+                                        </div>
+                                    </td>
                                 </tr>
                             `}).join('')}
                         </tbody>
@@ -895,9 +1814,29 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
         });
 
         return `
-            <!-- Period Selection -->
+            <!-- Period Quick Select -->
             <div style="background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                <h2 style="margin: 0 0 1rem 0; font-size: 1.2rem; color: #333;">Report Period</h2>
+                <h2 style="margin: 0 0 1rem 0; font-size: 1.2rem; color: #333;">Quick Period Selection</h2>
+                <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                    <button id="report-period-week" style="padding: 0.75rem 1.5rem; border: ${reportPeriod === 'week' ? '2px' : '1px'} solid ${reportPeriod === 'week' ? '#007bff' : '#ddd'}; background: ${reportPeriod === 'week' ? '#e7f3ff' : '#fff'}; color: ${reportPeriod === 'week' ? '#007bff' : '#666'}; border-radius: 4px; cursor: pointer; font-weight: ${reportPeriod === 'week' ? '600' : '400'};">
+                        📅 This Week
+                    </button>
+                    <button id="report-period-month" style="padding: 0.75rem 1.5rem; border: ${reportPeriod === 'month' ? '2px' : '1px'} solid ${reportPeriod === 'month' ? '#007bff' : '#ddd'}; background: ${reportPeriod === 'month' ? '#e7f3ff' : '#fff'}; color: ${reportPeriod === 'month' ? '#007bff' : '#666'}; border-radius: 4px; cursor: pointer; font-weight: ${reportPeriod === 'month' ? '600' : '400'};">
+                        📆 This Month
+                    </button>
+                    <button id="report-period-year" style="padding: 0.75rem 1.5rem; border: ${reportPeriod === 'year' ? '2px' : '1px'} solid ${reportPeriod === 'year' ? '#007bff' : '#ddd'}; background: ${reportPeriod === 'year' ? '#e7f3ff' : '#fff'}; color: ${reportPeriod === 'year' ? '#007bff' : '#666'}; border-radius: 4px; cursor: pointer; font-weight: ${reportPeriod === 'year' ? '600' : '400'};">
+                        📊 This Year
+                    </button>
+                    <button id="report-period-custom" style="padding: 0.75rem 1.5rem; border: ${reportPeriod === 'custom' ? '2px' : '1px'} solid ${reportPeriod === 'custom' ? '#007bff' : '#ddd'}; background: ${reportPeriod === 'custom' ? '#e7f3ff' : '#fff'}; color: ${reportPeriod === 'custom' ? '#007bff' : '#666'}; border-radius: 4px; cursor: pointer; font-weight: ${reportPeriod === 'custom' ? '600' : '400'};">
+                        🔧 Custom Period
+                    </button>
+                </div>
+            </div>
+
+            <!-- Custom Period Selection -->
+            ${reportPeriod === 'custom' ? `
+            <div style="background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                <h2 style="margin: 0 0 1rem 0; font-size: 1.2rem; color: #333;">Custom Date Range</h2>
                 <div style="display: grid; grid-template-columns: 1fr 1fr auto; gap: 1rem; align-items: end;">
                     <div>
                         <label for="report-date-from" style="display: block; margin-bottom: 0.5rem; color: #333; font-weight: 500;">From Date</label>
@@ -922,6 +1861,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                     <button id="apply-report-filters-btn" style="padding: 0.5rem 1rem; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">Update Report</button>
                 </div>
             </div>
+            ` : ''}
 
             <!-- Summary Stats -->
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
@@ -949,6 +1889,72 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                         ${parseFloat(stats.overtime) >= 0 ? 'Extra hours worked' : 'Hours under target'}
                     </div>
                 </div>
+            </div>
+
+            <!-- IST vs SOLL Comparison -->
+            <div style="background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                <h2 style="margin: 0 0 1rem 0; font-size: 1.2rem; color: #333;">IST vs SOLL Comparison</h2>
+                ${(() => {
+                    const ist = parseFloat(stats.totalHours);
+                    const soll = parseFloat(stats.expectedHours);
+                    const percentage = soll > 0 ? (ist / soll) * 100 : 0;
+                    const isOverTarget = ist >= soll;
+                    const progressColor = isOverTarget ? '#28a745' : (percentage >= 80 ? '#ffc107' : '#dc3545');
+
+                    return `
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 1.5rem;">
+                            <div>
+                                <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.5rem;">
+                                    <span style="font-weight: 600; color: #007bff; font-size: 1.1rem;">IST (Actual):</span>
+                                    <span style="font-size: 2rem; font-weight: 700; color: #007bff;">${stats.totalHours}h</span>
+                                </div>
+                                <div style="color: #666; font-size: 0.85rem;">
+                                    ${stats.entriesCount} time entries recorded
+                                </div>
+                            </div>
+                            <div>
+                                <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.5rem;">
+                                    <span style="font-weight: 600; color: #6c757d; font-size: 1.1rem;">SOLL (Target):</span>
+                                    <span style="font-size: 2rem; font-weight: 700; color: #6c757d;">${stats.expectedHours}h</span>
+                                </div>
+                                <div style="color: #666; font-size: 0.85rem;">
+                                    Expected hours (minus ${stats.absenceHours}h absences)
+                                </div>
+                            </div>
+                        </div>
+
+                        <div style="margin-bottom: 1rem;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                                <span style="font-weight: 600; color: #333;">Progress:</span>
+                                <span style="font-size: 1.2rem; font-weight: 700; color: ${progressColor};">
+                                    ${percentage.toFixed(1)}%
+                                </span>
+                            </div>
+                            <div style="background: #e9ecef; height: 24px; border-radius: 12px; overflow: hidden; position: relative;">
+                                <div style="background: ${progressColor}; height: 100%; width: ${Math.min(percentage, 100)}%; transition: width 0.3s; display: flex; align-items: center; justify-content: center;">
+                                    ${percentage >= 10 ? `<span style="color: white; font-weight: 600; font-size: 0.85rem;">${percentage.toFixed(1)}%</span>` : ''}
+                                </div>
+                                ${percentage > 100 ? `
+                                    <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;">
+                                        <span style="color: white; font-weight: 700; font-size: 0.85rem;">Target Exceeded! 🎉</span>
+                                    </div>
+                                ` : ''}
+                            </div>
+                        </div>
+
+                        <div style="padding: 1rem; background: ${isOverTarget ? '#d4edda' : (percentage >= 80 ? '#fff3cd' : '#f8d7da')}; border-radius: 6px; border-left: 4px solid ${progressColor};">
+                            <div style="font-weight: 600; color: ${isOverTarget ? '#155724' : (percentage >= 80 ? '#856404' : '#721c24')}; margin-bottom: 0.25rem;">
+                                ${isOverTarget ? '✅ Target Achieved!' : (percentage >= 80 ? '⚠️ Close to Target' : '❌ Below Target')}
+                            </div>
+                            <div style="color: ${isOverTarget ? '#155724' : (percentage >= 80 ? '#856404' : '#721c24')}; font-size: 0.9rem;">
+                                ${isOverTarget
+                                    ? `You have worked ${stats.overtime}h more than required. Great job!`
+                                    : `You need to work ${Math.abs(parseFloat(stats.overtime)).toFixed(2)}h more to reach your target.`
+                                }
+                            </div>
+                        </div>
+                    `;
+                })()}
             </div>
 
             <!-- Breakdown by Category -->
@@ -1064,6 +2070,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
 
         viewEntries?.addEventListener('click', () => {
             currentView = 'entries';
+            entriesPage = 1; // Reset to first page when switching to entries view
             render();
         });
 
@@ -1079,6 +2086,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
 
         viewAllEntries?.addEventListener('click', () => {
             currentView = 'entries';
+            entriesPage = 1; // Reset to first page
             render();
         });
 
@@ -1119,6 +2127,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
             filterDateFrom = dateFromInput.value;
             filterDateTo = dateToInput.value;
             filterCategory = categorySelect.value;
+            entriesPage = 1; // Reset to first page when filters change
 
             render();
         });
@@ -1129,6 +2138,51 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
 
         exportReportCsvBtn?.addEventListener('click', () => {
             exportToCSV();
+        });
+
+        // Pagination
+        const entriesPrevPage = element.querySelector('#entries-prev-page') as HTMLButtonElement;
+        const entriesNextPage = element.querySelector('#entries-next-page') as HTMLButtonElement;
+
+        entriesPrevPage?.addEventListener('click', () => {
+            if (entriesPage > 1) {
+                entriesPage--;
+                render();
+            }
+        });
+
+        entriesNextPage?.addEventListener('click', () => {
+            const totalPages = Math.ceil(getFilteredEntries().length / ENTRIES_PER_PAGE);
+            if (entriesPage < totalPages) {
+                entriesPage++;
+                render();
+            }
+        });
+
+        // Report period buttons
+        const reportPeriodWeek = element.querySelector('#report-period-week') as HTMLButtonElement;
+        const reportPeriodMonth = element.querySelector('#report-period-month') as HTMLButtonElement;
+        const reportPeriodYear = element.querySelector('#report-period-year') as HTMLButtonElement;
+        const reportPeriodCustom = element.querySelector('#report-period-custom') as HTMLButtonElement;
+
+        reportPeriodWeek?.addEventListener('click', () => {
+            setReportPeriod('week');
+            render();
+        });
+
+        reportPeriodMonth?.addEventListener('click', () => {
+            setReportPeriod('month');
+            render();
+        });
+
+        reportPeriodYear?.addEventListener('click', () => {
+            setReportPeriod('year');
+            render();
+        });
+
+        reportPeriodCustom?.addEventListener('click', () => {
+            reportPeriod = 'custom';
+            render();
         });
 
         // Report filters
@@ -1144,6 +2198,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
 
             filterDateFrom = dateFromInput.value;
             filterDateTo = dateToInput.value;
+            reportPeriod = 'custom';
 
             render();
         });
@@ -1167,6 +2222,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
         cancelManualEntryBtn?.addEventListener('click', () => {
             showAddManualEntry = false;
             editingEntry = null;
+            showBulkEntry = false;
             render();
         });
 
@@ -1268,6 +2324,174 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                 alert('Failed to save entry. Please try again.');
             }
         });
+
+        // Bulk entry
+        const bulkAddEntriesBtn = element.querySelector('#bulk-add-entries-btn') as HTMLButtonElement;
+        const closeBulkEntryBtn = element.querySelector('#close-bulk-entry-btn') as HTMLButtonElement;
+        const addBulkRowBtn = element.querySelector('#add-bulk-row-btn') as HTMLButtonElement;
+        const saveBulkEntriesBtn = element.querySelector('#save-bulk-entries-btn') as HTMLButtonElement;
+
+        bulkAddEntriesBtn?.addEventListener('click', () => {
+            showBulkEntry = true;
+            showAddManualEntry = false;
+            editingEntry = null;
+            // Start with 3 empty rows
+            if (bulkEntryRows.length === 0) {
+                addBulkEntryRow();
+                addBulkEntryRow();
+                addBulkEntryRow();
+            }
+            render();
+        });
+
+        closeBulkEntryBtn?.addEventListener('click', () => {
+            showBulkEntry = false;
+            render();
+        });
+
+        addBulkRowBtn?.addEventListener('click', () => {
+            addBulkEntryRow();
+        });
+
+        saveBulkEntriesBtn?.addEventListener('click', async () => {
+            await saveBulkEntries();
+        });
+
+        // Excel import/export
+        const downloadExcelTemplateBtn = element.querySelector('#download-excel-template-btn') as HTMLButtonElement;
+        const importExcelBtn = element.querySelector('#import-excel-btn') as HTMLButtonElement;
+        const importExcelInput = element.querySelector('#import-excel-input') as HTMLInputElement;
+
+        downloadExcelTemplateBtn?.addEventListener('click', () => {
+            downloadExcelTemplate();
+        });
+
+        importExcelBtn?.addEventListener('click', () => {
+            importExcelInput?.click();
+        });
+
+        importExcelInput?.addEventListener('change', (e) => {
+            const file = (e.target as HTMLInputElement).files?.[0];
+            if (file) {
+                importFromExcel(file);
+                // Reset input so the same file can be imported again
+                importExcelInput.value = '';
+            }
+        });
+
+        // Bulk input change handlers (using event delegation)
+        const bulkInputs = element.querySelectorAll('.bulk-input');
+        bulkInputs.forEach((input) => {
+            input.addEventListener('change', (e) => {
+                const target = e.target as HTMLInputElement | HTMLSelectElement;
+                const rowId = parseInt(target.dataset.rowId || '0');
+                const field = target.dataset.field as keyof BulkEntryRow;
+                if (rowId && field) {
+                    updateBulkEntryRow(rowId, field, target.value);
+                }
+            });
+        });
+
+        // Remove bulk row buttons (using event delegation)
+        const removeBulkRowBtns = element.querySelectorAll('.remove-bulk-row-btn');
+        removeBulkRowBtns.forEach((btn) => {
+            btn.addEventListener('click', (e) => {
+                const target = e.target as HTMLElement;
+                const rowId = parseInt(target.dataset.rowId || '0');
+                if (rowId && confirm('Remove this row?')) {
+                    removeBulkEntryRow(rowId);
+                }
+            });
+        });
+
+        // Absences
+        const addAbsenceBtn = element.querySelector('#add-absence-btn') as HTMLButtonElement;
+        const cancelAbsenceBtn = element.querySelector('#cancel-absence-btn') as HTMLButtonElement;
+        const saveAbsenceBtn = element.querySelector('#save-absence-btn') as HTMLButtonElement;
+        const absenceAllDayCheckbox = element.querySelector('#absence-all-day') as HTMLInputElement;
+
+        addAbsenceBtn?.addEventListener('click', () => {
+            showAddAbsence = true;
+            editingAbsence = null;
+            render();
+        });
+
+        cancelAbsenceBtn?.addEventListener('click', () => {
+            showAddAbsence = false;
+            editingAbsence = null;
+            render();
+        });
+
+        // Toggle time fields based on all-day checkbox
+        absenceAllDayCheckbox?.addEventListener('change', () => {
+            const timeFields = element.querySelector('#absence-time-fields') as HTMLElement;
+            if (timeFields) {
+                timeFields.style.display = absenceAllDayCheckbox.checked ? 'none' : 'grid';
+            }
+        });
+
+        saveAbsenceBtn?.addEventListener('click', async () => {
+            const startDateInput = element.querySelector('#absence-start-date') as HTMLInputElement;
+            const endDateInput = element.querySelector('#absence-end-date') as HTMLInputElement;
+            const startTimeInput = element.querySelector('#absence-start-time') as HTMLInputElement;
+            const endTimeInput = element.querySelector('#absence-end-time') as HTMLInputElement;
+            const reasonSelect = element.querySelector('#absence-reason') as HTMLSelectElement;
+            const commentTextarea = element.querySelector('#absence-comment') as HTMLTextAreaElement;
+            const allDayCheckbox = element.querySelector('#absence-all-day') as HTMLInputElement;
+
+            if (!startDateInput?.value || !endDateInput?.value || !reasonSelect?.value) {
+                alert('Please fill in all required fields.');
+                return;
+            }
+
+            const data = {
+                absenceReasonId: parseInt(reasonSelect.value),
+                comment: commentTextarea?.value || '',
+                startDate: startDateInput.value,
+                endDate: endDateInput.value,
+                startTime: !allDayCheckbox?.checked && startTimeInput?.value ? startTimeInput.value : undefined,
+                endTime: !allDayCheckbox?.checked && endTimeInput?.value ? endTimeInput.value : undefined,
+            };
+
+            if (editingAbsence) {
+                await updateAbsence(editingAbsence.id, data);
+            } else {
+                await createAbsence(data);
+            }
+        });
+
+        // Edit/Delete absence buttons (using event delegation)
+        const editAbsenceBtns = element.querySelectorAll('.edit-absence-btn');
+        editAbsenceBtns.forEach((btn) => {
+            btn.addEventListener('click', (e) => {
+                const target = e.target as HTMLElement;
+                const absenceId = parseInt(target.dataset.absenceId || '0');
+                const absence = absences.find((a) => a.id === absenceId);
+                if (absence) {
+                    editingAbsence = absence;
+                    showAddAbsence = false;
+                    render();
+                }
+            });
+        });
+
+        const deleteAbsenceBtns = element.querySelectorAll('.delete-absence-btn');
+        deleteAbsenceBtns.forEach((btn) => {
+            btn.addEventListener('click', (e) => {
+                const target = e.target as HTMLElement;
+                const absenceId = parseInt(target.dataset.absenceId || '0');
+                const absence = absences.find((a) => a.id === absenceId);
+
+                if (
+                    absence &&
+                    confirm(
+                        `Are you sure you want to delete this absence?\n\nFrom: ${new Date(absence.startDate).toLocaleDateString()}\nTo: ${new Date(absence.endDate).toLocaleDateString()}\nReason: ${absence.absenceReason?.name}`
+                    )
+                ) {
+                    deleteAbsence(absenceId);
+                }
+            });
+        });
     }
 
     // Setup event delegation for edit/delete entry buttons (only once)
@@ -1310,7 +2534,6 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
 
     // Cleanup
     return () => {
-        console.log('[TimeTracker] Cleaning up');
         stopTimerUpdate();
     };
 };

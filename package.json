@@ -18,7 +18,8 @@
         "deploy:legacy": "npm run clean && npm run build:legacy && node scripts/package.js"
     },
     "dependencies": {
-        "@churchtools/extension-points": "github:churchtools/churchtools-extension-points"
+        "@churchtools/extension-points": "github:churchtools/churchtools-extension-points",
+        "xlsx": "^0.18.5"
     },
     "devDependencies": {
         "@churchtools/churchtools-client": "^1.4.0",

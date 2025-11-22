@@ -129,11 +129,15 @@ This creates a ZIP file that can be uploaded to ChurchTools.
 
 ## Technical Details
 
+> **📖 Für Entwickler und KI-Assistenten:**
+> Eine ausführliche technische Dokumentation mit Implementierungsdetails, bekannten Problemen und Lösungen findest du in [docs/timetracker-implementation.md](docs/timetracker-implementation.md).
+> **Diese Dokumentation MUSS gelesen werden**, bevor Änderungen am Code vorgenommen werden, um bereits gelöste Probleme nicht erneut zu verursachen.
+
 ### Key Components
 
 - **Entry Point Registry** (`src/entry-points/index.ts`): Registers all entry points
-- **Main Module** (`src/entry-points/main.ts`): Core time tracking functionality (~920 lines)
-- **Admin Module** (`src/entry-points/admin.ts`): Configuration interface (~770 lines)
+- **Main Module** (`src/entry-points/main.ts`): Core time tracking functionality (~2300 lines)
+- **Admin Module** (`src/entry-points/admin.ts`): Configuration interface (~900 lines)
 - **KV Store Utilities** (`src/utils/kv-store.ts`): Helper functions for data persistence
 
 ### Data Models
@@ -170,18 +174,29 @@ interface Settings {
 - **Key-Value Store**: Persistent data storage in ChurchTools
 - **Vite**: Build tooling and development server
 
-## Future Enhancement Ideas
+## Features Status
 
-- Integration with ChurchTools absence tracking API
+### ✅ Implemented Features
+- Clock In/Out functionality
+- Manual time entry creation
+- Time entry editing and deletion
+- Excel import/export for bulk entries
+- Category management with reassignment on deletion
+- Absence tracking integration
+- CSV export
+- Real-time validation
+- Toast notifications
+
+### 🚧 Future Enhancement Ideas
 - Approval workflow for time entries
 - Team overview and reports for managers
-- Time entry editing and deletion capabilities
 - Break time tracking
 - Project/task tagging
 - Notifications for forgotten clock-outs
-- Weekly/monthly summary reports
-- Additional export formats (PDF, Excel)
+- Weekly/monthly summary email reports
+- PDF export
 - Mobile-optimized interface
+- Multi-language support
 
 ## License
 
