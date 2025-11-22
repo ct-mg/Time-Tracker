@@ -414,6 +414,7 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                         </h3>
 
                         <div style="display: grid; gap: 1rem; margin-bottom: 1rem;">
+                            ${editingCategory ? `
                             <div>
                                 <label style="display: block; margin-bottom: 0.5rem; color: #333; font-weight: 600;">
                                     Category ID
@@ -421,13 +422,13 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                                 <input
                                     type="text"
                                     id="category-id"
-                                    value="${editingCategory?.id || ''}"
-                                    placeholder="e.g., pastoralcare"
-                                    ${editingCategory ? 'disabled' : ''}
-                                    style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 4px; ${editingCategory ? 'background: #e9ecef; cursor: not-allowed;' : ''}"
+                                    value="${editingCategory.id}"
+                                    disabled
+                                    style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 4px; background: #e9ecef; cursor: not-allowed; font-family: monospace;"
                                 />
-                                <small style="color: #666; font-size: 0.85rem;">Unique identifier (lowercase, no hyphens)</small>
+                                <small style="color: #666; font-size: 0.85rem;">ID cannot be changed</small>
                             </div>
+                            ` : ''}
 
                             <div>
                                 <label style="display: block; margin-bottom: 0.5rem; color: #333; font-weight: 600;">
@@ -440,7 +441,7 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                                     placeholder="e.g., Pastoral Care"
                                     style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 4px;"
                                 />
-                                <small style="color: #666; font-size: 0.85rem;">Display name for the category</small>
+                                <small style="color: #666; font-size: 0.85rem;">Display name for the category ${!editingCategory ? '(ID will be auto-generated)' : ''}</small>
                             </div>
 
                             <div>
@@ -562,48 +563,6 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
             await handleSaveCategory();
         });
 
-        // Edit category buttons
-        const editCategoryBtns = element.querySelectorAll('.edit-category-btn');
-        editCategoryBtns.forEach((btn) => {
-            btn.addEventListener('click', () => {
-                const categoryId = (btn as HTMLElement).dataset.categoryId;
-                const category = workCategories.find((c) => c.id === categoryId);
-                if (category) {
-                    editingCategory = category;
-                    showAddCategory = false;
-                    render();
-                }
-            });
-        });
-
-        // Delete category buttons
-        const deleteCategoryBtns = element.querySelectorAll('.delete-category-btn');
-        deleteCategoryBtns.forEach((btn) => {
-            btn.addEventListener('click', async () => {
-                const categoryId = (btn as HTMLElement).dataset.categoryId;
-                const category = workCategories.find((c) => c.id === categoryId);
-
-                if (
-                    category &&
-                    confirm(
-                        `Are you sure you want to delete the category "${category.name}"?\n\nNote: Existing time entries with this category will not be deleted.`
-                    )
-                ) {
-                    try {
-                        await deleteCategory(categoryId!);
-                        emit('notification:show', {
-                            message: 'Category deleted successfully!',
-                            type: 'success',
-                            duration: 3000,
-                        });
-                        render();
-                    } catch (error) {
-                        alert('Failed to delete category. Please try again.');
-                    }
-                }
-            });
-        });
-
         // Color picker sync
         const colorPicker = element.querySelector('#category-color') as HTMLInputElement;
         const colorHex = element.querySelector('#category-color-hex') as HTMLInputElement;
@@ -674,44 +633,51 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
         }
     }
 
+    // Generate a valid category ID from a name
+    function generateCategoryId(name: string): string {
+        // Convert to lowercase, remove special chars, replace spaces with nothing
+        let id = name
+            .toLowerCase()
+            .replace(/[^a-z0-9\s]/g, '') // Remove special characters
+            .replace(/\s+/g, ''); // Remove spaces
+
+        // Make sure it's unique
+        let finalId = id;
+        let counter = 1;
+        while (workCategories.some((c) => c.id === finalId)) {
+            finalId = `${id}${counter}`;
+            counter++;
+        }
+
+        return finalId;
+    }
+
     // Handle save category
     async function handleSaveCategory() {
-        const idInput = element.querySelector('#category-id') as HTMLInputElement;
         const nameInput = element.querySelector('#category-name') as HTMLInputElement;
         const colorInput = element.querySelector('#category-color') as HTMLInputElement;
         const statusMessage = element.querySelector('#category-form-status') as HTMLElement;
         const saveBtn = element.querySelector('#save-category-btn') as HTMLButtonElement;
 
-        if (!idInput || !nameInput || !colorInput || !statusMessage || !saveBtn) return;
+        if (!nameInput || !colorInput || !statusMessage || !saveBtn) return;
 
         // Validation
-        if (!idInput.value.trim()) {
-            alert('Please enter a category ID');
-            return;
-        }
-
-        if (!/^[a-z0-9]+$/.test(idInput.value)) {
-            alert('Category ID must contain only lowercase letters and numbers (no hyphens)');
-            return;
-        }
-
         if (!nameInput.value.trim()) {
             alert('Please enter a category name');
             return;
         }
 
-        // Check for duplicate ID (only when creating new)
-        if (!editingCategory && workCategories.some((c) => c.id === idInput.value)) {
-            alert('A category with this ID already exists');
-            return;
-        }
+        // Generate ID from name (only for new categories)
+        const categoryId = editingCategory
+            ? editingCategory.id
+            : generateCategoryId(nameInput.value.trim());
 
         try {
             saveBtn.disabled = true;
             saveBtn.textContent = editingCategory ? '💾 Updating...' : '💾 Saving...';
 
             const category: WorkCategory = {
-                id: editingCategory ? editingCategory.id : idInput.value.trim(),
+                id: categoryId,
                 name: nameInput.value.trim(),
                 color: colorInput.value,
             };
@@ -756,6 +722,50 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
             saveBtn.textContent = editingCategory ? '💾 Update Category' : '💾 Save Category';
         }
     }
+
+    // Setup event delegation for edit/delete category buttons (only once)
+    element.addEventListener('click', (e) => {
+        const target = e.target as HTMLElement;
+
+        // Check if clicked element or its parent is an edit button
+        const editBtn = target.closest('.edit-category-btn') as HTMLElement;
+        if (editBtn) {
+            const categoryId = editBtn.dataset.categoryId;
+            const category = workCategories.find((c) => c.id === categoryId);
+            if (category) {
+                editingCategory = category;
+                showAddCategory = false;
+                render();
+            }
+            return;
+        }
+
+        // Check if clicked element or its parent is a delete button
+        const deleteBtn = target.closest('.delete-category-btn') as HTMLElement;
+        if (deleteBtn) {
+            const categoryId = deleteBtn.dataset.categoryId;
+            const category = workCategories.find((c) => c.id === categoryId);
+
+            if (
+                category &&
+                confirm(
+                    `Are you sure you want to delete the category "${category.name}"?\n\nNote: Existing time entries with this category will not be deleted.`
+                )
+            ) {
+                deleteCategory(categoryId!).then(() => {
+                    emit('notification:show', {
+                        message: 'Category deleted successfully!',
+                        type: 'success',
+                        duration: 3000,
+                    });
+                    render();
+                }).catch(() => {
+                    alert('Failed to delete category. Please try again.');
+                });
+            }
+            return;
+        }
+    });
 
     // Initialize on load
     initialize();

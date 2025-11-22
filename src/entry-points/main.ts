@@ -8,6 +8,7 @@ import {
     createCustomDataCategory,
     createCustomDataValue,
     updateCustomDataValue,
+    deleteCustomDataValue,
 } from '../utils/kv-store';
 
 /**
@@ -70,8 +71,9 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
     let filterCategory = 'all';
 
     // UI state
-    let currentView: 'dashboard' | 'entries' | 'reports' = 'dashboard';
+    let currentView: 'dashboard' | 'entries' | 'absences' | 'reports' = 'dashboard';
     let showAddManualEntry = false;
+    let editingEntry: TimeEntry | null = null;
 
     // Initialize
     async function initialize() {
@@ -297,6 +299,35 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
         }
     }
 
+    // Delete time entry
+    async function deleteTimeEntry(startTime: string) {
+        try {
+            const cat = await getCustomDataCategory<object>('timeentries');
+            if (!cat) {
+                throw new Error('Time entries category not found');
+            }
+
+            // Find the entry in KV store
+            const allValues = await getCustomDataValues<TimeEntry>(cat.id, moduleId!);
+            const existingValue = allValues.find(v => v.startTime === startTime);
+
+            if (!existingValue) {
+                throw new Error('Time entry not found in database');
+            }
+
+            const kvStoreId = (existingValue as any).id;
+            await deleteCustomDataValue(cat.id, kvStoreId, moduleId!);
+
+            // Remove from local array
+            timeEntries = timeEntries.filter(e => e.startTime !== startTime);
+
+            render();
+        } catch (error) {
+            console.error('[TimeTracker] Delete entry failed:', error);
+            alert('Failed to delete entry. Please try again.');
+        }
+    }
+
     // Timer update interval
     let timerInterval: number | null = null;
 
@@ -487,6 +518,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                             <div style="display: flex; gap: 0.5rem;">
                                 <button id="view-dashboard" style="padding: 0.5rem 1rem; border: ${currentView === 'dashboard' ? '2px' : '1px'} solid ${currentView === 'dashboard' ? '#007bff' : '#ddd'}; background: ${currentView === 'dashboard' ? '#e7f3ff' : '#fff'}; color: ${currentView === 'dashboard' ? '#007bff' : '#666'}; border-radius: 4px; cursor: pointer; font-weight: ${currentView === 'dashboard' ? '600' : '400'};">Dashboard</button>
                                 <button id="view-entries" style="padding: 0.5rem 1rem; border: ${currentView === 'entries' ? '2px' : '1px'} solid ${currentView === 'entries' ? '#007bff' : '#ddd'}; background: ${currentView === 'entries' ? '#e7f3ff' : '#fff'}; color: ${currentView === 'entries' ? '#007bff' : '#666'}; border-radius: 4px; cursor: pointer; font-weight: ${currentView === 'entries' ? '600' : '400'};">Time Entries</button>
+                                <button id="view-absences" style="padding: 0.5rem 1rem; border: ${currentView === 'absences' ? '2px' : '1px'} solid ${currentView === 'absences' ? '#007bff' : '#ddd'}; background: ${currentView === 'absences' ? '#e7f3ff' : '#fff'}; color: ${currentView === 'absences' ? '#007bff' : '#666'}; border-radius: 4px; cursor: pointer; font-weight: ${currentView === 'absences' ? '600' : '400'};">Absences</button>
                                 <button id="view-reports" style="padding: 0.5rem 1rem; border: ${currentView === 'reports' ? '2px' : '1px'} solid ${currentView === 'reports' ? '#007bff' : '#ddd'}; background: ${currentView === 'reports' ? '#e7f3ff' : '#fff'}; color: ${currentView === 'reports' ? '#007bff' : '#666'}; border-radius: 4px; cursor: pointer; font-weight: ${currentView === 'reports' ? '600' : '400'};">Reports</button>
                             </div>
                         </div>
@@ -506,6 +538,8 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                 return renderDashboard(stats);
             case 'entries':
                 return renderEntries();
+            case 'absences':
+                return renderAbsences();
             case 'reports':
                 return renderReports(stats);
             default:
@@ -652,11 +686,11 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
             </div>
 
             ${
-                showAddManualEntry
+                showAddManualEntry || editingEntry
                     ? `
-                <!-- Add Manual Entry Form -->
-                <div style="background: #fff3cd; border: 1px solid #ffc107; border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem;">
-                    <h3 style="margin: 0 0 1rem 0; color: #333;">Add Manual Entry</h3>
+                <!-- Add/Edit Manual Entry Form -->
+                <div style="background: ${editingEntry ? '#d1ecf1' : '#fff3cd'}; border: 1px solid ${editingEntry ? '#17a2b8' : '#ffc107'}; border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem;">
+                    <h3 style="margin: 0 0 1rem 0; color: #333;">${editingEntry ? '✏️ Edit Entry' : '➕ Add Manual Entry'}</h3>
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
                         <div>
                             <label for="manual-start" style="display: block; margin-bottom: 0.5rem; color: #333; font-weight: 500;">Start Date & Time</label>
@@ -664,6 +698,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                                 type="datetime-local"
                                 id="manual-start"
                                 name="start-time"
+                                value="${editingEntry ? editingEntry.startTime.slice(0, 16) : ''}"
                                 autocomplete="off"
                                 data-lpignore="true"
                                 data-1p-ignore="true"
@@ -676,6 +711,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                                 type="datetime-local"
                                 id="manual-end"
                                 name="end-time"
+                                value="${editingEntry && editingEntry.endTime ? editingEntry.endTime.slice(0, 16) : ''}"
                                 autocomplete="off"
                                 data-lpignore="true"
                                 data-1p-ignore="true"
@@ -691,7 +727,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                                 name="manual-category"
                                 style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;"
                             >
-                                ${workCategories.map((cat) => `<option value="${cat.id}">${cat.name}</option>`).join('')}
+                                ${workCategories.map((cat) => `<option value="${cat.id}" ${editingEntry && editingEntry.categoryId === cat.id ? 'selected' : ''}>${cat.name}</option>`).join('')}
                             </select>
                         </div>
                         <div>
@@ -700,6 +736,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                                 type="text"
                                 id="manual-description"
                                 name="manual-description"
+                                value="${editingEntry ? editingEntry.description : ''}"
                                 autocomplete="off"
                                 data-lpignore="true"
                                 data-1p-ignore="true"
@@ -709,7 +746,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                         </div>
                     </div>
                     <div style="display: flex; gap: 0.5rem;">
-                        <button id="save-manual-entry-btn" style="padding: 0.5rem 1rem; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer;">Save Entry</button>
+                        <button id="save-manual-entry-btn" style="padding: 0.5rem 1rem; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer;">${editingEntry ? '💾 Update Entry' : '💾 Save Entry'}</button>
                         <button id="cancel-manual-entry-btn" style="padding: 0.5rem 1rem; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer;">Cancel</button>
                     </div>
                 </div>
@@ -742,6 +779,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                             <th style="padding: 0.75rem; text-align: left; font-weight: 600; color: #495057;">Category</th>
                             <th style="padding: 0.75rem; text-align: left; font-weight: 600; color: #495057;">Description</th>
                             <th style="padding: 0.75rem; text-align: left; font-weight: 600; color: #495057;">Type</th>
+                            <th style="padding: 0.75rem; text-align: left; font-weight: 600; color: #495057;">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -769,12 +807,75 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                                             ${entry.isManual ? '📝 Manual' : '⏱️ Tracked'}
                                         </span>
                                     </td>
+                                    <td style="padding: 0.75rem;">
+                                        ${entry.endTime ? `
+                                        <div style="display: flex; gap: 0.25rem;">
+                                            <button
+                                                class="edit-entry-btn"
+                                                data-entry-start="${entry.startTime}"
+                                                style="padding: 0.25rem 0.5rem; background: #ffc107; color: #333; border: none; border-radius: 3px; cursor: pointer; font-size: 0.85rem;"
+                                                title="Edit"
+                                            >✏️</button>
+                                            <button
+                                                class="delete-entry-btn"
+                                                data-entry-start="${entry.startTime}"
+                                                style="padding: 0.25rem 0.5rem; background: #dc3545; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 0.85rem;"
+                                                title="Delete"
+                                            >🗑️</button>
+                                        </div>
+                                        ` : '<span style="color: #999; font-size: 0.85rem;">-</span>'}
+                                    </td>
                                 </tr>
                             `;
                             })
                             .join('')}
                     </tbody>
                 </table>
+            </div>
+        `;
+    }
+
+    function renderAbsences(): string {
+        return `
+            <div style="background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                    <h2 style="margin: 0; font-size: 1.2rem; color: #333;">My Absences (${absences.length})</h2>
+                    <button id="add-absence-btn" style="padding: 0.5rem 1rem; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600;">➕ Add Absence</button>
+                </div>
+                ${absences.length === 0 ? '<p style="color: #666; text-align: center; padding: 2rem;">No absences found.</p>' : `
+                <div style="overflow-x: auto;">
+                    <table style="width: 100%; border-collapse: collapse;">
+                        <thead>
+                            <tr style="background: #f8f9fa; border-bottom: 2px solid #dee2e6;">
+                                <th style="padding: 0.75rem; text-align: left; font-weight: 600; color: #495057;">From</th>
+                                <th style="padding: 0.75rem; text-align: left; font-weight: 600; color: #495057;">To</th>
+                                <th style="padding: 0.75rem; text-align: left; font-weight: 600; color: #495057;">Reason</th>
+                                <th style="padding: 0.75rem; text-align: left; font-weight: 600; color: #495057;">Note</th>
+                                <th style="padding: 0.75rem; text-align: left; font-weight: 600; color: #495057;">Type</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${absences.map(absence => {
+                                const isAllDay = absence.startTime === null || absence.endTime === null;
+                                const start = new Date(absence.startDate);
+                                const end = new Date(absence.endDate);
+                                return `
+                                <tr style="border-bottom: 1px solid #dee2e6;">
+                                    <td style="padding: 0.75rem;">${start.toLocaleDateString()}${!isAllDay ? ' ' + new Date(absence.startTime!).toLocaleTimeString() : ''}</td>
+                                    <td style="padding: 0.75rem;">${end.toLocaleDateString()}${!isAllDay ? ' ' + new Date(absence.endTime!).toLocaleTimeString() : ''}</td>
+                                    <td style="padding: 0.75rem;">
+                                        <span style="background: #ffc107; color: #333; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.85rem;">
+                                            ${absence.absenceReason?.name || 'Unknown'}
+                                        </span>
+                                    </td>
+                                    <td style="padding: 0.75rem;">${absence.comment || '-'}</td>
+                                    <td style="padding: 0.75rem;">${isAllDay ? 'All-day' : 'Timed'}</td>
+                                </tr>
+                            `}).join('')}
+                        </tbody>
+                    </table>
+                </div>
+                `}
             </div>
         `;
     }
@@ -952,6 +1053,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
         // View switchers
         const viewDashboard = element.querySelector('#view-dashboard') as HTMLButtonElement;
         const viewEntries = element.querySelector('#view-entries') as HTMLButtonElement;
+        const viewAbsences = element.querySelector('#view-absences') as HTMLButtonElement;
         const viewReports = element.querySelector('#view-reports') as HTMLButtonElement;
         const viewAllEntries = element.querySelector('#view-all-entries') as HTMLButtonElement;
 
@@ -962,6 +1064,11 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
 
         viewEntries?.addEventListener('click', () => {
             currentView = 'entries';
+            render();
+        });
+
+        viewAbsences?.addEventListener('click', () => {
+            currentView = 'absences';
             render();
         });
 
@@ -1059,6 +1166,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
 
         cancelManualEntryBtn?.addEventListener('click', () => {
             showAddManualEntry = false;
+            editingEntry = null;
             render();
         });
 
@@ -1087,20 +1195,56 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
 
             try {
                 const category = workCategories.find((c) => c.id === categorySelect.value);
-                const newEntry: TimeEntry = {
-                    userId: user?.id!,
-                    startTime: start.toISOString(),
-                    endTime: end.toISOString(),
-                    categoryId: categorySelect.value,
-                    categoryName: category?.name || 'Unknown',
-                    description: descriptionInput.value,
-                    isManual: true,
-                    createdAt: new Date().toISOString(),
-                };
-
-                // Save to KV store
                 const cat = await getCustomDataCategory<object>('timeentries');
-                if (cat) {
+                if (!cat) {
+                    throw new Error('Time entries category not found');
+                }
+
+                if (editingEntry) {
+                    // UPDATE existing entry
+                    const updatedEntry: TimeEntry = {
+                        ...editingEntry,
+                        startTime: start.toISOString(),
+                        endTime: end.toISOString(),
+                        categoryId: categorySelect.value,
+                        categoryName: category?.name || 'Unknown',
+                        description: descriptionInput.value,
+                    };
+
+                    // Find in KV store and update
+                    const allValues = await getCustomDataValues<TimeEntry>(cat.id, moduleId!);
+                    const existingValue = allValues.find(v => v.startTime === editingEntry!.startTime);
+
+                    if (existingValue) {
+                        const kvStoreId = (existingValue as any).id;
+                        await updateCustomDataValue(
+                            cat.id,
+                            kvStoreId,
+                            { value: JSON.stringify(updatedEntry) },
+                            moduleId!
+                        );
+                    }
+
+                    // Update local array
+                    const index = timeEntries.findIndex(e => e.startTime === editingEntry!.startTime);
+                    if (index !== -1) {
+                        timeEntries[index] = updatedEntry;
+                    }
+
+                    editingEntry = null;
+                } else {
+                    // CREATE new entry
+                    const newEntry: TimeEntry = {
+                        userId: user?.id!,
+                        startTime: start.toISOString(),
+                        endTime: end.toISOString(),
+                        categoryId: categorySelect.value,
+                        categoryName: category?.name || 'Unknown',
+                        description: descriptionInput.value,
+                        isManual: true,
+                        createdAt: new Date().toISOString(),
+                    };
+
                     await createCustomDataValue(
                         {
                             dataCategoryId: cat.id,
@@ -1108,22 +1252,58 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                         },
                         moduleId!
                     );
+
+                    timeEntries.unshift(newEntry);
+                    timeEntries.sort(
+                        (a, b) =>
+                            new Date(b.startTime).getTime() - new Date(a.startTime).getTime()
+                    );
+
+                    showAddManualEntry = false;
                 }
 
-                timeEntries.unshift(newEntry);
-                timeEntries.sort(
-                    (a, b) =>
-                        new Date(b.startTime).getTime() - new Date(a.startTime).getTime()
-                );
-
-                showAddManualEntry = false;
                 render();
             } catch (error) {
-                console.error('[TimeTracker] Failed to add manual entry:', error);
-                alert('Failed to add manual entry. Please try again.');
+                console.error('[TimeTracker] Failed to save entry:', error);
+                alert('Failed to save entry. Please try again.');
             }
         });
     }
+
+    // Setup event delegation for edit/delete entry buttons (only once)
+    element.addEventListener('click', (e) => {
+        const target = e.target as HTMLElement;
+
+        // Check if clicked element is an edit button
+        const editBtn = target.closest('.edit-entry-btn') as HTMLElement;
+        if (editBtn) {
+            const startTime = editBtn.dataset.entryStart;
+            const entry = timeEntries.find((e) => e.startTime === startTime);
+            if (entry) {
+                editingEntry = entry;
+                showAddManualEntry = false;
+                render();
+            }
+            return;
+        }
+
+        // Check if clicked element is a delete button
+        const deleteBtn = target.closest('.delete-entry-btn') as HTMLElement;
+        if (deleteBtn) {
+            const startTime = deleteBtn.dataset.entryStart;
+            const entry = timeEntries.find((e) => e.startTime === startTime);
+
+            if (
+                entry &&
+                confirm(
+                    `Are you sure you want to delete this time entry?\n\nStart: ${new Date(entry.startTime).toLocaleString()}\nEnd: ${entry.endTime ? new Date(entry.endTime).toLocaleString() : 'N/A'}\nCategory: ${entry.categoryName}`
+                )
+            ) {
+                deleteTimeEntry(startTime!);
+            }
+            return;
+        }
+    });
 
     // Initialize
     initialize();
