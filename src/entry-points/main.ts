@@ -261,11 +261,12 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
         }
     }
 
-    // Load absence reasons from ChurchTools API
+    // Load absence reasons from ChurchTools Event Masterdata
     async function loadAbsenceReasons(): Promise<void> {
         try {
-            const response = await churchtoolsClient.get<AbsenceReason[]>('/absencereasons');
-            absenceReasons = response || [];
+            const response = await churchtoolsClient.get<{ absenceReasons?: AbsenceReason[] }>('/events/masterdata');
+            absenceReasons = response?.absenceReasons || [];
+            console.log('[TimeTracker] Loaded absence reasons:', absenceReasons.length);
         } catch (error) {
             console.error('[TimeTracker] Failed to load absence reasons:', error);
             absenceReasons = [];
