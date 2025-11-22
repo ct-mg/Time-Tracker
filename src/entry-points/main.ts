@@ -302,10 +302,10 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
             await loadAbsences();
             showAddAbsence = false;
             render();
-            alert('Absence created successfully!');
+            showNotification('Absence created successfully!', 'success');
         } catch (error) {
             console.error('[TimeTracker] Failed to create absence:', error);
-            alert('Failed to create absence. Please try again.');
+            showNotification('Failed to create absence. Please try again.', 'error');
         }
     }
 
@@ -341,10 +341,10 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
             await loadAbsences();
             editingAbsence = null;
             render();
-            alert('Absence updated successfully!');
+            showNotification('Absence updated successfully!', 'success');
         } catch (error) {
             console.error('[TimeTracker] Failed to update absence:', error);
-            alert('Failed to update absence. Please try again.');
+            showNotification('Failed to update absence. Please try again.', 'error');
         }
     }
 
@@ -357,10 +357,10 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
             await (churchtoolsClient as any).request('DELETE', `/persons/${user.id}/absences/${absenceId}`);
             await loadAbsences();
             render();
-            alert('Absence deleted successfully!');
+            showNotification('Absence deleted successfully!', 'success');
         } catch (error) {
             console.error('[TimeTracker] Failed to delete absence:', error);
-            alert('Failed to delete absence. Please try again.');
+            showNotification('Failed to delete absence. Please try again.', 'error');
         }
     }
 
@@ -399,7 +399,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
             render();
         } catch (error) {
             console.error('[TimeTracker] Clock in failed:', error);
-            alert('Failed to clock in. Please try again.');
+            showNotification('Failed to clock in. Please try again.', 'error');
         }
     }
 
@@ -454,7 +454,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
             render();
         } catch (error) {
             console.error('[TimeTracker] Clock out failed:', error);
-            alert('Failed to clock out. Please try again.');
+            showNotification('Failed to clock out. Please try again.', 'error');
             // Reload to get fresh state
             await loadTimeEntries();
             currentEntry = timeEntries.find((entry) => entry.endTime === null && entry.userId === user?.id) || null;
@@ -487,7 +487,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
             render();
         } catch (error) {
             console.error('[TimeTracker] Delete entry failed:', error);
-            alert('Failed to delete entry. Please try again.');
+            showNotification('Failed to delete entry. Please try again.', 'error');
         }
     }
 
@@ -1722,10 +1722,15 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                     <select
                         id="absence-reason"
                         style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;"
+                        ${absenceReasons.length === 0 ? 'disabled' : ''}
                     >
-                        ${absenceReasons.map(reason => `
-                            <option value="${reason.id}" ${editingAbsence && editingAbsence.absenceReason.id === reason.id ? 'selected' : ''}>${reason.name}</option>
-                        `).join('')}
+                        ${absenceReasons.length === 0 ?
+                            '<option value="">No reasons available - check admin settings</option>' :
+                            (editingAbsence ? '' : '<option value="">-- Select a reason --</option>') +
+                            absenceReasons.map(reason => `
+                                <option value="${reason.id}" ${editingAbsence && editingAbsence.absenceReason.id === reason.id ? 'selected' : ''}>${reason.nameTranslated || reason.name}</option>
+                            `).join('')
+                        }
                     </select>
                 </div>
                 <div style="margin-bottom: 1rem;">
@@ -1776,7 +1781,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                                     <td style="padding: 0.75rem;">${end.toLocaleDateString()}${!isAllDay ? ' ' + new Date(absence.endTime!).toLocaleTimeString() : ''}</td>
                                     <td style="padding: 0.75rem;">
                                         <span style="background: #ffc107; color: #333; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.85rem;">
-                                            ${absence.absenceReason?.name || 'Unknown'}
+                                            ${absence.absenceReason?.nameTranslated || absence.absenceReason?.name || 'Unknown'}
                                         </span>
                                     </td>
                                     <td style="padding: 0.75rem;">${absence.comment || '-'}</td>
@@ -2040,7 +2045,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                                     <td style="padding: 0.75rem;">${end.toLocaleDateString()}${!isAllDay ? ' ' + new Date(absence.endTime!).toLocaleTimeString() : ''}</td>
                                     <td style="padding: 0.75rem;">
                                         <span style="background: #ffc107; color: #333; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.85rem;">
-                                            ${absence.absenceReason?.name || 'Unknown'}
+                                            ${absence.absenceReason?.nameTranslated || absence.absenceReason?.name || 'Unknown'}
                                         </span>
                                     </td>
                                     <td style="padding: 0.75rem; font-weight: 600;">${hours.toFixed(2)}h</td>
@@ -2245,7 +2250,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
             ) as HTMLInputElement;
 
             if (!startInput.value || !endInput.value) {
-                alert('Please fill in both start and end times.');
+                showNotification('Please fill in both start and end times.', 'error');
                 return;
             }
 
@@ -2253,7 +2258,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
             const end = new Date(endInput.value);
 
             if (end <= start) {
-                alert('End time must be after start time.');
+                showNotification('End time must be after start time.', 'error');
                 return;
             }
 
@@ -2329,7 +2334,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                 render();
             } catch (error) {
                 console.error('[TimeTracker] Failed to save entry:', error);
-                alert('Failed to save entry. Please try again.');
+                showNotification('Failed to save entry. Please try again.', 'error');
             }
         });
 
@@ -2450,7 +2455,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
             const allDayCheckbox = element.querySelector('#absence-all-day') as HTMLInputElement;
 
             if (!startDateInput?.value || !endDateInput?.value || !reasonSelect?.value) {
-                alert('Please fill in all required fields.');
+                showNotification('Please fill in all required fields.', 'error');
                 return;
             }
 
@@ -2495,7 +2500,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                 if (
                     absence &&
                     confirm(
-                        `Are you sure you want to delete this absence?\n\nFrom: ${new Date(absence.startDate).toLocaleDateString()}\nTo: ${new Date(absence.endDate).toLocaleDateString()}\nReason: ${absence.absenceReason?.name}`
+                        `Are you sure you want to delete this absence?\n\nFrom: ${new Date(absence.startDate).toLocaleDateString()}\nTo: ${new Date(absence.endDate).toLocaleDateString()}\nReason: ${absence.absenceReason?.nameTranslated || absence.absenceReason?.name}`
                     )
                 ) {
                     deleteAbsence(absenceId);
