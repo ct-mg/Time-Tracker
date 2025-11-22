@@ -1140,8 +1140,11 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
         // Calculate absence hours in the filtered period
         const absenceHours = calculateAbsenceHours();
 
+        // Get user-specific hours
+        const userHours = getUserHours();
+
         // Expected hours = work days * hours per week / 7 - absence hours
-        const expectedHours = (workDays / 7) * settings.defaultHoursPerWeek - absenceHours;
+        const expectedHours = (workDays / 7) * userHours.hoursPerWeek - absenceHours;
         const overtime = totalHours - expectedHours;
 
         cachedStats = {
@@ -1150,7 +1153,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
             overtime: overtime.toFixed(2),
             entriesCount: filtered.length,
             absenceHours: absenceHours.toFixed(2),
-            absenceDays: (absenceHours / settings.defaultHoursPerDay).toFixed(1),
+            absenceDays: (absenceHours / userHours.hoursPerDay).toFixed(1),
         };
 
         return cachedStats;
@@ -1240,11 +1243,14 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
             return totalMs / (1000 * 60 * 60); // Convert to hours
         }
 
+        // Get user-specific hours
+        const userHours = getUserHours();
+
         // TODAY
         const todayIst = calculateHours(today, today);
         const todayDate = new Date(today);
         const isTodayWorkday = todayDate.getDay() >= 1 && todayDate.getDay() <= 5;
-        const todaySoll = isTodayWorkday ? settings.defaultHoursPerDay : 0;
+        const todaySoll = isTodayWorkday ? userHours.hoursPerDay : 0;
 
         // THIS WEEK
         const dayOfWeek = now.getDay();
@@ -1256,7 +1262,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
         const weekEnd = today;
         const weekIst = calculateHours(weekStart, weekEnd);
         const weekWorkdays = countWorkdays(new Date(weekStart), new Date(weekEnd));
-        const weekSoll = weekWorkdays * settings.defaultHoursPerDay;
+        const weekSoll = weekWorkdays * userHours.hoursPerDay;
         const weekNumber = getISOWeek(now);
         const weekYear = getISOWeekYear(now);
 
@@ -1265,7 +1271,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
         const monthEnd = today;
         const monthIst = calculateHours(monthStart, monthEnd);
         const monthWorkdays = countWorkdays(new Date(monthStart), new Date(monthEnd));
-        const monthSoll = monthWorkdays * settings.defaultHoursPerDay;
+        const monthSoll = monthWorkdays * userHours.hoursPerDay;
 
         // LAST MONTH
         const lastMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
@@ -1274,7 +1280,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
         const lastMonthEnd = lastMonthLastDay.toISOString().split('T')[0];
         const lastMonthIst = calculateHours(lastMonthStart, lastMonthEnd);
         const lastMonthWorkdays = countWorkdays(lastMonthDate, lastMonthLastDay);
-        const lastMonthSoll = lastMonthWorkdays * settings.defaultHoursPerDay;
+        const lastMonthSoll = lastMonthWorkdays * userHours.hoursPerDay;
 
         return {
             today: { ist: todayIst, soll: todaySoll },
@@ -1288,6 +1294,9 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
     function calculateAbsenceHours(): number {
         const fromDate = new Date(filterDateFrom);
         const toDate = new Date(filterDateTo);
+
+        // Get user-specific hours
+        const userHours = getUserHours();
 
         let totalAbsenceHours = 0;
 
@@ -1311,7 +1320,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                 // For all-day absences, count full days
                 const daysMs = overlapEnd.getTime() - overlapStart.getTime();
                 const days = Math.ceil(daysMs / (1000 * 60 * 60 * 24)) + 1; // +1 because both start and end are inclusive
-                totalAbsenceHours += days * settings.defaultHoursPerDay;
+                totalAbsenceHours += days * userHours.hoursPerDay;
             } else {
                 // For timed absences, calculate actual hours
                 const startTime = new Date(absence.startTime!);
@@ -2051,6 +2060,9 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
             return '<p style="color: #666; text-align: center; padding: 2rem;">No entries found.</p>';
         }
 
+        // Get user-specific hours
+        const userHours = getUserHours();
+
         // Group entries by calendar week, then by day
         type WeekGroup = {
             weekNumber: number;
@@ -2099,7 +2111,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                 return sum + (end - start);
             }, 0);
             const weekIst = formatHours(weekIstMs);
-            const weekSoll = formatHours(settings.defaultHoursPerWeek * 3600000); // Convert hours to ms
+            const weekSoll = formatHours(userHours.hoursPerWeek * 3600000); // Convert hours to ms
 
             html += `
                 <div style="background: #f8f9fa; border: 2px solid #dee2e6; border-radius: 8px; padding: 1rem;">
@@ -2109,7 +2121,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                         </h3>
                         <div style="display: flex; gap: 1rem; font-size: 0.9rem;">
                             <span style="color: #666;">
-                                <strong>Woche IST:</strong> <span style="color: ${weekIstMs >= settings.defaultHoursPerWeek * 3600000 ? '#28a745' : '#dc3545'}; font-weight: 600;">${weekIst}</span>
+                                <strong>Woche IST:</strong> <span style="color: ${weekIstMs >= userHours.hoursPerWeek * 3600000 ? '#28a745' : '#dc3545'}; font-weight: 600;">${weekIst}</span>
                             </span>
                             <span style="color: #666;">
                                 <strong>Woche SOLL:</strong> <span style="font-weight: 600;">${weekSoll}</span>
@@ -2138,7 +2150,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                 // Determine day SOLL (only workdays Monday-Friday)
                 const dayOfWeek = date.getDay(); // 0 = Sunday, 6 = Saturday
                 const isWorkday = dayOfWeek >= 1 && dayOfWeek <= 5; // Monday to Friday
-                const daySoll = isWorkday ? formatHours(settings.defaultHoursPerDay * 3600000) : '0h';
+                const daySoll = isWorkday ? formatHours(userHours.hoursPerDay * 3600000) : '0h';
 
                 html += `
                     <div style="background: white; border: 1px solid #dee2e6; border-radius: 6px; padding: 0.75rem; margin-bottom: 0.75rem;">
@@ -2148,7 +2160,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                             </h4>
                             <div style="display: flex; gap: 1rem; font-size: 0.85rem;">
                                 <span style="color: #666;">
-                                    <strong>Tag IST:</strong> <span style="color: ${dayIstMs >= settings.defaultHoursPerDay * 3600000 ? '#28a745' : (isWorkday ? '#dc3545' : '#6c757d')}; font-weight: 600;">${dayIst}</span>
+                                    <strong>Tag IST:</strong> <span style="color: ${dayIstMs >= userHours.hoursPerDay * 3600000 ? '#28a745' : (isWorkday ? '#dc3545' : '#6c757d')}; font-weight: 600;">${dayIst}</span>
                                 </span>
                                 <span style="color: #666;">
                                     <strong>Tag SOLL:</strong> <span style="font-weight: 600;">${daySoll}</span>
@@ -2718,7 +2730,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                                 let hours = 0;
                                 if (isAllDay) {
                                     const days = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
-                                    hours = days * settings.defaultHoursPerDay;
+                                    hours = days * userHours.hoursPerDay;
                                 } else {
                                     const startTime = new Date(absence.startTime!);
                                     const endTime = new Date(absence.endTime!);
