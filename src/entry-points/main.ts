@@ -70,11 +70,19 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
     let errorMessage = '';
     let moduleId: number | null = null;
 
-    // Filters
-    let filterDateFrom = new Date(new Date().setDate(new Date().getDate() - 30))
-        .toISOString()
-        .split('T')[0];
-    let filterDateTo = new Date().toISOString().split('T')[0];
+    // Filters - Initialize to This Week (Monday to Sunday)
+    const now = new Date();
+    const dayOfWeek = now.getDay();
+    const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+    const monday = new Date(now);
+    monday.setDate(now.getDate() + mondayOffset);
+    monday.setHours(0, 0, 0, 0);
+    const sunday = new Date(monday);
+    sunday.setDate(monday.getDate() + 6);
+    sunday.setHours(23, 59, 59, 999);
+
+    let filterDateFrom = monday.toISOString().split('T')[0];
+    let filterDateTo = sunday.toISOString().split('T')[0];
     let filterCategory = 'all';
 
     // UI state
@@ -82,7 +90,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
     let showAddManualEntry = false;
     let editingEntry: TimeEntry | null = null;
     let showBulkEntry = false;
-    let reportPeriod: 'week' | 'month' | 'year' | 'custom' = 'custom';
+    let reportPeriod: 'week' | 'month' | 'year' | 'custom' = 'week';
     let showAddAbsence = false;
     let editingAbsence: Absence | null = null;
 
