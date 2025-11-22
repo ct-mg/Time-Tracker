@@ -1374,6 +1374,17 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
         return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
     }
 
+    // Format decimal hours to hours and minutes (e.g. 5.5 -> "5h 30m")
+    function formatDecimalHours(decimalHours: number): string {
+        const hours = Math.floor(decimalHours);
+        const minutes = Math.round((decimalHours - hours) * 60);
+
+        if (minutes === 0) {
+            return `${hours}h`;
+        }
+        return `${hours}h ${minutes}m`;
+    }
+
     // Get ISO week number (KW)
     function getISOWeek(date: Date): number {
         const target = new Date(date.valueOf());
@@ -1394,10 +1405,10 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
         return target.getFullYear();
     }
 
-    // Format hours as decimal (e.g., 8.5h)
+    // Format hours from milliseconds (e.g., 8.5h -> "8h 30m")
     function formatHours(ms: number): string {
         const hours = ms / (1000 * 60 * 60);
-        return hours.toFixed(1) + 'h';
+        return formatDecimalHours(hours);
     }
 
     // Format date
@@ -1591,13 +1602,13 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                         <div>
                             <div style="color: #999; font-size: 0.75rem;">IST</div>
                             <div style="font-size: 1.5rem; font-weight: 700; color: ${dashStats.today.ist >= dashStats.today.soll ? '#28a745' : (dashStats.today.soll > 0 ? '#dc3545' : '#6c757d')};">
-                                ${dashStats.today.ist.toFixed(1)}h
+                                ${formatDecimalHours(dashStats.today.ist)}
                             </div>
                         </div>
                         <div style="text-align: right;">
                             <div style="color: #999; font-size: 0.75rem;">SOLL</div>
                             <div style="font-size: 1.5rem; font-weight: 700; color: #6c757d;">
-                                ${dashStats.today.soll.toFixed(1)}h
+                                ${formatDecimalHours(dashStats.today.soll)}
                             </div>
                         </div>
                     </div>
@@ -1613,13 +1624,13 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                         <div>
                             <div style="color: #999; font-size: 0.75rem;">IST</div>
                             <div style="font-size: 1.5rem; font-weight: 700; color: ${dashStats.week.ist >= dashStats.week.soll ? '#28a745' : '#dc3545'};">
-                                ${dashStats.week.ist.toFixed(1)}h
+                                ${formatDecimalHours(dashStats.week.ist)}
                             </div>
                         </div>
                         <div style="text-align: right;">
                             <div style="color: #999; font-size: 0.75rem;">SOLL</div>
                             <div style="font-size: 1.5rem; font-weight: 700; color: #6c757d;">
-                                ${dashStats.week.soll.toFixed(1)}h
+                                ${formatDecimalHours(dashStats.week.soll)}
                             </div>
                         </div>
                     </div>
@@ -1635,13 +1646,13 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                         <div>
                             <div style="color: #999; font-size: 0.75rem;">IST</div>
                             <div style="font-size: 1.5rem; font-weight: 700; color: ${dashStats.month.ist >= dashStats.month.soll ? '#28a745' : '#dc3545'};">
-                                ${dashStats.month.ist.toFixed(1)}h
+                                ${formatDecimalHours(dashStats.month.ist)}
                             </div>
                         </div>
                         <div style="text-align: right;">
                             <div style="color: #999; font-size: 0.75rem;">SOLL</div>
                             <div style="font-size: 1.5rem; font-weight: 700; color: #6c757d;">
-                                ${dashStats.month.soll.toFixed(1)}h
+                                ${formatDecimalHours(dashStats.month.soll)}
                             </div>
                         </div>
                     </div>
@@ -1657,13 +1668,13 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                         <div>
                             <div style="color: #999; font-size: 0.75rem;">IST</div>
                             <div style="font-size: 1.5rem; font-weight: 700; color: ${dashStats.lastMonth.ist >= dashStats.lastMonth.soll ? '#28a745' : '#dc3545'};">
-                                ${dashStats.lastMonth.ist.toFixed(1)}h
+                                ${formatDecimalHours(dashStats.lastMonth.ist)}
                             </div>
                         </div>
                         <div style="text-align: right;">
                             <div style="color: #999; font-size: 0.75rem;">SOLL</div>
                             <div style="font-size: 1.5rem; font-weight: 700; color: #6c757d;">
-                                ${dashStats.lastMonth.soll.toFixed(1)}h
+                                ${formatDecimalHours(dashStats.lastMonth.soll)}
                             </div>
                         </div>
                     </div>
@@ -2658,8 +2669,8 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                             </div>
                             <div style="color: ${isOverTarget ? '#155724' : (percentage >= 80 ? '#856404' : '#721c24')}; font-size: 0.9rem;">
                                 ${isOverTarget
-                                    ? `You have worked ${stats.overtime}h more than required. Great job!`
-                                    : `You need to work ${Math.abs(parseFloat(stats.overtime)).toFixed(2)}h more to reach your target.`
+                                    ? `You have worked ${formatDecimalHours(parseFloat(stats.overtime))} more than required. Great job!`
+                                    : `You need to work ${formatDecimalHours(Math.abs(parseFloat(stats.overtime)))} more to reach your target.`
                                 }
                             </div>
                         </div>
@@ -2684,7 +2695,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                                     ${category?.name || 'Unknown'}
                                 </span>
                                 <span style="font-size: 1.2rem; font-weight: 700; color: #333;">
-                                    ${data.hours.toFixed(2)}h
+                                    ${formatDecimalHours(data.hours)}
                                 </span>
                             </div>
                             <div style="background: #e9ecef; height: 8px; border-radius: 4px; overflow: hidden;">
@@ -2745,7 +2756,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                                             ${absence.absenceReason?.nameTranslated || absence.absenceReason?.name || 'Unknown'}
                                         </span>
                                     </td>
-                                    <td style="padding: 0.75rem; font-weight: 600;">${hours.toFixed(2)}h</td>
+                                    <td style="padding: 0.75rem; font-weight: 600;">${formatDecimalHours(hours)}</td>
                                 </tr>
                             `}).join('')}
                         </tbody>
