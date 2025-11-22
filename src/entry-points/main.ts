@@ -1220,10 +1220,6 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                         <div style="display: flex; justify-content: space-between; align-items: center;">
                             <div>
                                 <h1 style="margin: 0 0 0.5rem 0; font-size: 1.8rem; color: #333;">
-                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle; margin-right: 0.5rem;">
-                                        <circle cx="12" cy="12" r="10"></circle>
-                                        <polyline points="12 6 12 12 16 14"></polyline>
-                                    </svg>
                                     Time Tracker
                                 </h1>
                                 <p style="margin: 0; color: #666;">Welcome, ${user?.firstName || 'User'}! Track your working hours.</p>
@@ -2044,6 +2040,12 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                             <line x1="16" y1="2" x2="16" y2="6"></line>
                             <line x1="8" y1="2" x2="8" y2="6"></line>
                             <line x1="3" y1="10" x2="21" y2="10"></line>
+                            <line x1="8" y1="14" x2="8" y2="14"></line>
+                            <line x1="12" y1="14" x2="12" y2="14"></line>
+                            <line x1="16" y1="14" x2="16" y2="14"></line>
+                            <line x1="8" y1="18" x2="8" y2="18"></line>
+                            <line x1="12" y1="18" x2="12" y2="18"></line>
+                            <line x1="16" y1="18" x2="16" y2="18"></line>
                         </svg>
                         This Month
                     </button>
