@@ -45,6 +45,7 @@ interface WorkCategory {
 interface Settings {
     defaultHoursPerDay: number;
     defaultHoursPerWeek: number;
+    excelImportEnabled: boolean; // Alpha feature toggle
 }
 
 const mainEntryPoint: EntryPoint<MainModuleData> = ({
@@ -56,7 +57,11 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
     // State
     let timeEntries: TimeEntry[] = [];
     let workCategories: WorkCategory[] = [];
-    let settings: Settings = { defaultHoursPerDay: 8, defaultHoursPerWeek: 40 };
+    let settings: Settings = {
+        defaultHoursPerDay: 8,
+        defaultHoursPerWeek: 40,
+        excelImportEnabled: false // Default: disabled (Alpha)
+    };
     let currentEntry: TimeEntry | null = null;
     let absences: Absence[] = [];
     let absenceReasons: AbsenceReason[] = [];
@@ -1419,11 +1424,13 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                     </table>
                 </div>
 
-                <!-- Excel Import/Export -->
+                <!-- Excel Import/Export (Alpha Feature) -->
+                ${settings.excelImportEnabled ? `
                 <div style="background: #fff3cd; border: 1px solid #ffc107; border-radius: 6px; padding: 1rem; margin-bottom: 1rem;">
                     <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
                         <span style="font-size: 1.2rem;">📊</span>
                         <strong style="color: #856404;">Excel Import/Export</strong>
+                        <span style="background: #ff9800; color: white; padding: 0.125rem 0.5rem; border-radius: 3px; font-size: 0.75rem; margin-left: 0.5rem; font-weight: 700;">ALPHA</span>
                     </div>
                     <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center;">
                         <button id="download-excel-template-btn" style="padding: 0.5rem 1rem; background: #17a2b8; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600;">⬇️ Download Template</button>
@@ -1432,6 +1439,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                         <span style="color: #856404; font-size: 0.85rem; font-style: italic;">Import will replace existing entries in the table</span>
                     </div>
                 </div>
+                ` : ''}
 
                 <div style="display: flex; gap: 0.5rem; justify-content: space-between; flex-wrap: wrap;">
                     <button id="add-bulk-row-btn" style="padding: 0.5rem 1rem; background: #6f42c1; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600;">➕ Add Row</button>
@@ -2357,27 +2365,29 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
             await saveBulkEntries();
         });
 
-        // Excel import/export
-        const downloadExcelTemplateBtn = element.querySelector('#download-excel-template-btn') as HTMLButtonElement;
-        const importExcelBtn = element.querySelector('#import-excel-btn') as HTMLButtonElement;
-        const importExcelInput = element.querySelector('#import-excel-input') as HTMLInputElement;
+        // Excel import/export (Alpha Feature)
+        if (settings.excelImportEnabled) {
+            const downloadExcelTemplateBtn = element.querySelector('#download-excel-template-btn') as HTMLButtonElement;
+            const importExcelBtn = element.querySelector('#import-excel-btn') as HTMLButtonElement;
+            const importExcelInput = element.querySelector('#import-excel-input') as HTMLInputElement;
 
-        downloadExcelTemplateBtn?.addEventListener('click', () => {
-            downloadExcelTemplate();
-        });
+            downloadExcelTemplateBtn?.addEventListener('click', () => {
+                downloadExcelTemplate();
+            });
 
-        importExcelBtn?.addEventListener('click', () => {
-            importExcelInput?.click();
-        });
+            importExcelBtn?.addEventListener('click', () => {
+                importExcelInput?.click();
+            });
 
-        importExcelInput?.addEventListener('change', (e) => {
-            const file = (e.target as HTMLInputElement).files?.[0];
-            if (file) {
-                importFromExcel(file);
-                // Reset input so the same file can be imported again
-                importExcelInput.value = '';
-            }
-        });
+            importExcelInput?.addEventListener('change', (e) => {
+                const file = (e.target as HTMLInputElement).files?.[0];
+                if (file) {
+                    importFromExcel(file);
+                    // Reset input so the same file can be imported again
+                    importExcelInput.value = '';
+                }
+            });
+        }
 
         // Bulk input change handlers (using event delegation)
         const bulkInputs = element.querySelectorAll('.bulk-input');

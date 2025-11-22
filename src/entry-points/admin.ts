@@ -31,6 +31,7 @@ interface WorkCategory {
 interface Settings {
     defaultHoursPerDay: number;
     defaultHoursPerWeek: number;
+    excelImportEnabled: boolean; // Alpha feature toggle
 }
 
 const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) => {
@@ -38,7 +39,11 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
     let workCategoriesCategory: CustomModuleDataCategory | null = null;
     let settingsCategory: CustomModuleDataCategory | null = null;
     let workCategories: WorkCategory[] = [];
-    let settings: Settings = { defaultHoursPerDay: 8, defaultHoursPerWeek: 40 };
+    let settings: Settings = {
+        defaultHoursPerDay: 8,
+        defaultHoursPerWeek: 40,
+        excelImportEnabled: false // Disabled by default (Alpha)
+    };
 
     // UI State
     let isLoading = true;
@@ -547,6 +552,34 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                     </div>
                 </div>
 
+                <!-- Alpha Features -->
+                <div style="margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid #e0e0e0;">
+                    <h3 style="margin: 0 0 0.5rem 0; font-size: 1.1rem; color: #333;">
+                        🧪 Alpha Features
+                    </h3>
+                    <p style="margin: 0 0 1rem 0; color: #ff9800; font-size: 0.9rem; background: #fff3e0; padding: 0.75rem; border-radius: 4px; border-left: 3px solid #ff9800;">
+                        ⚠️ These features are experimental and may not work as expected. Use at your own risk.
+                    </p>
+
+                    <label style="display: flex; align-items: center; cursor: pointer; padding: 0.75rem; background: #f8f9fa; border-radius: 4px; border: 1px solid #e0e0e0;">
+                        <input
+                            type="checkbox"
+                            id="excel-import-toggle"
+                            ${settings.excelImportEnabled ? 'checked' : ''}
+                            style="width: 20px; height: 20px; margin-right: 0.75rem; cursor: pointer;"
+                        />
+                        <div style="flex: 1;">
+                            <div style="font-weight: 600; color: #333; margin-bottom: 0.25rem;">
+                                Enable Excel Import/Export
+                                <span style="background: #ff9800; color: white; padding: 0.125rem 0.5rem; border-radius: 3px; font-size: 0.75rem; margin-left: 0.5rem; font-weight: 700;">ALPHA</span>
+                            </div>
+                            <div style="color: #666; font-size: 0.85rem;">
+                                Bulk import time entries from Excel templates. Currently experiencing issues.
+                            </div>
+                        </div>
+                    </label>
+                </div>
+
                 <button
                     id="save-settings-btn"
                     style="width: 100%; padding: 0.75rem; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 1rem; font-weight: 600; transition: background 0.2s;"
@@ -880,10 +913,11 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
     async function handleSaveSettings() {
         const hoursPerDayInput = element.querySelector('#hours-per-day') as HTMLInputElement;
         const hoursPerWeekInput = element.querySelector('#hours-per-week') as HTMLInputElement;
+        const excelImportToggle = element.querySelector('#excel-import-toggle') as HTMLInputElement;
         const statusMessage = element.querySelector('#settings-status') as HTMLElement;
         const saveBtn = element.querySelector('#save-settings-btn') as HTMLButtonElement;
 
-        if (!hoursPerDayInput || !hoursPerWeekInput || !statusMessage || !saveBtn) return;
+        if (!hoursPerDayInput || !hoursPerWeekInput || !excelImportToggle || !statusMessage || !saveBtn) return;
 
         try {
             saveBtn.disabled = true;
@@ -892,6 +926,7 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
             const newSettings: Settings = {
                 defaultHoursPerDay: parseFloat(hoursPerDayInput.value),
                 defaultHoursPerWeek: parseFloat(hoursPerWeekInput.value),
+                excelImportEnabled: excelImportToggle.checked,
             };
 
             await saveSettings(newSettings);
