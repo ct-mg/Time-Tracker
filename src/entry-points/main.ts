@@ -47,6 +47,7 @@ interface Settings {
     defaultHoursPerDay: number;
     defaultHoursPerWeek: number;
     excelImportEnabled: boolean; // Alpha feature toggle
+    reportPeriod?: 'week' | 'month' | 'year' | 'custom'; // User's preferred report period
 }
 
 const mainEntryPoint: EntryPoint<MainModuleData> = ({
@@ -235,10 +236,48 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                 const values = await getCustomDataValues<Settings>(category.id, moduleId!);
                 if (values.length > 0) {
                     settings = values[0];
+
+                    // Apply saved report period if it exists
+                    if (settings.reportPeriod) {
+                        reportPeriod = settings.reportPeriod;
+                        setReportPeriod(settings.reportPeriod, false); // Don't save on load
+                    }
                 }
             }
         } catch (error) {
             console.error('[TimeTracker] Failed to load settings:', error);
+        }
+    }
+
+    // Save settings to KV store
+    async function saveSettings(): Promise<void> {
+        try {
+            const category = await getCustomDataCategory<object>('settings');
+            if (category) {
+                const values = await getCustomDataValues<Settings>(category.id, moduleId!);
+
+                if (values.length > 0) {
+                    // Update existing settings
+                    const existingId = (values[0] as any).id;
+                    await updateCustomDataValue(
+                        category.id,
+                        existingId,
+                        { value: JSON.stringify(settings) },
+                        moduleId!
+                    );
+                } else {
+                    // Create new settings
+                    await createCustomDataValue(
+                        {
+                            dataCategoryId: category.id,
+                            value: JSON.stringify(settings),
+                        },
+                        moduleId!
+                    );
+                }
+            }
+        } catch (error) {
+            console.error('[TimeTracker] Failed to save settings:', error);
         }
     }
 
@@ -1050,7 +1089,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
     }
 
     // Set report period dates
-    function setReportPeriod(period: 'week' | 'month' | 'year' | 'custom') {
+    function setReportPeriod(period: 'week' | 'month' | 'year' | 'custom', saveToSettings: boolean = true) {
         reportPeriod = period;
         const now = new Date();
 
@@ -1092,6 +1131,12 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
             case 'custom':
                 // Keep current dates
                 break;
+        }
+
+        // Save period to settings
+        if (saveToSettings) {
+            settings.reportPeriod = period;
+            saveSettings();
         }
     }
 
@@ -2792,6 +2837,8 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
 
         reportPeriodCustom?.addEventListener('click', () => {
             reportPeriod = 'custom';
+            settings.reportPeriod = 'custom';
+            saveSettings();
             render();
         });
 
@@ -2809,6 +2856,8 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
             filterDateFrom = dateFromInput.value;
             filterDateTo = dateToInput.value;
             reportPeriod = 'custom';
+            settings.reportPeriod = 'custom';
+            saveSettings();
 
             render();
         });
