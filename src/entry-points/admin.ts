@@ -130,7 +130,7 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                 workCategories = values;
             } else {
                 // Create default categories
-                workCategories = [
+                const defaultCategories = [
                     { id: 'office', name: 'Office Work', color: '#007bff' },
                     { id: 'pastoral', name: 'Pastoral Care', color: '#28a745' },
                     { id: 'event', name: 'Event Preparation', color: '#ffc107' },
@@ -138,7 +138,7 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                 ];
 
                 // Save default categories
-                for (const category of workCategories) {
+                for (const category of defaultCategories) {
                     await createCustomDataValue(
                         {
                             dataCategoryId: workCategoriesCategory!.id,
@@ -147,6 +147,13 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                         moduleId!
                     );
                 }
+
+                // IMPORTANT: Reload from KV store to get the proper IDs
+                const reloadedValues = await getCustomDataValues<WorkCategory>(
+                    workCategoriesCategory!.id,
+                    moduleId!
+                );
+                workCategories = reloadedValues;
             }
         } catch (error) {
             console.error('[TimeTracker Admin] Failed to load categories:', error);
@@ -723,52 +730,69 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
         }
     }
 
-    // Setup event delegation for edit/delete category buttons (only once)
-    element.addEventListener('click', (e) => {
-        const target = e.target as HTMLElement;
-
-        // Check if clicked element or its parent is an edit button
-        const editBtn = target.closest('.edit-category-btn') as HTMLElement;
-        if (editBtn) {
-            const categoryId = editBtn.dataset.categoryId;
-            const category = workCategories.find((c) => c.id === categoryId);
-            if (category) {
-                editingCategory = category;
-                showAddCategory = false;
-                render();
-            }
-            return;
-        }
-
-        // Check if clicked element or its parent is a delete button
-        const deleteBtn = target.closest('.delete-category-btn') as HTMLElement;
-        if (deleteBtn) {
-            const categoryId = deleteBtn.dataset.categoryId;
-            const category = workCategories.find((c) => c.id === categoryId);
-
-            if (
-                category &&
-                confirm(
-                    `Are you sure you want to delete the category "${category.name}"?\n\nNote: Existing time entries with this category will not be deleted.`
-                )
-            ) {
-                deleteCategory(categoryId!).then(() => {
-                    emit('notification:show', {
-                        message: 'Category deleted successfully!',
-                        type: 'success',
-                        duration: 3000,
-                    });
-                    render();
-                }).catch(() => {
-                    alert('Failed to delete category. Please try again.');
-                });
-            }
-            return;
-        }
-    });
-
     // Initialize on load
     initialize();
+
+    // Setup event delegation for edit/delete category buttons
+    // This MUST be after initialize() so the element is populated
+    // Using setTimeout to ensure DOM is ready
+    setTimeout(() => {
+        element.addEventListener('click', (e) => {
+            const target = e.target as HTMLElement;
+
+            console.log('[TimeTracker Admin] Click detected on:', target);
+
+            // Check if clicked element or its parent is an edit button
+            const editBtn = target.closest('.edit-category-btn') as HTMLElement;
+            if (editBtn) {
+                console.log('[TimeTracker Admin] Edit button clicked');
+                const categoryId = editBtn.dataset.categoryId;
+                console.log('[TimeTracker Admin] Category ID:', categoryId);
+                const category = workCategories.find((c) => c.id === categoryId);
+                if (category) {
+                    console.log('[TimeTracker Admin] Found category:', category);
+                    editingCategory = category;
+                    showAddCategory = false;
+                    render();
+                }
+                e.stopPropagation();
+                e.preventDefault();
+                return;
+            }
+
+            // Check if clicked element or its parent is a delete button
+            const deleteBtn = target.closest('.delete-category-btn') as HTMLElement;
+            if (deleteBtn) {
+                console.log('[TimeTracker Admin] Delete button clicked');
+                const categoryId = deleteBtn.dataset.categoryId;
+                const category = workCategories.find((c) => c.id === categoryId);
+
+                if (
+                    category &&
+                    confirm(
+                        `Are you sure you want to delete the category "${category.name}"?\n\nNote: Existing time entries with this category will not be deleted.`
+                    )
+                ) {
+                    console.log('[TimeTracker Admin] Deleting category:', categoryId);
+                    deleteCategory(categoryId!).then(() => {
+                        emit('notification:show', {
+                            message: 'Category deleted successfully!',
+                            type: 'success',
+                            duration: 3000,
+                        });
+                        render();
+                    }).catch((error) => {
+                        console.error('[TimeTracker Admin] Delete failed:', error);
+                        alert('Failed to delete category. Please try again.');
+                    });
+                }
+                e.stopPropagation();
+                e.preventDefault();
+                return;
+            }
+        });
+        console.log('[TimeTracker Admin] Event delegation setup complete');
+    }, 100);
 
     // Cleanup function
     return () => {
