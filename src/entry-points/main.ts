@@ -2192,9 +2192,16 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                                             <td style="padding: 0.5rem;">${entry.endTime ? end.toLocaleTimeString() : '<span style="color: #28a745; font-weight: 600;">Active</span>'}</td>
                                             <td style="padding: 0.5rem; font-weight: 600;">${duration}</td>
                                             <td style="padding: 0.5rem;">
-                                                <span style="background: ${category?.color || '#6c757d'}; color: white; padding: 0.2rem 0.4rem; border-radius: 3px; font-size: 0.8rem;">
-                                                    ${entry.categoryName}
-                                                </span>
+                                                <div style="display: flex; align-items: center; gap: 0.3rem; flex-wrap: wrap;">
+                                                    <span style="background: ${category?.color || '#6c757d'}; color: white; padding: 0.2rem 0.4rem; border-radius: 3px; font-size: 0.8rem;">
+                                                        ${entry.categoryName}
+                                                    </span>
+                                                    ${entry.isBreak ? `
+                                                        <span style="background: #17a2b8; color: white; padding: 0.2rem 0.4rem; border-radius: 3px; font-size: 0.75rem; font-weight: 600; display: inline-flex; align-items: center; gap: 0.2rem;">
+                                                            ⏸ Pause
+                                                        </span>
+                                                    ` : ''}
+                                                </div>
                                             </td>
                                             <td style="padding: 0.5rem; font-size: 0.85rem;">${entry.description || '-'}</td>
                                             <td style="padding: 0.5rem;">
@@ -2217,12 +2224,11 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                                                         </span>
                                                     </span>
                                                     ${entry.isBreak ? `
-                                                        <span style="color: #17a2b8; font-size: 0.75rem;">
-                                                            <span style="display: inline-flex; align-items: center; gap: 0.2rem;">
-                                                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                                                    <circle cx="12" cy="12" r="10"></circle>
-                                                                    <line x1="8" y1="12" x2="16" y2="12"></line>
-                                                                    <line x1="12" y1="8" x2="12" y2="16"></line>
+                                                        <span style="background: #e7f5f7; color: #17a2b8; padding: 0.15rem 0.4rem; border-radius: 3px; font-size: 0.75rem; font-weight: 600; border: 1px solid #b8dfe4;">
+                                                            <span style="display: inline-flex; align-items: center; gap: 0.25rem;">
+                                                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                                                                    <rect x="6" y="4" width="4" height="16" rx="1"></rect>
+                                                                    <rect x="14" y="4" width="4" height="16" rx="1"></rect>
                                                                 </svg>
                                                                 Break
                                                             </span>
@@ -3277,7 +3283,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
             if (
                 entry &&
                 confirm(
-                    `Are you sure you want to delete this time entry?\n\nStart: ${new Date(entry.startTime).toLocaleString()}\nEnd: ${entry.endTime ? new Date(entry.endTime).toLocaleString() : 'N/A'}\nCategory: ${entry.categoryName}`
+                    `Are you sure you want to delete this time entry?\n\nStart: ${new Date(entry.startTime).toLocaleString()}\nEnd: ${entry.endTime ? new Date(entry.endTime).toLocaleString() : 'N/A'}\nCategory: ${entry.categoryName}${entry.isBreak ? ' (Pause)' : ''}`
                 )
             ) {
                 deleteTimeEntry(startTime!);
