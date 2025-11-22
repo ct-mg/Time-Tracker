@@ -1,0 +1,372 @@
+# Time Tracker Extension - Architecture & Design Decisions
+
+> **⚠️ Kritische Designentscheidungen die NIEMALS geändert werden dürfen!**
+
+---
+
+## Übersicht
+
+Dieses Dokument beschreibt die 5 kritischen Architektur-Entscheidungen der Time Tracker Extension. Diese Entscheidungen wurden aus gutem Grund getroffen und dürfen nicht rückgängig gemacht werden, da bereits Workarounds und Fixes implementiert wurden.
+
+---
+
+## 1. ⚠️ **KV-Store ID-Problematik** (SEHR WICHTIG!)
+
+### Problem
+
+Die KV-Store Helper-Funktion `getCustomDataValues<T>()` in `src/utils/kv-store.ts` hat einen schwerwiegenden Bug:
+
+**Technische Details:**
+- Zeile 232-235: Spread-Operator überschreibt String-ID mit numerischer ID
+- `{ ...parsedData, ...metadata }` → metadata.id (Zahl) überschreibt parsedData.id (String)
+- JavaScript Spread-Operator arbeitet von links nach rechts
+
+### Symptome
+
+- Kategorien können nicht bearbeitet/gelöscht werden nach Reload
+- HTML-Buttons haben `data-category-id="65"` statt `"office"`
+- Event-Handler finden Kategorien nicht mehr (65 !== "office")
+- Zeiteinträge zeigen "Unknown" als Kategorie
+
+### Design Decision: NIEMALS getCustomDataValues() verwenden
+
+**Stattdessen:**
+1. Direkter API-Call: `churchtoolsClient.get('/custommodules/{moduleId}/customdatacategories/{categoryId}/customdatavalues')`
+2. Manuelles JSON Parsing: `JSON.parse(rawVal.value)`
+3. String-ID aus JSON extrahieren: `parsed.id`
+4. Numerische KV-Store ID separat speichern: `kvStoreId: rawVal.id`
+
+### Wo implementiert
+
+- `main.ts` Zeilen 150-164: `loadWorkCategories()`
+- `main.ts` Zeilen 200-220: `loadTimeEntries()`
+- `admin.ts` Zeilen 157-184: `loadWorkCategories()`
+
+### Warum diese Lösung
+
+**Alternative erwogen:** Bug in kv-store.ts fixen
+- ❌ Würde Framework-Code ändern (nicht empfohlen)
+- ❌ Könnte andere Extensions brechen
+- ❌ Update würde Fix überschreiben
+
+**Gewählte Lösung:** Direkter API-Call
+- ✅ Kein Framework-Code ändern
+- ✅ Volle Kontrolle über ID-Handling
+- ✅ Update-safe
+
+### CRITICAL: Niemals zurück zu getCustomDataValues()!
+
+---
+
+## 2. **Zweifache ID-Verwaltung für Kategorien**
+
+### Problem
+
+WorkCategory benötigt zwei verschiedene IDs für unterschiedliche Zwecke.
+
+### Design Decision: Duale ID-Struktur
+
+**Interface:**
+- `id` (string): User-facing ID, unveränderlich, wird in TimeEntries referenziert
+- `kvStoreId` (number): DB-ID für Updates/Deletes, von ChurchTools vergeben
+
+### Rationale
+
+**Warum String-ID?**
+- Menschenlesbar (z.B. "office", "pastoral")
+- Stabil (ändert sich nie)
+- Referenz-Integrität in TimeEntries
+- User kann ID verstehen
+
+**Warum numerische kvStoreId?**
+- Von ChurchTools API vergeben
+- Benötigt für Update/Delete Operations
+- Kann sich ändern (bei Re-Create)
+
+### Workflow
+
+**Create:**
+- Speichere nur `id`, `name`, `color` als JSON
+- kvStoreId wird von DB vergeben (nicht im JSON!)
+- Nach Create: Reload um kvStoreId zu bekommen
+
+**Read:**
+- Extrahiere String-ID aus `JSON.parse(rawVal.value).id`
+- Extrahiere numerische ID aus `rawVal.id`
+- Speichere beide in WorkCategory Object
+
+**Update:**
+- Finde Category über String-ID
+- Verwende kvStoreId für API-Call
+- String-ID bleibt unverändert im JSON
+
+**Delete:**
+- Finde Category über String-ID
+- Verwende kvStoreId für Delete API-Call
+
+### Wo implementiert
+
+- `main.ts` Zeilen 260-290: `saveWorkCategory()`
+- `admin.ts` Zeilen 250-300: `saveCategory()`, `deleteCategory()`
+
+### Warum diese Lösung
+
+**Alternative erwogen:** Nur numerische ID
+- ❌ Nicht menschenlesbar
+- ❌ TimeEntry-Referenzen brechen bei Category-Delete/Re-Create
+- ❌ Schwer zu debuggen
+
+**Gewählte Lösung:** Duale IDs
+- ✅ String-ID stabil für Referenzen
+- ✅ kvStoreId für API-Operations
+- ✅ Best of both worlds
+
+---
+
+## 3. **Notification System**
+
+### User Requirement (CRITICAL!)
+
+**Explizite User-Anforderung:**
+- Success Messages: MÜSSEN automatisch nach 3s verschwinden
+- Error Messages: MÜSSEN dauerhaft bleiben bis manuell geschlossen
+- Warning Messages: MÜSSEN dauerhaft bleiben bis manuell geschlossen
+
+### Design Decision: Custom Toast System
+
+**Architektur:**
+- Notification Container (fixed, top-right, z-index 10000)
+- Einzelne Notification Elements (slide-in animation)
+- Type-basiertes Auto-Hide Logic
+- Close-Button nur für Error/Warning
+
+**Implementation Details:**
+
+**Container Management:**
+- Lazy Creation: Container wird bei Bedarf erstellt
+- Singleton Pattern: Nur ein Container pro Page
+- Stacking: Neue Notifications stapeln sich vertikal
+
+**Notification Lifecycle:**
+
+**Success (type: 'success'):**
+- setTimeout mit duration (default 3000ms)
+- Slide-out Animation
+- Remove von DOM nach Animation
+
+**Error/Warning (type: 'error' | 'warning'):**
+- KEIN setTimeout (bleibt für immer!)
+- Close-Button mit Manual Remove
+- Slide-out nur bei User-Click
+
+### Wo implementiert
+
+- `main.ts` Zeilen 100-150: `showNotification()` Function
+- `admin.ts` Zeilen 80-130: `showNotification()` Function
+
+### Warum diese Lösung
+
+**Alternative erwogen:** alert(), confirm(), prompt()
+- ❌ User-Requirement: NIEMALS alert() verwenden
+- ❌ Unterbricht Workflow
+- ❌ Nicht anpassbar
+- ❌ Keine Stacking-Möglichkeit
+
+**Alternative erwogen:** External Toast Library
+- ❌ Extra Dependency
+- ❌ Bundle Size
+- ❌ Muss ChurchTools Design System folgen
+
+**Gewählte Lösung:** Custom Implementation
+- ✅ Volle Kontrolle über Behavior
+- ✅ Erfüllt User-Requirement exakt
+- ✅ Keine Dependencies
+- ✅ Perfekte Integration
+
+---
+
+## 4. **Excel Import/Export ohne Dropdown**
+
+### Problem
+
+User wünscht Dropdown in Excel für Category-Auswahl, aber xlsx Library unterstützt keine Excel Data Validation.
+
+### Technical Limitation
+
+**Versuchte Implementation:**
+- Sheet['!dataValidation'] Property setzen
+- List-Validierung mit allowedCategories
+- **Resultat:** xlsx schreibt Metadaten nicht ins Excel-File
+
+**Library-Limitation:**
+- xlsx v0.18.x unterstützt keine Validation beim Export
+- Andere Libraries (exceljs, xlsx-populate): Nicht getestet, Bundle Size Concern
+
+### Design Decision: Zwei-Sheet Ansatz
+
+**Lösung:**
+- Sheet 1: "Time Entries" - Eingabebereich mit Beispiel-Row
+- Sheet 2: "Available Categories" - Alle gültigen IDs und Namen
+- User muss IDs manuell aus Sheet 2 kopieren
+
+**Warum akzeptabel:**
+- Copy/Paste ist schnell
+- User sieht alle verfügbaren Kategorien
+- Validierung beim Speichern fängt alle Fehler ab
+- Detaillierte Fehlermeldungen helfen bei Korrektur
+
+### Validierung beim Import
+
+**Category Matching:**
+- Case-insensitive Vergleich
+- Suche nach Name ODER ID
+- User kann sowohl "Office Work" als auch "office" eingeben
+
+**Validierung beim Speichern:**
+- Prüfe alle Category IDs
+- Sammle ungültige Row-Nummern und IDs
+- Zeige detaillierte Error Toast:
+  - "Invalid category IDs in row(s) 1, 2, 3"
+  - "Found: abc, def"
+  - "Available: "office", "pastoral", ..."
+
+### Wo implementiert
+
+- `main.ts` Zeilen 400-500: `importFromExcel()`
+- `main.ts` Zeilen 550-650: `saveBulkEntries()` mit Validierung
+
+### Warum diese Lösung
+
+**Alternative erwogen:** Andere Library
+- ⚠️ Mehr Research nötig
+- ⚠️ Mögliche Bundle Size Increase
+- ⚠️ Migration-Aufwand
+
+**Gewählte Lösung:** Zwei-Sheet mit Validation
+- ✅ Funktioniert jetzt
+- ✅ User findet es OK (User Feedback)
+- ✅ Validation fängt alle Fehler
+- ✅ Kann später noch gewechselt werden
+
+---
+
+## 5. **Category Deletion mit Reassignment**
+
+### User Requirement
+
+Bevor eine Kategorie gelöscht wird, müssen alle Zeiteinträge einer anderen Kategorie zugewiesen werden.
+
+### Design Decision: Pre-Deletion Check mit Dialog
+
+**Workflow:**
+
+**Step 1: Pre-Check**
+- Count Entries using Category
+- Falls 0: Direkt löschen (keine Confirmation)
+- Falls >0: Dialog zeigen
+
+**Step 2: Reassignment Dialog**
+- Zeige Anzahl betroffener Einträge
+- Dropdown mit allen anderen Kategorien
+- "Delete and Reassign" Button
+- "Cancel" Button
+
+**Step 3: Automatic Reassignment**
+- Lade alle Time Entries (direkte API-Calls wegen KV-Store Bug!)
+- Für jeden Entry mit old categoryId:
+  - Update categoryId = newCategoryId
+  - Update categoryName = newCategory.name (BEIDE Felder!)
+  - Save via updateCustomDataValue()
+
+**Step 4: Delete Category**
+- Nach erfolgreichem Reassignment: Delete Category
+- Verwende kvStoreId für Delete API-Call
+
+### Warum beide Felder (categoryId + categoryName)?
+
+**Rationale:**
+- TimeEntry speichert beide aus Performance-Gründen
+- Verhindert Lookup bei jedem Render
+- Bei Category-Rename würden alte Entries alten Namen zeigen
+- Daher bei Reassignment IMMER beide updaten
+
+### Wo implementiert
+
+- `admin.ts` Zeilen 400-450: `initiateDeleteCategory()`
+- `admin.ts` Zeilen 450-500: `countEntriesUsingCategory()`
+- `admin.ts` Zeilen 500-600: `reassignTimeEntries()`
+- `admin.ts` Zeilen 600-650: `confirmDeleteCategory()`
+
+### Warum diese Lösung
+
+**Alternative erwogen:** Soft Delete (Archive)
+- ❌ User will harte Löschung
+- ❌ Kategorien würden sich akkumulieren
+- ❌ UI wird unübersichtlich
+
+**Alternative erwogen:** Cascade Delete
+- ❌ User verliert Daten
+- ❌ Sehr gefährlich
+- ❌ Nicht rückgängig machbar
+
+**Gewählte Lösung:** Pre-Check + Reassignment
+- ✅ Keine Datenverlust
+- ✅ User hat Kontrolle
+- ✅ Transparenter Prozess
+- ✅ Erfüllt User-Requirement
+
+---
+
+## Design Principles
+
+Diese Architektur-Entscheidungen folgen bestimmten Prinzipien:
+
+### 1. User Requirements First
+- Alle Entscheidungen basieren auf expliziten User-Anforderungen
+- User Feedback wird respektiert
+- Keine Änderungen ohne User-Zustimmung
+
+### 2. Workarounds sind OK
+- Library-Bugs: Workaround statt Fork
+- Framework-Limitations: Alternative Approaches
+- Pragmatismus über Perfektion
+
+### 3. Data Integrity
+- Keine Datenverlust bei Operations
+- Referenz-Integrität zwischen Entities
+- Validation vor DB-Operations
+
+### 4. Transparency
+- User sieht was passiert (Notifications)
+- Klare Fehlermeldungen mit Details
+- Keine Silent Failures
+
+### 5. Maintainability
+- Dokumentierte Entscheidungen
+- Klare Separation of Concerns
+- Future AI-Assistenten können verstehen warum
+
+---
+
+## Für KI-Assistenten
+
+**CRITICAL: Diese 5 Entscheidungen NIEMALS ändern ohne User-Request!**
+
+1. ⚠️ **NIEMALS `getCustomDataValues()` verwenden** - Direkte API-Calls!
+2. ⚠️ **IMMER duale IDs für Categories** - String ID + kvStoreId!
+3. ⚠️ **NIEMALS alert() verwenden** - Nur Custom Toasts!
+4. ⚠️ **Zwei-Sheet Excel ist OK** - Nicht nach Dropdown suchen!
+5. ⚠️ **Reassignment ist Pflicht** - Nicht einfach löschen!
+
+**Wenn du einen dieser Punkte ändern möchtest:**
+1. Lies diese Dokumentation
+2. Verstehe die Rationale
+3. Prüfe ob Problem wirklich gelöst wird
+4. Frage User um Erlaubnis
+5. Update diese Dokumentation
+
+---
+
+**Letzte Aktualisierung:** 2025-01-22
+**Version:** 1.0
+**Status:** ✅ Alle Decisions implementiert und getestet
