@@ -1,6 +1,6 @@
 import type { EntryPoint } from '../lib/main';
 import type { MainModuleData } from '@churchtools/extension-points/main';
-import type { Absence, AbsenceReason } from '../utils/ct-types';
+import type { Absence, AbsenceReason, EventMasterData } from '../utils/ct-types';
 import * as XLSX from 'xlsx';
 import {
     getModule,
@@ -106,6 +106,41 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
     let cachedFilteredEntries: TimeEntry[] | null = null;
     let cachedStats: any | null = null;
     let lastFilterState = '';
+
+    // Refresh data
+    async function refreshData() {
+        try {
+            // Clear cache
+            cachedFilteredEntries = null;
+            cachedStats = null;
+            lastFilterState = '';
+
+            // Reload all data
+            await Promise.all([
+                loadWorkCategories(),
+                loadSettings(),
+                loadTimeEntries(),
+                loadAbsences(),
+                loadAbsenceReasons(),
+            ]);
+
+            // Check if there's a currently active entry
+            currentEntry =
+                timeEntries.find((entry) => entry.endTime === null && entry.userId === user?.id) ||
+                null;
+
+            // Re-render
+            render();
+
+            // Restart timer if there's an active entry
+            if (currentEntry) {
+                startTimerUpdate();
+            }
+        } catch (error) {
+            console.error('[TimeTracker] Refresh error:', error);
+            showNotification('Failed to refresh data. Please try again.', 'error');
+        }
+    }
 
     // Initialize
     async function initialize() {
@@ -264,9 +299,11 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
     // Load absence reasons from ChurchTools Event Masterdata
     async function loadAbsenceReasons(): Promise<void> {
         try {
-            const response = await churchtoolsClient.get<{ absenceReasons?: AbsenceReason[] }>('/events/masterdata');
+            console.log('[TimeTracker] Loading absence reasons from /event/masterdata...');
+            const response = await churchtoolsClient.get<EventMasterData>('/event/masterdata');
+            console.log('[TimeTracker] Masterdata response:', response);
             absenceReasons = response?.absenceReasons || [];
-            console.log('[TimeTracker] Loaded absence reasons:', absenceReasons.length);
+            console.log('[TimeTracker] Loaded absence reasons:', absenceReasons.length, absenceReasons);
         } catch (error) {
             console.error('[TimeTracker] Failed to load absence reasons:', error);
             absenceReasons = [];
@@ -1182,10 +1219,24 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                     <div style="background: #fff; border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
                         <div style="display: flex; justify-content: space-between; align-items: center;">
                             <div>
-                                <h1 style="margin: 0 0 0.5rem 0; font-size: 1.8rem; color: #333;">⏱️ Time Tracker</h1>
+                                <h1 style="margin: 0 0 0.5rem 0; font-size: 1.8rem; color: #333;">
+                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle; margin-right: 0.5rem;">
+                                        <circle cx="12" cy="12" r="10"></circle>
+                                        <polyline points="12 6 12 12 16 14"></polyline>
+                                    </svg>
+                                    Time Tracker
+                                </h1>
                                 <p style="margin: 0; color: #666;">Welcome, ${user?.firstName || 'User'}! Track your working hours.</p>
                             </div>
-                            <div style="display: flex; gap: 0.5rem;">
+                            <div style="display: flex; gap: 0.5rem; align-items: center;">
+                                <button id="refresh-data-btn" style="padding: 0.5rem; border: 1px solid #28a745; background: #fff; color: #28a745; border-radius: 4px; cursor: pointer; display: flex; align-items: center; justify-content: center;" title="Refresh data">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <polyline points="23 4 23 10 17 10"></polyline>
+                                        <polyline points="1 20 1 14 7 14"></polyline>
+                                        <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+                                    </svg>
+                                </button>
+                                <div style="width: 1px; height: 30px; background: #ddd;"></div>
                                 <button id="view-dashboard" style="padding: 0.5rem 1rem; border: ${currentView === 'dashboard' ? '2px' : '1px'} solid ${currentView === 'dashboard' ? '#007bff' : '#ddd'}; background: ${currentView === 'dashboard' ? '#e7f3ff' : '#fff'}; color: ${currentView === 'dashboard' ? '#007bff' : '#666'}; border-radius: 4px; cursor: pointer; font-weight: ${currentView === 'dashboard' ? '600' : '400'};">Dashboard</button>
                                 <button id="view-entries" style="padding: 0.5rem 1rem; border: ${currentView === 'entries' ? '2px' : '1px'} solid ${currentView === 'entries' ? '#007bff' : '#ddd'}; background: ${currentView === 'entries' ? '#e7f3ff' : '#fff'}; color: ${currentView === 'entries' ? '#007bff' : '#666'}; border-radius: 4px; cursor: pointer; font-weight: ${currentView === 'entries' ? '600' : '400'};">Time Entries</button>
                                 <button id="view-absences" style="padding: 0.5rem 1rem; border: ${currentView === 'absences' ? '2px' : '1px'} solid ${currentView === 'absences' ? '#007bff' : '#ddd'}; background: ${currentView === 'absences' ? '#e7f3ff' : '#fff'}; color: ${currentView === 'absences' ? '#007bff' : '#666'}; border-radius: 4px; cursor: pointer; font-weight: ${currentView === 'absences' ? '600' : '400'};">Absences</button>
@@ -1443,7 +1494,13 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                 ` : ''}
 
                 <div style="display: flex; gap: 0.5rem; justify-content: space-between; flex-wrap: wrap;">
-                    <button id="add-bulk-row-btn" style="padding: 0.5rem 1rem; background: #6f42c1; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600;">➕ Add Row</button>
+                    <button id="add-bulk-row-btn" style="padding: 0.5rem 1rem; background: #6f42c1; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; display: inline-flex; align-items: center; gap: 0.5rem;">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="12" y1="5" x2="12" y2="19"></line>
+                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                        </svg>
+                        Add Row
+                    </button>
                     <div style="display: flex; gap: 0.5rem;">
                         <button id="save-bulk-entries-btn" ${bulkEntryRows.length === 0 ? 'disabled' : ''} style="padding: 0.5rem 1.5rem; background: ${bulkEntryRows.length === 0 ? '#6c757d' : '#28a745'}; color: white; border: none; border-radius: 4px; cursor: ${bulkEntryRows.length === 0 ? 'not-allowed' : 'pointer'}; font-weight: 600;">💾 Save All Entries (${bulkEntryRows.length})</button>
                     </div>
@@ -1639,13 +1696,19 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                                                 data-entry-start="${entry.startTime}"
                                                 style="padding: 0.25rem 0.5rem; background: #ffc107; color: #333; border: none; border-radius: 3px; cursor: pointer; font-size: 0.85rem;"
                                                 title="Edit"
-                                            >✏️</button>
+                                            ><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                                            </svg></button>
                                             <button
                                                 class="delete-entry-btn"
                                                 data-entry-start="${entry.startTime}"
                                                 style="padding: 0.25rem 0.5rem; background: #dc3545; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 0.85rem;"
                                                 title="Delete"
-                                            >🗑️</button>
+                                            ><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                <polyline points="3 6 5 6 21 6"></polyline>
+                                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                            </svg></button>
                                         </div>
                                         ` : '<span style="color: #999; font-size: 0.85rem;">-</span>'}
                                     </td>
@@ -1794,13 +1857,19 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                                                 data-absence-id="${absence.id}"
                                                 style="padding: 0.25rem 0.5rem; background: #ffc107; color: #333; border: none; border-radius: 3px; cursor: pointer; font-size: 0.85rem;"
                                                 title="Edit"
-                                            >✏️</button>
+                                            ><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                                            </svg></button>
                                             <button
                                                 class="delete-absence-btn"
                                                 data-absence-id="${absence.id}"
                                                 style="padding: 0.25rem 0.5rem; background: #dc3545; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 0.85rem;"
                                                 title="Delete"
-                                            >🗑️</button>
+                                            ><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                <polyline points="3 6 5 6 21 6"></polyline>
+                                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                            </svg></button>
                                         </div>
                                     </td>
                                 </tr>
@@ -2070,6 +2139,22 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
 
     // Attach event handlers
     function attachEventHandlers() {
+        // Refresh button
+        const refreshBtn = element.querySelector('#refresh-data-btn') as HTMLButtonElement;
+        refreshBtn?.addEventListener('click', async () => {
+            const originalContent = refreshBtn.innerHTML;
+            refreshBtn.disabled = true;
+            refreshBtn.style.opacity = '0.6';
+            refreshBtn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation: spin 1s linear infinite;"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg><style>@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }</style>';
+
+            await refreshData();
+
+            refreshBtn.innerHTML = originalContent;
+            refreshBtn.disabled = false;
+            refreshBtn.style.opacity = '1';
+            showNotification('Data refreshed successfully!', 'success');
+        });
+
         // View switchers
         const viewDashboard = element.querySelector('#view-dashboard') as HTMLButtonElement;
         const viewEntries = element.querySelector('#view-entries') as HTMLButtonElement;
