@@ -2616,7 +2616,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                             </div>
                             <div style="background: #e9ecef; height: 24px; border-radius: 12px; overflow: hidden; position: relative;">
                                 <div style="background: ${progressColor}; height: 100%; width: ${Math.min(percentage, 100)}%; transition: width 0.3s; display: flex; align-items: center; justify-content: center;">
-                                    ${percentage >= 10 ? `<span style="color: white; font-weight: 600; font-size: 0.85rem;">${percentage.toFixed(1)}%</span>` : ''}
+                                    ${percentage > 100 ? '' : (percentage >= 10 ? `<span style="color: white; font-weight: 600; font-size: 0.85rem;">${percentage.toFixed(1)}%</span>` : '')}
                                 </div>
                                 ${percentage > 100 ? `
                                     <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;">
