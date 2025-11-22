@@ -32,6 +32,7 @@ interface TimeEntry {
     categoryName: string;
     description: string;
     isManual: boolean;
+    isBreak: boolean; // If true, does not count towards work hours
     createdAt: string;
 }
 
@@ -247,6 +248,11 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                 timeEntries = rawValues.map(rawVal => {
                     const entry = JSON.parse(rawVal.value) as TimeEntry;
 
+                    // Backward compatibility: set isBreak to false if undefined
+                    if (entry.isBreak === undefined) {
+                        entry.isBreak = false;
+                    }
+
                     // Update categoryName from current categories (in case it was renamed)
                     const currentCategory = workCategories.find(c => c.id === entry.categoryId);
                     if (currentCategory) {
@@ -403,7 +409,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
     }
 
     // Clock in
-    async function clockIn(categoryId: string, description: string) {
+    async function clockIn(categoryId: string, description: string, isBreak: boolean = false) {
         if (!user?.id || currentEntry) return;
 
         try {
@@ -416,6 +422,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                 categoryName: category?.name || 'Unknown',
                 description,
                 isManual: false,
+                isBreak,
                 createdAt: new Date().toISOString(),
             };
 
@@ -997,7 +1004,9 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
         }
 
         const filtered = getFilteredEntries();
-        const totalMs = filtered.reduce((sum, entry) => {
+        // Exclude breaks from work hour calculations
+        const workEntries = filtered.filter(entry => !entry.isBreak);
+        const totalMs = workEntries.reduce((sum, entry) => {
             const start = new Date(entry.startTime).getTime();
             const end = entry.endTime ? new Date(entry.endTime).getTime() : new Date().getTime();
             return sum + (end - start);
