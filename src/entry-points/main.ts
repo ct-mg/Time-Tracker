@@ -43,11 +43,21 @@ interface WorkCategory {
     kvStoreId?: number; // Optional: KV-Store ID (used in admin)
 }
 
+interface UserHoursConfig {
+    userId: number;
+    userName: string;
+    hoursPerDay: number;
+    hoursPerWeek: number;
+}
+
 interface Settings {
     defaultHoursPerDay: number;
     defaultHoursPerWeek: number;
     excelImportEnabled: boolean; // Alpha feature toggle
     reportPeriod?: 'week' | 'month' | 'year' | 'custom'; // User's preferred report period
+    employeeGroupId?: number; // ChurchTools group ID for employees (with individual SOLL)
+    volunteerGroupId?: number; // ChurchTools group ID for volunteers (no SOLL requirements)
+    userHoursConfig?: UserHoursConfig[]; // Individual SOLL hours for employees
 }
 
 const mainEntryPoint: EntryPoint<MainModuleData> = ({
@@ -228,6 +238,55 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
         }
     }
 
+    // Check if current user has access
+    async function checkUserAccess(): Promise<boolean> {
+        if (!user?.id) return false;
+        if (!settings.employeeGroupId && !settings.volunteerGroupId) return true; // No groups configured = allow all
+
+        try {
+            // Get user's groups from ChurchTools
+            const userGroups = await churchtoolsClient.get(`/persons/${user.id}/groups`);
+            const groupIds = userGroups.map((g: any) => g.id);
+
+            // Check if user is in either employee or volunteer group
+            const hasAccess = (settings.employeeGroupId && groupIds.includes(settings.employeeGroupId)) ||
+                             (settings.volunteerGroupId && groupIds.includes(settings.volunteerGroupId));
+
+            return hasAccess;
+        } catch (error) {
+            console.error('[TimeTracker] Failed to check user access:', error);
+            return true; // Allow access if check fails
+        }
+    }
+
+    // Get user-specific hours (from employee config) or default hours
+    function getUserHours(): { hoursPerDay: number; hoursPerWeek: number } {
+        if (!user?.id) {
+            return {
+                hoursPerDay: settings.defaultHoursPerDay,
+                hoursPerWeek: settings.defaultHoursPerWeek
+            };
+        }
+
+        // Check if user has individual config (employees only)
+        const userConfig = settings.userHoursConfig?.find(c => c.userId === user.id);
+        if (userConfig) {
+            return {
+                hoursPerDay: userConfig.hoursPerDay,
+                hoursPerWeek: userConfig.hoursPerWeek
+            };
+        }
+
+        // Check if user is volunteer (no SOLL requirements)
+        // We'll check this during access check and set SOLL to 0 if needed
+
+        // Default to settings
+        return {
+            hoursPerDay: settings.defaultHoursPerDay,
+            hoursPerWeek: settings.defaultHoursPerWeek
+        };
+    }
+
     // Load settings from KV store
     async function loadSettings(): Promise<void> {
         try {
@@ -241,6 +300,15 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                     if (settings.reportPeriod) {
                         reportPeriod = settings.reportPeriod;
                         setReportPeriod(settings.reportPeriod, false); // Don't save on load
+                    }
+
+                    // Check user access
+                    const hasAccess = await checkUserAccess();
+                    if (!hasAccess) {
+                        isLoading = false;
+                        errorMessage = 'You do not have access to the Time Tracker. Please contact your administrator.';
+                        render();
+                        return;
                     }
                 }
             }

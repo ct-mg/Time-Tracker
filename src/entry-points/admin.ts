@@ -28,10 +28,21 @@ interface WorkCategory {
     kvStoreId?: number; // KV-Store ID for updates/deletes
 }
 
+interface UserHoursConfig {
+    userId: number;
+    userName: string;
+    hoursPerDay: number;
+    hoursPerWeek: number;
+}
+
 interface Settings {
     defaultHoursPerDay: number;
     defaultHoursPerWeek: number;
     excelImportEnabled: boolean; // Alpha feature toggle
+    reportPeriod?: 'week' | 'month' | 'year' | 'custom';
+    employeeGroupId?: number; // ChurchTools group ID for employees (with individual SOLL)
+    volunteerGroupId?: number; // ChurchTools group ID for volunteers (no SOLL requirements)
+    userHoursConfig?: UserHoursConfig[]; // Individual SOLL hours for employees
 }
 
 const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) => {
@@ -56,6 +67,10 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
     let categoryToDelete: WorkCategory | null = null;
     let replacementCategoryId: string = '';
     let affectedEntriesCount: number = 0;
+
+    // Group Management state
+    let loadingEmployees = false;
+    let employeesList: Array<{ userId: number; userName: string }> = [];
 
     // Initialize and load settings
     async function initialize() {
@@ -253,6 +268,42 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
         } catch (error) {
             console.error('[TimeTracker Admin] Failed to save settings:', error);
             throw error;
+        }
+    }
+
+    // Load employees from a ChurchTools group
+    async function loadEmployeesFromGroup(groupId: number): Promise<void> {
+        try {
+            loadingEmployees = true;
+            render();
+
+            // Get members of the group from ChurchTools API
+            const groupMembers = await churchtoolsClient.get(`/groups/${groupId}/members`);
+
+            console.log('[TimeTracker Admin] Group members:', groupMembers);
+
+            // Extract user info (id and name)
+            employeesList = groupMembers.map((member: any) => ({
+                userId: member.personId || member.id,
+                userName: member.person?.firstName && member.person?.lastName
+                    ? `${member.person.firstName} ${member.person.lastName}`
+                    : member.person?.name || `User ${member.personId || member.id}`
+            }));
+
+            loadingEmployees = false;
+            render();
+        } catch (error) {
+            console.error('[TimeTracker Admin] Failed to load employees:', error);
+            loadingEmployees = false;
+            employeesList = [];
+
+            emit('notification:show', {
+                message: 'Failed to load employees from group. Please check the group ID.',
+                type: 'error',
+                duration: 5000,
+            });
+
+            render();
         }
     }
 
@@ -498,6 +549,7 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                 `
                           : `
                     ${renderGeneralSettings()}
+                    ${renderGroupManagement()}
                     ${renderWorkCategories()}
                 `
                 }
@@ -590,6 +642,146 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                 </button>
 
                 <div id="settings-status" style="margin-top: 1rem; padding: 0.75rem; border-radius: 4px; display: none;"></div>
+            </div>
+        `;
+    }
+
+    function renderGroupManagement(): string {
+        // Initialize userHoursConfig if not present
+        if (!settings.userHoursConfig) {
+            settings.userHoursConfig = [];
+        }
+
+        return `
+            <!-- Group Management -->
+            <div style="background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                <h2 style="margin: 0 0 1rem 0; font-size: 1.3rem; color: #333;">👥 Group Management & Access Control</h2>
+                <p style="margin: 0 0 1.5rem 0; color: #666; font-size: 0.95rem;">
+                    Configure ChurchTools groups for employees and volunteers. Employees get individual SOLL hours, volunteers track time without SOLL requirements.
+                </p>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
+                    <div>
+                        <label style="display: block; margin-bottom: 0.5rem; color: #333; font-weight: 600;">
+                            Employee Group ID
+                        </label>
+                        <input
+                            type="number"
+                            id="employee-group-id"
+                            value="${settings.employeeGroupId || ''}"
+                            placeholder="e.g., 42"
+                            style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 4px; font-size: 1rem;"
+                        />
+                        <small style="color: #666; font-size: 0.85rem;">ChurchTools group for employees with individual SOLL hours</small>
+                    </div>
+
+                    <div>
+                        <label style="display: block; margin-bottom: 0.5rem; color: #333; font-weight: 600;">
+                            Volunteer Group ID
+                        </label>
+                        <input
+                            type="number"
+                            id="volunteer-group-id"
+                            value="${settings.volunteerGroupId || ''}"
+                            placeholder="e.g., 43"
+                            style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 4px; font-size: 1rem;"
+                        />
+                        <small style="color: #666; font-size: 0.85rem;">ChurchTools group for volunteers (no SOLL requirements)</small>
+                    </div>
+                </div>
+
+                <!-- Employee Configuration -->
+                <div style="margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid #e0e0e0;">
+                    <h3 style="margin: 0 0 0.5rem 0; font-size: 1.1rem; color: #333;">
+                        Employee SOLL Hours Configuration
+                    </h3>
+                    <p style="margin: 0 0 1rem 0; color: #666; font-size: 0.9rem;">
+                        Load employees from the employee group and configure individual working hours for each person.
+                    </p>
+
+                    <button
+                        id="load-employees-btn"
+                        ${!settings.employeeGroupId || loadingEmployees ? 'disabled' : ''}
+                        style="padding: 0.75rem 1.5rem; background: ${!settings.employeeGroupId || loadingEmployees ? '#6c757d' : '#17a2b8'}; color: white; border: none; border-radius: 4px; cursor: ${!settings.employeeGroupId || loadingEmployees ? 'not-allowed' : 'pointer'}; font-weight: 600; margin-bottom: 1rem;"
+                    >
+                        ${loadingEmployees ? '⏳ Loading...' : '📥 Load Employees from Group'}
+                    </button>
+
+                    ${employeesList.length > 0 ? `
+                        <!-- Employees Table -->
+                        <div style="background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 6px; padding: 1rem;">
+                            <p style="margin: 0 0 1rem 0; color: #333; font-weight: 600;">
+                                Found ${employeesList.length} employee${employeesList.length === 1 ? '' : 's'} in group
+                            </p>
+
+                            <div style="overflow-x: auto;">
+                                <table style="width: 100%; border-collapse: collapse;">
+                                    <thead>
+                                        <tr style="background: #e9ecef;">
+                                            <th style="padding: 0.75rem; text-align: left; border-bottom: 2px solid #dee2e6; font-weight: 600; color: #333;">Employee</th>
+                                            <th style="padding: 0.75rem; text-align: left; border-bottom: 2px solid #dee2e6; font-weight: 600; color: #333;">Hours/Day</th>
+                                            <th style="padding: 0.75rem; text-align: left; border-bottom: 2px solid #dee2e6; font-weight: 600; color: #333;">Hours/Week</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${employeesList.map(emp => {
+                                            const existingConfig = settings.userHoursConfig?.find(c => c.userId === emp.userId);
+                                            const hoursPerDay = existingConfig?.hoursPerDay || settings.defaultHoursPerDay;
+                                            const hoursPerWeek = existingConfig?.hoursPerWeek || settings.defaultHoursPerWeek;
+
+                                            return `
+                                                <tr style="border-bottom: 1px solid #dee2e6;">
+                                                    <td style="padding: 0.75rem; color: #333;">${emp.userName}</td>
+                                                    <td style="padding: 0.75rem;">
+                                                        <input
+                                                            type="number"
+                                                            class="employee-hours-day"
+                                                            data-user-id="${emp.userId}"
+                                                            data-user-name="${emp.userName}"
+                                                            value="${hoursPerDay}"
+                                                            min="0.5"
+                                                            max="24"
+                                                            step="0.5"
+                                                            style="width: 80px; padding: 0.5rem; border: 1px solid #ced4da; border-radius: 4px;"
+                                                        />
+                                                    </td>
+                                                    <td style="padding: 0.75rem;">
+                                                        <input
+                                                            type="number"
+                                                            class="employee-hours-week"
+                                                            data-user-id="${emp.userId}"
+                                                            data-user-name="${emp.userName}"
+                                                            value="${hoursPerWeek}"
+                                                            min="0.5"
+                                                            max="168"
+                                                            step="0.5"
+                                                            style="width: 80px; padding: 0.5rem; border: 1px solid #ced4da; border-radius: 4px;"
+                                                        />
+                                                    </td>
+                                                </tr>
+                                            `;
+                                        }).join('')}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    ` : (!loadingEmployees && settings.employeeGroupId ? `
+                        <p style="color: #666; font-style: italic; background: #f8f9fa; padding: 1rem; border-radius: 4px; border-left: 3px solid #6c757d;">
+                            Click "Load Employees" to fetch the employee list from ChurchTools.
+                        </p>
+                    ` : '')}
+                </div>
+
+                <button
+                    id="save-group-settings-btn"
+                    style="width: 100%; padding: 0.75rem; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 1rem; font-weight: 600; margin-top: 1.5rem; transition: background 0.2s;"
+                    onmouseover="this.style.background='#218838'"
+                    onmouseout="this.style.background='#28a745'"
+                >
+                    💾 Save Group Settings
+                </button>
+
+                <div id="group-settings-status" style="margin-top: 1rem; padding: 0.75rem; border-radius: 4px; display: none;"></div>
             </div>
         `;
     }
@@ -801,6 +993,23 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
             await handleSaveSettings();
         });
 
+        // Group Management
+        const loadEmployeesBtn = element.querySelector('#load-employees-btn') as HTMLButtonElement;
+        const saveGroupSettingsBtn = element.querySelector('#save-group-settings-btn') as HTMLButtonElement;
+
+        loadEmployeesBtn?.addEventListener('click', async () => {
+            const employeeGroupIdInput = element.querySelector('#employee-group-id') as HTMLInputElement;
+            const groupId = parseInt(employeeGroupIdInput.value);
+
+            if (groupId && groupId > 0) {
+                await loadEmployeesFromGroup(groupId);
+            }
+        });
+
+        saveGroupSettingsBtn?.addEventListener('click', async () => {
+            await handleSaveGroupSettings();
+        });
+
         // Work Categories
         const addCategoryBtn = element.querySelector('#add-category-btn') as HTMLButtonElement;
         const cancelCategoryBtn = element.querySelector(
@@ -961,6 +1170,87 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
         } finally {
             saveBtn.disabled = false;
             saveBtn.textContent = '💾 Save General Settings';
+        }
+    }
+
+    // Handle save group settings
+    async function handleSaveGroupSettings() {
+        const employeeGroupIdInput = element.querySelector('#employee-group-id') as HTMLInputElement;
+        const volunteerGroupIdInput = element.querySelector('#volunteer-group-id') as HTMLInputElement;
+        const statusMessage = element.querySelector('#group-settings-status') as HTMLElement;
+        const saveBtn = element.querySelector('#save-group-settings-btn') as HTMLButtonElement;
+
+        if (!statusMessage || !saveBtn) return;
+
+        try {
+            saveBtn.disabled = true;
+            saveBtn.textContent = '💾 Saving...';
+
+            // Get group IDs (allow empty)
+            const employeeGroupId = employeeGroupIdInput?.value ? parseInt(employeeGroupIdInput.value) : undefined;
+            const volunteerGroupId = volunteerGroupIdInput?.value ? parseInt(volunteerGroupIdInput.value) : undefined;
+
+            // Collect individual employee hours from table
+            const userHoursConfig: UserHoursConfig[] = [];
+            const employeeHoursDayInputs = element.querySelectorAll('.employee-hours-day') as NodeListOf<HTMLInputElement>;
+            const employeeHoursWeekInputs = element.querySelectorAll('.employee-hours-week') as NodeListOf<HTMLInputElement>;
+
+            employeeHoursDayInputs.forEach((dayInput, index) => {
+                const userId = parseInt(dayInput.dataset.userId || '0');
+                const userName = dayInput.dataset.userName || '';
+                const hoursPerDay = parseFloat(dayInput.value);
+                const hoursPerWeek = parseFloat(employeeHoursWeekInputs[index]?.value || '0');
+
+                if (userId > 0) {
+                    userHoursConfig.push({
+                        userId,
+                        userName,
+                        hoursPerDay,
+                        hoursPerWeek
+                    });
+                }
+            });
+
+            // Create new settings object with group settings
+            const newSettings: Settings = {
+                ...settings,
+                employeeGroupId,
+                volunteerGroupId,
+                userHoursConfig
+            };
+
+            await saveSettings(newSettings);
+
+            // Show success message
+            statusMessage.style.display = 'block';
+            statusMessage.style.background = '#d4edda';
+            statusMessage.style.border = '1px solid #c3e6cb';
+            statusMessage.style.color = '#155724';
+            statusMessage.textContent = `✓ Group settings saved successfully! Configured ${userHoursConfig.length} employee${userHoursConfig.length === 1 ? '' : 's'}.`;
+
+            // Emit notification to ChurchTools
+            emit('notification:show', {
+                message: `Group settings saved! Configured ${userHoursConfig.length} employee${userHoursConfig.length === 1 ? '' : 's'}.`,
+                type: 'success',
+                duration: 3000,
+            });
+
+            setTimeout(() => {
+                statusMessage.style.display = 'none';
+            }, 3000);
+        } catch (error) {
+            console.error('[TimeTracker Admin] Save group settings error:', error);
+
+            // Show error message
+            statusMessage.style.display = 'block';
+            statusMessage.style.background = '#f8d7da';
+            statusMessage.style.border = '1px solid #f5c6cb';
+            statusMessage.style.color = '#721c24';
+            statusMessage.textContent =
+                '✗ Failed to save: ' + (error instanceof Error ? error.message : 'Unknown error');
+        } finally {
+            saveBtn.disabled = false;
+            saveBtn.textContent = '💾 Save Group Settings';
         }
     }
 
