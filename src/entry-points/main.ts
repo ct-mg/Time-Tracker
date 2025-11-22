@@ -1087,6 +1087,82 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
         }
     }
 
+    // Calculate dashboard statistics (Today, This Week, This Month, Last Month)
+    function calculateDashboardStats() {
+        const now = new Date();
+        const today = now.toISOString().split('T')[0];
+
+        // Helper: Count workdays (Monday-Friday) in date range
+        function countWorkdays(startDate: Date, endDate: Date): number {
+            let count = 0;
+            const current = new Date(startDate);
+            while (current <= endDate) {
+                const dayOfWeek = current.getDay();
+                if (dayOfWeek >= 1 && dayOfWeek <= 5) count++;
+                current.setDate(current.getDate() + 1);
+            }
+            return count;
+        }
+
+        // Helper: Calculate hours for date range
+        function calculateHours(startDate: string, endDate: string) {
+            const entries = timeEntries.filter(e => {
+                if (e.isBreak || !e.endTime) return false;
+                const entryDate = new Date(e.startTime).toISOString().split('T')[0];
+                return entryDate >= startDate && entryDate <= endDate;
+            });
+            const totalMs = entries.reduce((sum, e) => {
+                const start = new Date(e.startTime).getTime();
+                const end = new Date(e.endTime!).getTime();
+                return sum + (end - start);
+            }, 0);
+            return totalMs / (1000 * 60 * 60); // Convert to hours
+        }
+
+        // TODAY
+        const todayIst = calculateHours(today, today);
+        const todayDate = new Date(today);
+        const isTodayWorkday = todayDate.getDay() >= 1 && todayDate.getDay() <= 5;
+        const todaySoll = isTodayWorkday ? settings.defaultHoursPerDay : 0;
+
+        // THIS WEEK
+        const dayOfWeek = now.getDay();
+        const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+        const monday = new Date(now);
+        monday.setDate(now.getDate() + mondayOffset);
+        monday.setHours(0, 0, 0, 0);
+        const weekStart = monday.toISOString().split('T')[0];
+        const weekEnd = today;
+        const weekIst = calculateHours(weekStart, weekEnd);
+        const weekWorkdays = countWorkdays(new Date(weekStart), new Date(weekEnd));
+        const weekSoll = weekWorkdays * settings.defaultHoursPerDay;
+        const weekNumber = getISOWeek(now);
+        const weekYear = getISOWeekYear(now);
+
+        // THIS MONTH
+        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+        const monthEnd = today;
+        const monthIst = calculateHours(monthStart, monthEnd);
+        const monthWorkdays = countWorkdays(new Date(monthStart), new Date(monthEnd));
+        const monthSoll = monthWorkdays * settings.defaultHoursPerDay;
+
+        // LAST MONTH
+        const lastMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        const lastMonthStart = lastMonthDate.toISOString().split('T')[0];
+        const lastMonthLastDay = new Date(now.getFullYear(), now.getMonth(), 0);
+        const lastMonthEnd = lastMonthLastDay.toISOString().split('T')[0];
+        const lastMonthIst = calculateHours(lastMonthStart, lastMonthEnd);
+        const lastMonthWorkdays = countWorkdays(lastMonthDate, lastMonthLastDay);
+        const lastMonthSoll = lastMonthWorkdays * settings.defaultHoursPerDay;
+
+        return {
+            today: { ist: todayIst, soll: todaySoll },
+            week: { ist: weekIst, soll: weekSoll, weekNumber, year: weekYear },
+            month: { ist: monthIst, soll: monthSoll },
+            lastMonth: { ist: lastMonthIst, soll: lastMonthSoll }
+        };
+    }
+
     // Calculate absence hours in the filtered date range
     function calculateAbsenceHours(): number {
         const fromDate = new Date(filterDateFrom);
@@ -1373,32 +1449,101 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                 }
             </div>
 
-            <!-- Quick Stats -->
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+            <!-- Dashboard Statistics -->
+            ${(() => {
+                const dashStats = calculateDashboardStats();
+                return `
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+                <!-- Today -->
                 <div style="background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                    <div style="color: #666; font-size: 0.9rem; margin-bottom: 0.5rem;">Total Hours (Period)</div>
-                    <div style="font-size: 2rem; font-weight: 700; color: #007bff;">${stats.totalHours}h</div>
-                </div>
-                <div style="background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                    <div style="color: #666; font-size: 0.9rem; margin-bottom: 0.5rem;">Expected Hours</div>
-                    <div style="font-size: 2rem; font-weight: 700; color: #6c757d;">${stats.expectedHours}h</div>
-                </div>
-                <div style="background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                    <div style="color: #666; font-size: 0.9rem; margin-bottom: 0.5rem;">Absence Hours</div>
-                    <div style="font-size: 1.5rem; font-weight: 700; color: #ffc107;">${stats.absenceHours}h</div>
-                    <div style="color: #999; font-size: 0.8rem; margin-top: 0.25rem;">(${stats.absenceDays} days)</div>
-                </div>
-                <div style="background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                    <div style="color: #666; font-size: 0.9rem; margin-bottom: 0.5rem;">Overtime</div>
-                    <div style="font-size: 2rem; font-weight: 700; color: ${parseFloat(stats.overtime) >= 0 ? '#28a745' : '#dc3545'};">
-                        ${parseFloat(stats.overtime) >= 0 ? '+' : ''}${stats.overtime}h
+                    <div style="color: #666; font-size: 0.9rem; margin-bottom: 0.5rem; font-weight: 600;">Heute</div>
+                    <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.5rem;">
+                        <div>
+                            <div style="color: #999; font-size: 0.75rem;">IST</div>
+                            <div style="font-size: 1.5rem; font-weight: 700; color: ${dashStats.today.ist >= dashStats.today.soll ? '#28a745' : (dashStats.today.soll > 0 ? '#dc3545' : '#6c757d')};">
+                                ${dashStats.today.ist.toFixed(1)}h
+                            </div>
+                        </div>
+                        <div style="text-align: right;">
+                            <div style="color: #999; font-size: 0.75rem;">SOLL</div>
+                            <div style="font-size: 1.5rem; font-weight: 700; color: #6c757d;">
+                                ${dashStats.today.soll.toFixed(1)}h
+                            </div>
+                        </div>
+                    </div>
+                    <div style="height: 4px; background: #e9ecef; border-radius: 2px; overflow: hidden;">
+                        <div style="height: 100%; background: ${dashStats.today.ist >= dashStats.today.soll ? '#28a745' : '#dc3545'}; width: ${dashStats.today.soll > 0 ? Math.min(100, (dashStats.today.ist / dashStats.today.soll) * 100) : 0}%; transition: width 0.3s;"></div>
                     </div>
                 </div>
+
+                <!-- This Week -->
                 <div style="background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                    <div style="color: #666; font-size: 0.9rem; margin-bottom: 0.5rem;">Entries</div>
-                    <div style="font-size: 2rem; font-weight: 700; color: #007bff;">${stats.entriesCount}</div>
+                    <div style="color: #666; font-size: 0.9rem; margin-bottom: 0.5rem; font-weight: 600;">Diese Woche (KW ${dashStats.week.weekNumber})</div>
+                    <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.5rem;">
+                        <div>
+                            <div style="color: #999; font-size: 0.75rem;">IST</div>
+                            <div style="font-size: 1.5rem; font-weight: 700; color: ${dashStats.week.ist >= dashStats.week.soll ? '#28a745' : '#dc3545'};">
+                                ${dashStats.week.ist.toFixed(1)}h
+                            </div>
+                        </div>
+                        <div style="text-align: right;">
+                            <div style="color: #999; font-size: 0.75rem;">SOLL</div>
+                            <div style="font-size: 1.5rem; font-weight: 700; color: #6c757d;">
+                                ${dashStats.week.soll.toFixed(1)}h
+                            </div>
+                        </div>
+                    </div>
+                    <div style="height: 4px; background: #e9ecef; border-radius: 2px; overflow: hidden;">
+                        <div style="height: 100%; background: ${dashStats.week.ist >= dashStats.week.soll ? '#28a745' : '#dc3545'}; width: ${Math.min(100, (dashStats.week.ist / dashStats.week.soll) * 100)}%; transition: width 0.3s;"></div>
+                    </div>
+                </div>
+
+                <!-- This Month -->
+                <div style="background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                    <div style="color: #666; font-size: 0.9rem; margin-bottom: 0.5rem; font-weight: 600;">Dieser Monat</div>
+                    <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.5rem;">
+                        <div>
+                            <div style="color: #999; font-size: 0.75rem;">IST</div>
+                            <div style="font-size: 1.5rem; font-weight: 700; color: ${dashStats.month.ist >= dashStats.month.soll ? '#28a745' : '#dc3545'};">
+                                ${dashStats.month.ist.toFixed(1)}h
+                            </div>
+                        </div>
+                        <div style="text-align: right;">
+                            <div style="color: #999; font-size: 0.75rem;">SOLL</div>
+                            <div style="font-size: 1.5rem; font-weight: 700; color: #6c757d;">
+                                ${dashStats.month.soll.toFixed(1)}h
+                            </div>
+                        </div>
+                    </div>
+                    <div style="height: 4px; background: #e9ecef; border-radius: 2px; overflow: hidden;">
+                        <div style="height: 100%; background: ${dashStats.month.ist >= dashStats.month.soll ? '#28a745' : '#dc3545'}; width: ${Math.min(100, (dashStats.month.ist / dashStats.month.soll) * 100)}%; transition: width 0.3s;"></div>
+                    </div>
+                </div>
+
+                <!-- Last Month -->
+                <div style="background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                    <div style="color: #666; font-size: 0.9rem; margin-bottom: 0.5rem; font-weight: 600;">Letzter Monat</div>
+                    <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.5rem;">
+                        <div>
+                            <div style="color: #999; font-size: 0.75rem;">IST</div>
+                            <div style="font-size: 1.5rem; font-weight: 700; color: ${dashStats.lastMonth.ist >= dashStats.lastMonth.soll ? '#28a745' : '#dc3545'};">
+                                ${dashStats.lastMonth.ist.toFixed(1)}h
+                            </div>
+                        </div>
+                        <div style="text-align: right;">
+                            <div style="color: #999; font-size: 0.75rem;">SOLL</div>
+                            <div style="font-size: 1.5rem; font-weight: 700; color: #6c757d;">
+                                ${dashStats.lastMonth.soll.toFixed(1)}h
+                            </div>
+                        </div>
+                    </div>
+                    <div style="height: 4px; background: #e9ecef; border-radius: 2px; overflow: hidden;">
+                        <div style="height: 100%; background: ${dashStats.lastMonth.ist >= dashStats.lastMonth.soll ? '#28a745' : '#dc3545'}; width: ${Math.min(100, (dashStats.lastMonth.ist / dashStats.lastMonth.soll) * 100)}%; transition: width 0.3s;"></div>
+                    </div>
                 </div>
             </div>
+            `;
+            })()}
 
             <!-- Recent Entries -->
             <div style="background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
