@@ -95,6 +95,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
         endTime: string;
         categoryId: string;
         description: string;
+        isBreak: boolean;
     }
     let bulkEntryRows: BulkEntryRow[] = [];
     let nextBulkRowId = 1;
@@ -550,6 +551,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
             endTime: timeStr,
             categoryId: workCategories[0]?.id || '',
             description: '',
+            isBreak: false,
         });
         render();
     }
@@ -559,7 +561,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
         render();
     }
 
-    function updateBulkEntryRow(rowId: number, field: keyof BulkEntryRow, value: string) {
+    function updateBulkEntryRow(rowId: number, field: keyof BulkEntryRow, value: string | boolean) {
         const row = bulkEntryRows.find(r => r.id === rowId);
         if (row && field !== 'id') {
             (row as any)[field] = value;
@@ -634,6 +636,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                     categoryName: category!.name, // We know category exists due to validation above
                     description: row.description,
                     isManual: true,
+                    isBreak: row.isBreak,
                     createdAt: new Date().toISOString(),
                 };
 
@@ -830,6 +833,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                         endTime: parsedEndTime,
                         categoryId: categoryId,
                         description: description,
+                        isBreak: false, // Default to non-break for imported entries
                     });
 
                     importedCount++;
@@ -1322,8 +1326,13 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                                 data-lpignore="true"
                                 data-1p-ignore="true"
                                 placeholder="What are you working on?"
-                                style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 4px; margin-bottom: 1.5rem; font-size: 1rem;"
+                                style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 4px; margin-bottom: 1rem; font-size: 1rem;"
                             />
+
+                            <label style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1.5rem; cursor: pointer; text-align: left;">
+                                <input type="checkbox" id="clock-in-is-break" style="width: 18px; height: 18px; cursor: pointer;" />
+                                <span style="color: #666; font-size: 0.95rem;">This is a break/pause (won't count towards work hours)</span>
+                            </label>
 
                             <button id="clock-in-btn" style="width: 100%; padding: 1rem 2rem; background: #28a745; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 1.1rem; font-weight: 600; box-shadow: 0 2px 4px rgba(0,0,0,0.2); display: inline-flex; align-items: center; gap: 0.5rem; justify-content: center;">
                                 <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
@@ -1407,13 +1416,14 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                                 <th style="padding: 0.75rem; text-align: left; font-weight: 600;">End Time</th>
                                 <th style="padding: 0.75rem; text-align: left; font-weight: 600;">Category</th>
                                 <th style="padding: 0.75rem; text-align: left; font-weight: 600;">Description</th>
+                                <th style="padding: 0.75rem; text-align: center; font-weight: 600;">Break?</th>
                                 <th style="padding: 0.75rem; text-align: center; font-weight: 600;">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
                             ${bulkEntryRows.length === 0 ? `
                                 <tr>
-                                    <td colspan="7" style="padding: 2rem; text-align: center; color: #666;">
+                                    <td colspan="8" style="padding: 2rem; text-align: center; color: #666;">
                                         No entries yet. Click "Add Row" to start.
                                     </td>
                                 </tr>
@@ -1480,6 +1490,16 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                                             value="${row.description}"
                                             placeholder="Description..."
                                             style="width: 100%; padding: 0.375rem; border: 1px solid #ddd; border-radius: 3px;"
+                                        />
+                                    </td>
+                                    <td style="padding: 0.5rem; text-align: center;">
+                                        <input
+                                            type="checkbox"
+                                            class="bulk-input-checkbox"
+                                            data-row-id="${row.id}"
+                                            data-field="isBreak"
+                                            ${row.isBreak ? 'checked' : ''}
+                                            style="width: 18px; height: 18px; cursor: pointer;"
                                         />
                                     </td>
                                     <td style="padding: 0.5rem; text-align: center;">
@@ -1697,6 +1717,10 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                             />
                         </div>
                     </div>
+                    <label style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem; cursor: pointer; text-align: left;">
+                        <input type="checkbox" id="manual-is-break" ${editingEntry && editingEntry.isBreak ? 'checked' : ''} style="width: 18px; height: 18px; cursor: pointer;" />
+                        <span style="color: #666; font-size: 0.95rem;">This is a break/pause (won't count towards work hours)</span>
+                    </label>
                     <div style="display: flex; gap: 0.5rem;">
                         <button id="save-manual-entry-btn" style="padding: 0.5rem 1rem; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; display: inline-flex; align-items: center; gap: 0.5rem;">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -1776,23 +1800,37 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                                     </td>
                                     <td style="padding: 0.75rem;">${entry.description || '-'}</td>
                                     <td style="padding: 0.75rem;">
-                                        <span style="color: ${entry.isManual ? '#ffc107' : '#6c757d'}; font-size: 0.85rem;">
-                                            <span style="display: inline-flex; align-items: center; gap: 0.25rem;">
-                                                ${entry.isManual ? `
-                                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                                                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-                                                    </svg>
-                                                    Manual
-                                                ` : `
-                                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                                        <circle cx="12" cy="12" r="10"></circle>
-                                                        <polyline points="12 6 12 12 16 14"></polyline>
-                                                    </svg>
-                                                    Tracked
-                                                `}
+                                        <div style="display: flex; flex-direction: column; gap: 0.25rem;">
+                                            <span style="color: ${entry.isManual ? '#ffc107' : '#6c757d'}; font-size: 0.85rem;">
+                                                <span style="display: inline-flex; align-items: center; gap: 0.25rem;">
+                                                    ${entry.isManual ? `
+                                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                                                        </svg>
+                                                        Manual
+                                                    ` : `
+                                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                            <circle cx="12" cy="12" r="10"></circle>
+                                                            <polyline points="12 6 12 12 16 14"></polyline>
+                                                        </svg>
+                                                        Tracked
+                                                    `}
+                                                </span>
                                             </span>
-                                        </span>
+                                            ${entry.isBreak ? `
+                                                <span style="color: #17a2b8; font-size: 0.85rem;">
+                                                    <span style="display: inline-flex; align-items: center; gap: 0.25rem;">
+                                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                            <circle cx="12" cy="12" r="10"></circle>
+                                                            <line x1="8" y1="12" x2="16" y2="12"></line>
+                                                            <line x1="12" y1="8" x2="12" y2="16"></line>
+                                                        </svg>
+                                                        Break
+                                                    </span>
+                                                </span>
+                                            ` : ''}
+                                        </div>
                                     </td>
                                     <td style="padding: 0.75rem;">
                                         ${entry.endTime ? `
@@ -2391,7 +2429,10 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
             const descriptionInput = element.querySelector(
                 '#clock-in-description'
             ) as HTMLInputElement;
-            await clockIn(categorySelect.value, descriptionInput.value);
+            const isBreakCheckbox = element.querySelector(
+                '#clock-in-is-break'
+            ) as HTMLInputElement;
+            await clockIn(categorySelect.value, descriptionInput.value, isBreakCheckbox?.checked || false);
         });
 
         clockOutBtn?.addEventListener('click', async () => {
@@ -2525,6 +2566,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
             const descriptionInput = element.querySelector(
                 '#manual-description'
             ) as HTMLInputElement;
+            const isBreakCheckbox = element.querySelector('#manual-is-break') as HTMLInputElement;
 
             if (!startInput.value || !endInput.value) {
                 showNotification('Please fill in both start and end times.', 'error');
@@ -2555,6 +2597,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                         categoryId: categorySelect.value,
                         categoryName: category?.name || 'Unknown',
                         description: descriptionInput.value,
+                        isBreak: isBreakCheckbox?.checked || false,
                     };
 
                     // Find in KV store and update
@@ -2588,6 +2631,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                         categoryName: category?.name || 'Unknown',
                         description: descriptionInput.value,
                         isManual: true,
+                        isBreak: isBreakCheckbox?.checked || false,
                         createdAt: new Date().toISOString(),
                     };
 
@@ -2680,6 +2724,19 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                 const field = target.dataset.field as keyof BulkEntryRow;
                 if (rowId && field) {
                     updateBulkEntryRow(rowId, field, target.value);
+                }
+            });
+        });
+
+        // Bulk checkbox change handlers (for isBreak)
+        const bulkCheckboxes = element.querySelectorAll('.bulk-input-checkbox');
+        bulkCheckboxes.forEach((checkbox) => {
+            checkbox.addEventListener('change', (e) => {
+                const target = e.target as HTMLInputElement;
+                const rowId = parseInt(target.dataset.rowId || '0');
+                const field = target.dataset.field as keyof BulkEntryRow;
+                if (rowId && field) {
+                    updateBulkEntryRow(rowId, field, target.checked);
                 }
             });
         });
