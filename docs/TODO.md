@@ -136,21 +136,19 @@
 
 ### 🔴 Priorität: Kritisch (Blocking Issues)
 
-#### User Namen zeigen "User [ID]" statt echte Namen
-**Problem:** Im Admin-Panel bei Employee SOLL Hours Config zeigen User "User [ID]" statt "Vorname Nachname"
-**Root Cause:** ChurchTools API Antwort structure unclear - `member.person.firstName` nicht verfügbar
-**Location:** `admin.ts` Zeile 317
-**Status:** Debugging erforderlich
-**Aufwand:** Klein
-**User Impact:** Hoch (Admin kann User nicht identifizieren)
+#### ✅ User Namen zeigen "User [ID]" statt echte Namen - GELÖST
+**Problem:** Im Admin-Panel bei Employee SOLL Hours Config zeigen User "User [ID]" statt "Vorname Nachname"  
+**Root Cause:** ChurchTools API speichert Namen in `person.domainAttributes.firstName/lastName`, nicht direkt auf `person`  
+**Location:** `admin.ts` Zeile 298-307  
+**Status:** ✅ Resolved (2025-11-23)  
+**Aufwand:** Klein  
 
-**Debug Steps:**
-1. Console log komplette API response von `/groups/{groupId}/members`
-2. Check welche Felder verfügbar sind
-3. Path zu firstName/lastName korrigieren
-4. Fallback zu Person API `/persons/{userId}` wenn nötig
+**Lösung:**
+- Namen extrahieren aus `member.person.domainAttributes.firstName/lastName`
+- Fallback zu "User [ID]" bleibt funktionsfähig
+- Code vereinfacht und Debug-Logs entfernt
 
-**Workaround:** Admin kann User ID notieren und in ChurchTools nachschlagen
+**Git Commit:** `0f1c6e9` - fix: user names now display correctly in admin panel
 
 ---
 
