@@ -1532,8 +1532,6 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
             return;
         }
 
-        const stats = calculateStats();
-
         element.innerHTML = `
             <div style="min-height: 100vh; background: #f8f9fa; padding: 2rem;">
                 <div style="max-width: 1400px; margin: 0 auto;">
@@ -1589,7 +1587,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
             case 'absences':
                 return renderAbsences();
             case 'reports':
-                return renderReports(stats);
+                return renderReports();
             default:
                 return '';
         }
@@ -2539,7 +2537,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
         `;
     }
 
-    function renderReports(stats: any): string {
+    function renderReports(): string {
         // Group entries by category
         const entriesByCategory: { [key: string]: { hours: number; count: number } } = {};
         getFilteredEntries().forEach((entry) => {
