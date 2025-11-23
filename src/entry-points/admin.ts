@@ -46,18 +46,36 @@ interface Settings {
     volunteerGroupId?: number; // ChurchTools group ID for volunteers (no SOLL requirements)
     userHoursConfig?: UserHoursConfig[]; // Individual SOLL hours for employees
     workWeekDays?: number[]; // Days of week that count as work days (0=Sunday, 1=Monday, ..., 6=Saturday)
+    schemaVersion: number; // Schema version for migration handling
+    lastModified: number; // Timestamp of last modification
+    modifiedBy?: string; // Optional: User who made the change
 }
+
+interface SettingsBackup {
+    timestamp: number;
+    settings: Settings;
+    summary: string; // Brief description of changes or state
+    version: number;
+}
+
+
+const MAX_BACKUPS = 5;
+const CURRENT_SCHEMA_VERSION = 1;
 
 const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) => {
     let moduleId: number | null = null;
     let workCategoriesCategory: CustomModuleDataCategory | null = null;
     let settingsCategory: CustomModuleDataCategory | null = null;
+    let settingsBackupsCategory: CustomModuleDataCategory | null = null;
     let workCategories: WorkCategory[] = [];
+    let backupsList: SettingsBackup[] = [];
     let settings: Settings = {
         defaultHoursPerDay: 8,
         defaultHoursPerWeek: 40,
         excelImportEnabled: false, // Disabled by default (Alpha)
-        workWeekDays: [1, 2, 3, 4, 5] // Default: Monday to Friday
+        workWeekDays: [1, 2, 3, 4, 5], // Default: Monday to Friday
+        schemaVersion: CURRENT_SCHEMA_VERSION,
+        lastModified: Date.now()
     };
 
     // UI State
@@ -113,12 +131,21 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                 'Settings',
                 'Extension configuration settings'
             );
+            settingsBackupsCategory = await getOrCreateCategory(
+                'settings_backups',
+                'Settings Backups',
+                'Automatic backups of extension settings'
+            );
 
             // One-time cleanup: Remove old default categories
             await removeOldDefaultCategories();
 
             // Load data
-            await Promise.all([loadWorkCategories(), loadSettings()]);
+            await Promise.all([
+                loadWorkCategories(),
+                loadSettings(),
+                (async () => { backupsList = await getBackups(); })()
+            ]);
 
             // Auto-load employees if employee group ID is configured
             if (settings.employeeGroupId) {
@@ -241,6 +268,12 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
 
             if (values.length > 0) {
                 settings = values[0];
+
+                // Migration: Ensure schemaVersion exists
+                if (!settings.schemaVersion) {
+                    settings.schemaVersion = 1;
+                    settings.lastModified = Date.now();
+                }
             } else {
                 // Create default settings
                 await createCustomDataValue(
@@ -256,36 +289,163 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
         }
     }
 
-    // Save settings
-    async function saveSettings(newSettings: Settings): Promise<void> {
+    // Validate settings integrity
+    function validateSettings(settingsToValidate: Settings): { isValid: boolean; error?: string } {
+        if (!settingsToValidate) return { isValid: false, error: 'Settings object is null or undefined' };
+
+        // Check required fields
+        if (typeof settingsToValidate.defaultHoursPerDay !== 'number') return { isValid: false, error: 'defaultHoursPerDay is missing or invalid' };
+        if (typeof settingsToValidate.defaultHoursPerWeek !== 'number') return { isValid: false, error: 'defaultHoursPerWeek is missing or invalid' };
+
+        // Check integrity of optional fields if they exist
+        if (settingsToValidate.employeeGroupId !== undefined && typeof settingsToValidate.employeeGroupId !== 'number') {
+            return { isValid: false, error: 'employeeGroupId must be a number' };
+        }
+
+        if (settingsToValidate.userHoursConfig && !Array.isArray(settingsToValidate.userHoursConfig)) {
+            return { isValid: false, error: 'userHoursConfig must be an array' };
+        }
+
+        return { isValid: true };
+    }
+
+    // Create a backup of current settings
+    async function createBackup(currentSettings: Settings, summary: string): Promise<void> {
         try {
+            // Load existing backups
+            const backupValues = await getCustomDataValues<SettingsBackup>(
+                settingsBackupsCategory!.id,
+                moduleId!
+            );
+
+            // Sort by timestamp descending
+            const backups = backupValues.sort((a, b) => b.timestamp - a.timestamp);
+
+            // Create new backup
+            const newBackup: SettingsBackup = {
+                timestamp: Date.now(),
+                settings: JSON.parse(JSON.stringify(currentSettings)), // Deep copy
+                summary,
+                version: currentSettings.schemaVersion || 1
+            };
+
+            // Save new backup
+            await createCustomDataValue(
+                {
+                    dataCategoryId: settingsBackupsCategory!.id,
+                    value: JSON.stringify(newBackup),
+                },
+                moduleId!
+            );
+
+            // Prune old backups if we exceed MAX_BACKUPS
+            if (backups.length >= MAX_BACKUPS) {
+                const backupsToDelete = backups.slice(MAX_BACKUPS - 1); // Keep 4, add 1 = 5
+                for (const backup of backupsToDelete) {
+                    const kvStoreId = (backup as any).id;
+                    if (kvStoreId) {
+                        await deleteCustomDataValue(settingsBackupsCategory!.id, kvStoreId);
+                    }
+                }
+            }
+
+            console.log('[TimeTracker Admin] Backup created:', summary);
+        } catch (e) {
+            console.error('[TimeTracker Admin] Backup failed:', e);
+            // We don't block saving if backup fails, but we log it
+        }
+    }
+
+    // Get backups
+    async function getBackups(): Promise<SettingsBackup[]> {
+        try {
+            const values = await getCustomDataValues<SettingsBackup>(
+                settingsBackupsCategory!.id,
+                moduleId!
+            );
+            return values.sort((a, b) => b.timestamp - a.timestamp);
+        } catch (e) {
+            console.error('[TimeTracker Admin] Failed to load backups', e);
+            return [];
+        }
+    }
+
+    // Restore backup
+    async function handleRestoreBackup(backupId: number) {
+        if (!confirm('Are you sure you want to restore this backup? Current settings will be overwritten.')) {
+            return;
+        }
+
+        try {
+            const backups = await getBackups();
+            const backupToRestore = backups.find((b: any) => b.id === backupId);
+
+            if (!backupToRestore) {
+                alert('Backup not found!');
+                return;
+            }
+
+            // We use saveSettings to restore, which will create a NEW backup of the current state before restoring!
+            await saveSettings(backupToRestore.settings, `Restored from backup ${new Date(backupToRestore.timestamp).toLocaleString()}`);
+
+            alert('Settings restored successfully!');
+
+            // Reload backups list
+            backupsList = await getBackups();
+            render();
+        } catch (e) {
+            console.error('[TimeTracker Admin] Restore failed:', e);
+            alert('Failed to restore backup: ' + (e instanceof Error ? e.message : 'Unknown error'));
+        }
+    }
+
+    // Save settings with validation and backup
+    async function saveSettings(newSettings: Settings, changeSummary: string = 'Settings updated'): Promise<void> {
+        // 1. Validate
+        const validation = validateSettings(newSettings);
+        if (!validation.isValid) {
+            throw new Error(`Settings validation failed: ${validation.error}`);
+        }
+
+        try {
+            // 2. Create Backup of OLD settings (if they exist and are valid)
+            if (settings && settings.defaultHoursPerDay) {
+                await createBackup(settings, changeSummary);
+            }
+
+            // 3. Update Metadata
+            newSettings.lastModified = Date.now();
+            newSettings.schemaVersion = CURRENT_SCHEMA_VERSION;
+
             const values = await getCustomDataValues<Settings>(
                 settingsCategory!.id,
                 moduleId!
             );
 
-            const valueData = JSON.stringify(newSettings);
-
             if (values.length > 0) {
-                // Update existing
+                const settingId = (values[0] as any).id;
                 await updateCustomDataValue(
                     settingsCategory!.id,
-                    (values[0] as any).id,
-                    { value: valueData },
-                    moduleId!
+                    settingId,
+                    {
+                        dataCategoryId: settingsCategory!.id,
+                        value: JSON.stringify(newSettings),
+                    }
                 );
             } else {
-                // Create new
                 await createCustomDataValue(
                     {
                         dataCategoryId: settingsCategory!.id,
-                        value: valueData,
+                        value: JSON.stringify(newSettings),
                     },
                     moduleId!
                 );
             }
 
+            // Update local state
             settings = newSettings;
+            hasUnsavedChanges = false;
+
         } catch (error) {
             console.error('[TimeTracker Admin] Failed to save settings:', error);
             throw error;
@@ -299,7 +459,7 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
             render();
 
             // Get members of the group from ChurchTools API
-            const groupMembers = await churchtoolsClient.get(`/groups/${groupId}/members`);
+            const groupMembers = await churchtoolsClient.get(`/groups/${groupId}/members`) as any[];
 
             // Extract user IDs from current group
             const currentGroupUserIds = new Set(groupMembers.map((member: { personId?: number; id?: number }) => member.personId || member.id));
@@ -335,7 +495,7 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                     : (firstName || lastName || `User ${member.personId || member.id}`);
 
                 return {
-                    userId: member.personId || member.id,
+                    userId: member.personId || member.id || 0,
                     userName,
                     firstName: firstName || '',
                     lastName: lastName || ''
@@ -598,6 +758,75 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
     }
 
     // Render UI
+    // Update save button visual state based on dirty flag
+    function updateSaveButtonState() {
+        const saveBtn = element.querySelector('#save-group-settings-btn') as HTMLButtonElement;
+        if (!saveBtn) return;
+
+        if (hasUnsavedChanges) {
+            saveBtn.style.background = '#dc3545'; // Red
+            saveBtn.style.animation = 'pulse 2s ease-in-out infinite';
+            saveBtn.innerHTML = `
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                    <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                    <polyline points="7 3 7 8 15 8"></polyline>
+                </svg>
+                Save Group Settings (Unsaved Changes!)
+            `;
+        } else {
+            saveBtn.style.background = '#28a745'; // Green
+            saveBtn.style.animation = '';
+            saveBtn.innerHTML = `
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1-2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                    <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                    <polyline points="7 3 7 8 15 8"></polyline>
+                </svg>
+                Save Group Settings
+            `;
+        }
+    }
+
+    function renderBackupsSection(): string {
+        if (backupsList.length === 0) {
+            return `
+                <div style="margin-top: 3rem; border-top: 1px solid #eee; padding-top: 2rem;">
+                    <h3 style="color: #333; margin-bottom: 1rem;">Data Safety & Recovery</h3>
+                    <p style="color: #666; font-style: italic;">No backups available yet. Backups are created automatically when you save settings.</p>
+                </div>
+            `;
+        }
+
+        const backupsHtml = backupsList.map(backup => {
+            const date = new Date(backup.timestamp).toLocaleString();
+            const id = (backup as any).id; // KV Store ID
+            return `
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.75rem; border-bottom: 1px solid #eee;">
+                    <div>
+                        <div style="font-weight: 600; color: #333;">${date}</div>
+                        <div style="font-size: 0.85rem; color: #666;">${backup.summary || 'No summary'} (v${backup.version})</div>
+                    </div>
+                    <button class="restore-backup-btn btn btn-sm btn-outline-secondary" data-backup-id="${id}" style="padding: 0.25rem 0.5rem; border: 1px solid #ccc; background: #fff; border-radius: 4px; cursor: pointer;">
+                        Restore
+                    </button>
+                </div>
+            `;
+        }).join('');
+
+        return `
+            <div style="margin-top: 3rem; border-top: 1px solid #eee; padding-top: 2rem;">
+                <h3 style="color: #333; margin-bottom: 1rem;">Data Safety & Recovery</h3>
+                <div style="background: #fff; border: 1px solid #ddd; border-radius: 8px; overflow: hidden;">
+                    <div style="padding: 1rem; background: #f8f9fa; border-bottom: 1px solid #ddd; font-size: 0.9rem; color: #666;">
+                        Last ${backupsList.length} Backups
+                    </div>
+                    ${backupsHtml}
+                </div>
+            </div>
+        `;
+    }
+
     function render() {
         element.innerHTML = `
             <div style="max-width: 900px; margin: 2rem auto; padding: 2rem;">
@@ -641,6 +870,7 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                     ${renderGeneralSettings()}
                     ${renderGroupManagement()}
                     ${renderWorkCategories()}
+                    ${renderBackupsSection()}
                 `
             }
             </div>
@@ -1303,35 +1533,7 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
             });
         });
 
-        // Update save button visual state based on dirty flag
-        function updateSaveButtonState() {
-            const saveBtn = element.querySelector('#save-group-settings-btn') as HTMLButtonElement;
-            if (!saveBtn) return;
 
-            if (hasUnsavedChanges) {
-                saveBtn.style.background = '#dc3545'; // Red
-                saveBtn.style.animation = 'pulse 2s ease-in-out infinite';
-                saveBtn.innerHTML = `
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
-                        <polyline points="17 21 17 13 7 13 7 21"></polyline>
-                        <polyline points="7 3 7 8 15 8"></polyline>
-                    </svg>
-                    Save Group Settings (Unsaved Changes!)
-                `;
-            } else {
-                saveBtn.style.background = '#28a745'; // Green
-                saveBtn.style.animation = '';
-                saveBtn.innerHTML = `
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
-                        <polyline points="17 21 17 13 7 13 7 21"></polyline>
-                        <polyline points="7 3 7 8 15 8"></polyline>
-                    </svg>
-                    Save Group Settings
-                `;
-            }
-        }
 
         saveGroupSettingsBtn?.addEventListener('click', async () => {
             await handleSaveGroupSettings();
@@ -1443,6 +1645,20 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                 replacementCategoryId = (e.target as HTMLSelectElement).value;
             });
         }
+
+        // Restore backup handlers
+        element.querySelectorAll('.restore-backup-btn').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                const target = e.target as HTMLElement;
+                const button = target.closest('.restore-backup-btn') as HTMLElement;
+                if (button) {
+                    const id = parseInt(button.getAttribute('data-backup-id') || '0');
+                    if (id) {
+                        await handleRestoreBackup(id);
+                    }
+                }
+            });
+        });
     }
 
     // Handle save general settings
@@ -1468,6 +1684,7 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
             saveBtn.innerHTML = saveIconHTML + 'Saving...';
 
             const newSettings: Settings = {
+                ...settings,
                 defaultHoursPerDay: parseFloat(hoursPerDayInput.value),
                 defaultHoursPerWeek: parseFloat(hoursPerWeekInput.value),
                 excelImportEnabled: excelImportToggle.checked,
@@ -1564,6 +1781,16 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
             const employeeGroupId = employeeGroupIdInput?.value ? parseInt(employeeGroupIdInput.value) : undefined;
             const volunteerGroupId = volunteerGroupIdInput?.value ? parseInt(volunteerGroupIdInput.value) : undefined;
 
+            // Collect global work week days
+            const globalWorkWeekDays: number[] = [];
+            const globalWorkWeekCheckboxes = element.querySelectorAll('.global-work-week-checkbox') as NodeListOf<HTMLInputElement>;
+            globalWorkWeekCheckboxes.forEach(checkbox => {
+                if (checkbox.checked) {
+                    globalWorkWeekDays.push(parseInt(checkbox.getAttribute('data-day') || '0'));
+                }
+            });
+            globalWorkWeekDays.sort((a, b) => a - b);
+
             // Collect individual employee hours from table
             const userHoursConfig: UserHoursConfig[] = [];
             const employeeHoursDayInputs = element.querySelectorAll('.employee-hours-day') as NodeListOf<HTMLInputElement>;
@@ -1609,10 +1836,9 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                 ...settings,
                 employeeGroupId,
                 volunteerGroupId,
-                userHoursConfig
-            };
-
-            await saveSettings(newSettings);
+                userHoursConfig,
+                workWeekDays: globalWorkWeekDays
+            }; await saveSettings(newSettings);
 
             // Reset dirty state after successful save
             hasUnsavedChanges = false;
