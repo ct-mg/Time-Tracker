@@ -76,6 +76,18 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
     let loadingEmployees = false;
     let employeesList: Array<{ userId: number; userName: string }> = [];
 
+    // Dirty state tracking for unsaved changes warning
+    let hasUnsavedChanges = false;
+
+    // Browser warning for unsaved changes
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+        if (hasUnsavedChanges) {
+            e.preventDefault();
+            e.returnValue = ''; // Modern browsers show generic message
+        }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
     // Initialize and load settings
     async function initialize() {
         try {
@@ -595,8 +607,18 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
 
                 ${isLoading
                 ? `
-                    <div style="padding: 3rem; text-align: center; color: #666;">
-                        <div style="font-size: 2rem; margin-bottom: 1rem;">⏳</div>
+                    <div style="max-width: 1200px; margin: 0 auto; text-align: center; padding: 3rem;">
+                        <div style="margin-bottom: 1rem;">
+                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#007bff" stroke-width="2" style="animation: spin 1s linear infinite;">
+                                <style>
+                                    @keyframes spin {
+                                        from { transform: rotate(0deg); }
+                                        to { transform: rotate(360deg); }
+                                    }
+                                </style>
+                                <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"></path>
+                            </svg>
+                        </div>
                         <p>Loading settings...</p>
                     </div>
                 `
@@ -1242,11 +1264,65 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
 
         // Work week checkbox handlers (no auto-save, requires Save button like hours)
         element.querySelectorAll('.user-work-week-checkbox').forEach(checkbox => {
-            checkbox.addEventListener('change', (e) => {
-                // Just mark as dirty, user must click Save Group Settings
-                // This matches the behavior of hours inputs
+            checkbox.addEventListener('change', () => {
+                hasUnsavedChanges = true;
+                updateSaveButtonState();
             });
         });
+
+        // Hours input handlers (mark as dirty)
+        element.querySelectorAll('.employee-hours-day, .employee-hours-week').forEach(input => {
+            input.addEventListener('input', () => {
+                hasUnsavedChanges = true;
+                updateSaveButtonState();
+            });
+        });
+
+        // General Settings inputs (hours/day, hours/week, work week)
+        element.querySelectorAll('#hours-per-day, #hours-per-week').forEach(input => {
+            input.addEventListener('input', () => {
+                hasUnsavedChanges = true;
+                updateSaveButtonState();
+            });
+        });
+
+        // Global work week checkboxes
+        element.querySelectorAll('.work-week-day-checkbox').forEach(checkbox => {
+            checkbox.addEventListener('change', () => {
+                hasUnsavedChanges = true;
+                updateSaveButtonState();
+            });
+        });
+
+        // Update save button visual state based on dirty flag
+        function updateSaveButtonState() {
+            const saveBtn = element.querySelector('#save-group-settings-btn') as HTMLButtonElement;
+            if (!saveBtn) return;
+
+            if (hasUnsavedChanges) {
+                saveBtn.style.background = '#dc3545'; // Red
+                saveBtn.style.animation = 'pulse 2s ease-in-out infinite';
+                saveBtn.innerHTML = `
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                        <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                        <polyline points="7 3 7 8 15 8"></polyline>
+                    </svg>
+                    Save Group Settings (Unsaved Changes!)
+                `;
+            } else {
+                saveBtn.style.background = '#28a745'; // Green
+                saveBtn.style.animation = '';
+                saveBtn.innerHTML = `
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                        <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                        <polyline points="7 3 7 8 15 8"></polyline>
+                    </svg>
+                    Save Group Settings
+                `;
+            }
+        }
 
         saveGroupSettingsBtn?.addEventListener('click', async () => {
             await handleSaveGroupSettings();
@@ -1528,6 +1604,10 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
             };
 
             await saveSettings(newSettings);
+
+            // Reset dirty state after successful save
+            hasUnsavedChanges = false;
+            updateSaveButtonState();
 
             // Show success message
             statusMessage.style.display = 'block';
