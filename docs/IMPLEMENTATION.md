@@ -18,8 +18,11 @@
 4. [Bulk Entry mit Excel](#bulk-entry-mit-excel)
 5. [Category Management](#category-management)
 6. [Notification System](#notification-system)
-7. [Best Practices](#best-practices)
-8. [Änderungshistorie](#änderungshistorie)
+7. [Absence Management](#absence-management) ← NEW
+8. [Break Tracking](#break-tracking) ← NEW
+9. [Group Access Control & Individual SOLL](#group-access-control--individual-soll) ← NEW
+10. [Best Practices](#best-practices)
+11. [Änderungshistorie](#änderungshistorie)
 
 ---
 
@@ -35,6 +38,7 @@
 - `categoryName` (string): Anzeigename für UI (denormalisiert für Performance)
 - `description` (string): Beschreibung der Tätigkeit
 - `isManual` (boolean): true = manuell, false = Clock-in/out
+- `isBreak` (boolean): true = Pause (wird nicht zu Arbeitsstunden gezählt) ← NEW (v1.6.0)
 - `createdAt` (string): ISO datetime
 
 **Why startTime as unique identifier?**
@@ -699,6 +703,65 @@ HTML wird bei jedem `render()` komplett neu generiert. Event Listeners gehen ver
 - Stacking für multiple notifications
 - Slide-in/Slide-out Animationen
 
+### v1.5.0 - Absence Management (2025-11-22)
+- **Full CRUD via ChurchTools API** (`/persons/{userId}/absences`)
+- Absence Reasons von Event Masterdata laden
+- Create/Edit/Delete Dialogs mit Validation
+- Support für All-Day und Timed Absences
+- **Absence Hours in Overtime Calculation**
+  - Expected Hours = (Work Days / 7) * Hours per Week - Absence Hours
+- Absence Calendar View in Reports
+- Absences in Period table mit Details
+
+### v1.6.0 - Break Tracking & Advanced Stats (2025-11-22)
+- **Break/Pause Tracking**
+  - `isBreak` boolean field in TimeEntry
+  - Break Checkbox in Clock-In, Manual Entry, Bulk Entry
+  - Breaks excluded from work hours calculation
+  - Visual distinction mit Break Badge
+- **Calendar Week Grouping**
+  - Time Entries grouped by ISO calendar week
+  - Daily/Weekly Soll vs Ist calculations per week
+  - Visual progress bars
+- **Dashboard Period Statistics**
+  - Day/Week/Month/Last Month IST/SOLL views
+  - Color-coded progress indicators
+  - Replaced simple stat cards
+- **Report Period Persistence**
+  - User's preferred period saved to Settings
+  - Default: 'This Week'
+
+### v1.7.0 - Access Control & Individual SOLL (2025-11-22)
+- **ChurchTools Group-Based Access**
+  - `employeeGroupId` and `volunteerGroupId` in Settings
+  - Access check on initialization
+  - Restrict extension to group members
+- **Individual SOLL Hours per Employee**
+  - `userHoursConfig: UserHoursConfig[]` in Settings
+  - Admin UI for per-employee hours configuration
+  - Load employees from ChurchTools group
+  - Soft-delete support (inactive flag)
+  - SOLL calculations use user-specific hours
+  - Priority: user config > default settings
+
+### v1.8.0 - UI/UX Polish (2025-11-22)
+- **Removed ALL Emojis**
+  - Replaced with clean SVG icons throughout
+  - Modern minimalist design
+- **Hours Display Format**
+  - Changed from decimal (8.5h) to hours:minutes (8h 30m)
+  - Applied throughout entire UI
+- **Refresh Button**
+  - Manual data reload without page refresh
+  - Clears cache and reloads all data
+- **Excel Import as Alpha Feature**
+  - Toggleable via Settings `excelImportEnabled`
+  - Default: disabled with warning UI
+- **Visual Bug Fixes**
+  - Progress bar text overlap when target exceeded
+  - Duplicate pause badge in dashboard
+  - Edit button visibility fixes
+
 ---
 
 ## Für KI-Assistenten
@@ -711,12 +774,12 @@ HTML wird bei jedem `render()` komplett neu generiert. Event Listeners gehen ver
 5. Git Commit mit Feature-Beschreibung
 
 **Kritische Files:**
-- `src/entry-points/main.ts` (2300+ Zeilen) - Vorsichtig ändern!
-- `src/entry-points/admin.ts` (900+ Zeilen)
+- `src/entry-points/main.ts` (3347 Zeilen) - Vorsichtig ändern! ← UPDATED
+- `src/entry-points/admin.ts` (1640 Zeilen) ← UPDATED
 - Niemals `src/utils/kv-store.ts` ändern (Framework)
 
 ---
 
-**Letzte Aktualisierung:** 2025-01-22
-**Version:** 1.4
-**Status:** ✅ Production Ready (Phase 2 Complete)
+**Letzte Aktualisierung:** 2025-11-23
+**Version:** 1.8.0
+**Status:** ✅ Production Ready (Phase 3 In Progress)

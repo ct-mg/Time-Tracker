@@ -48,6 +48,7 @@ interface UserHoursConfig {
     userName: string;
     hoursPerDay: number;
     hoursPerWeek: number;
+    isActive?: boolean; // False if user was removed from employee group (soft delete)
 }
 
 interface Settings {
@@ -58,6 +59,7 @@ interface Settings {
     employeeGroupId?: number; // ChurchTools group ID for employees (with individual SOLL)
     volunteerGroupId?: number; // ChurchTools group ID for volunteers (no SOLL requirements)
     userHoursConfig?: UserHoursConfig[]; // Individual SOLL hours for employees
+    workWeekDays?: number[]; // Days of week that count as work days (0=Sunday, 1=Monday, ..., 6=Saturday). Default: [1,2,3,4,5] (Mon-Fri)
 }
 
 const mainEntryPoint: EntryPoint<MainModuleData> = ({
@@ -72,7 +74,8 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
     let settings: Settings = {
         defaultHoursPerDay: 8,
         defaultHoursPerWeek: 40,
-        excelImportEnabled: false // Default: disabled (Alpha)
+        excelImportEnabled: false, // Default: disabled (Alpha)
+        workWeekDays: [1, 2, 3, 4, 5] // Default: Monday to Friday
     };
     let currentEntry: TimeEntry | null = null;
     let absences: Absence[] = [];
@@ -285,6 +288,31 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
             hoursPerDay: settings.defaultHoursPerDay,
             hoursPerWeek: settings.defaultHoursPerWeek
         };
+    }
+
+    // Check if a date is a work day according to settings
+    function isWorkDay(date: Date): boolean {
+        const dayOfWeek = date.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+        const workWeekDays = settings.workWeekDays || [1, 2, 3, 4, 5]; // Default: Mon-Fri
+        return workWeekDays.includes(dayOfWeek);
+    }
+
+    // Count work days in a date range
+    function countWorkDays(startDate: Date, endDate: Date): number {
+        let count = 0;
+        const current = new Date(startDate);
+        current.setHours(0, 0, 0, 0);
+        const end = new Date(endDate);
+        end.setHours(0, 0, 0, 0);
+
+        while (current <= end) {
+            if (isWorkDay(current)) {
+                count++;
+            }
+            current.setDate(current.getDate() + 1);
+        }
+
+        return count;
     }
 
     // Load settings from KV store
@@ -1132,10 +1160,6 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
         }, 0);
 
         const totalHours = totalMs / (1000 * 60 * 60);
-        const workDays = Math.ceil(
-            (new Date(filterDateTo).getTime() - new Date(filterDateFrom).getTime()) /
-                (1000 * 60 * 60 * 24)
-        );
 
         // Calculate absence hours in the filtered period
         const absenceHours = calculateAbsenceHours();
@@ -1143,8 +1167,11 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
         // Get user-specific hours
         const userHours = getUserHours();
 
-        // Expected hours = work days * hours per week / 7 - absence hours
-        const expectedHours = (workDays / 7) * userHours.hoursPerWeek - absenceHours;
+        // Count actual work days in the period (respecting workWeekDays configuration)
+        const workDaysCount = countWorkDays(new Date(filterDateFrom), new Date(filterDateTo));
+
+        // Expected hours = work days count * hours per day - absence hours
+        const expectedHours = workDaysCount * userHours.hoursPerDay - absenceHours;
         const overtime = totalHours - expectedHours;
 
         cachedStats = {
@@ -1473,14 +1500,14 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
 
                     <!-- Header -->
                     <div style="background: #fff; border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                        <div style="display: flex; justify-content: space-between; align-items: center;">
-                            <div>
-                                <h1 style="margin: 0 0 0.5rem 0; font-size: 1.8rem; color: #333;">
+                        <div style="display: flex; flex-wrap: wrap; gap: 1rem; align-items: center;">
+                            <div style="flex: 1 1 250px; min-width: 250px;">
+                                <h1 style="margin: 0 0 0.5rem 0; font-size: clamp(1.3rem, 4vw, 1.8rem); color: #333;">
                                     Time Tracker
                                 </h1>
-                                <p style="margin: 0; color: #666;">Welcome, ${user?.firstName || 'User'}! Track your working hours.</p>
+                                <p style="margin: 0; color: #666; font-size: clamp(0.85rem, 2vw, 1rem);">Welcome, ${user?.firstName || 'User'}! Track your working hours.</p>
                             </div>
-                            <div style="display: flex; gap: 0.5rem; align-items: center;">
+                            <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; flex: 0 1 auto;">
                                 <button id="refresh-data-btn" style="padding: 0.5rem; border: 1px solid #28a745; background: #fff; color: #28a745; border-radius: 4px; cursor: pointer; display: flex; align-items: center; justify-content: center;" title="Refresh data">
                                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                         <polyline points="23 4 23 10 17 10"></polyline>
@@ -1488,13 +1515,20 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                                         <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
                                     </svg>
                                 </button>
-                                <div style="width: 1px; height: 30px; background: #ddd;"></div>
-                                <button id="view-dashboard" style="padding: 0.5rem 1rem; border: ${currentView === 'dashboard' ? '2px' : '1px'} solid ${currentView === 'dashboard' ? '#007bff' : '#ddd'}; background: ${currentView === 'dashboard' ? '#e7f3ff' : '#fff'}; color: ${currentView === 'dashboard' ? '#007bff' : '#666'}; border-radius: 4px; cursor: pointer; font-weight: ${currentView === 'dashboard' ? '600' : '400'};">Dashboard</button>
-                                <button id="view-entries" style="padding: 0.5rem 1rem; border: ${currentView === 'entries' ? '2px' : '1px'} solid ${currentView === 'entries' ? '#007bff' : '#ddd'}; background: ${currentView === 'entries' ? '#e7f3ff' : '#fff'}; color: ${currentView === 'entries' ? '#007bff' : '#666'}; border-radius: 4px; cursor: pointer; font-weight: ${currentView === 'entries' ? '600' : '400'};">Time Entries</button>
-                                <button id="view-absences" style="padding: 0.5rem 1rem; border: ${currentView === 'absences' ? '2px' : '1px'} solid ${currentView === 'absences' ? '#007bff' : '#ddd'}; background: ${currentView === 'absences' ? '#e7f3ff' : '#fff'}; color: ${currentView === 'absences' ? '#007bff' : '#666'}; border-radius: 4px; cursor: pointer; font-weight: ${currentView === 'absences' ? '600' : '400'};">Absences</button>
-                                <button id="view-reports" style="padding: 0.5rem 1rem; border: ${currentView === 'reports' ? '2px' : '1px'} solid ${currentView === 'reports' ? '#007bff' : '#ddd'}; background: ${currentView === 'reports' ? '#e7f3ff' : '#fff'}; color: ${currentView === 'reports' ? '#007bff' : '#666'}; border-radius: 4px; cursor: pointer; font-weight: ${currentView === 'reports' ? '600' : '400'};">Reports</button>
+                                <div style="width: 1px; height: 30px; background: #ddd; display: none;" class="nav-divider"></div>
+                                <button id="view-dashboard" style="padding: 0.5rem 1rem; border: ${currentView === 'dashboard' ? '2px' : '1px'} solid ${currentView === 'dashboard' ? '#007bff' : '#ddd'}; background: ${currentView === 'dashboard' ? '#e7f3ff' : '#fff'}; color: ${currentView === 'dashboard' ? '#007bff' : '#666'}; border-radius: 4px; cursor: pointer; font-weight: ${currentView === 'dashboard' ? '600' : '400'}; white-space: nowrap;">Dashboard</button>
+                                <button id="view-entries" style="padding: 0.5rem 1rem; border: ${currentView === 'entries' ? '2px' : '1px'} solid ${currentView === 'entries' ? '#007bff' : '#ddd'}; background: ${currentView === 'entries' ? '#e7f3ff' : '#fff'}; color: ${currentView === 'entries' ? '#007bff' : '#666'}; border-radius: 4px; cursor: pointer; font-weight: ${currentView === 'entries' ? '600' : '400'}; white-space: nowrap;">Time Entries</button>
+                                <button id="view-absences" style="padding: 0.5rem 1rem; border: ${currentView === 'absences' ? '2px' : '1px'} solid ${currentView === 'absences' ? '#007bff' : '#ddd'}; background: ${currentView === 'absences' ? '#e7f3ff' : '#fff'}; color: ${currentView === 'absences' ? '#007bff' : '#666'}; border-radius: 4px; cursor: pointer; font-weight: ${currentView === 'absences' ? '600' : '400'}; white-space: nowrap;">Absences</button>
+                                <button id="view-reports" style="padding: 0.5rem 1rem; border: ${currentView === 'reports' ? '2px' : '1px'} solid ${currentView === 'reports' ? '#007bff' : '#ddd'}; background: ${currentView === 'reports' ? '#e7f3ff' : '#fff'}; color: ${currentView === 'reports' ? '#007bff' : '#666'}; border-radius: 4px; cursor: pointer; font-weight: ${currentView === 'reports' ? '600' : '400'}; white-space: nowrap;">Reports</button>
                             </div>
                         </div>
+                        <style>
+                            @media (min-width: 900px) {
+                                .nav-divider {
+                                    display: block !important;
+                                }
+                            }
+                        </style>
                     </div>
 
                     ${renderCurrentView(stats)}
@@ -2158,9 +2192,8 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                 }, 0);
                 const dayIst = formatHours(dayIstMs);
 
-                // Determine day SOLL (only workdays Monday-Friday)
-                const dayOfWeek = date.getDay(); // 0 = Sunday, 6 = Saturday
-                const isWorkday = dayOfWeek >= 1 && dayOfWeek <= 5; // Monday to Friday
+                // Determine day SOLL (based on configured work week days)
+                const isWorkday = isWorkDay(date);
                 const daySoll = isWorkday ? formatHours(userHours.hoursPerDay * 3600000) : '0h';
 
                 html += `

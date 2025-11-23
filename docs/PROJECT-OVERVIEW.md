@@ -17,24 +17,32 @@ Die **Time Tracker Extension** ist eine umfassende Zeiterfassungs-Lösung für C
 
 ## Hauptmodule
 
-### main.ts (2300+ Zeilen)
+### main.ts (3347 Zeilen) ← UPDATED!
 **Endnutzer-Modul** - Zeiterfassung und Verwaltung
-- Clock-in/Clock-out Funktionalität
+- Clock-in/Clock-out Funktionalität **mit Break Tracking**
 - Timer-Updates (sekündlich)
 - Manuelle Zeiteinträge (Create, Edit, Delete)
-- Bulk Entry mit Excel Import/Export
-- Time Entries Liste mit Filtering
+- **Abwesenheitsverwaltung** (Create, Edit, Delete via ChurchTools)
+- Bulk Entry mit Excel Import/Export (Alpha Feature, toggleable)
+- Time Entries Liste **mit Calendar Week Grouping**
+- **Advanced Statistics** (Day/Week/Month Soll vs Ist)
 - Reports nach Kategorie und Zeitraum
+- **Individual SOLL Hours per User**
+- **Group-based Access Control**
 - Toast Notification System
 
 **Wichtig:** Sehr groß, Änderungen vorsichtig machen!
 
-### admin.ts (900+ Zeilen)
+### admin.ts (1640 Zeilen) ← UPDATED!
 **Admin-Modul** - Konfiguration und Management
 - Category Management (Create, Edit, Delete)
 - Auto-ID Generation aus Namen
 - Color Picker für Kategorien
 - Category Deletion mit Entry Reassignment
+- **Group Management** (Employee/Volunteer Groups)
+- **Individual SOLL Hours Configuration** per Employee
+- **Work Week Days Configuration** (global)
+- **Alpha Features Toggle** (Excel Import)
 - Settings Management
 
 ---
@@ -168,8 +176,8 @@ Erstellt optimiertes ZIP in `releases/`
 │   └── TODO.md                     # Roadmap
 ├── src/
 │   ├── entry-points/
-│   │   ├── main.ts                 # Hauptmodul (2300+ Zeilen)
-│   │   └── admin.ts                # Admin-Modul (900+ Zeilen)
+│   │   ├── main.ts                 # Hauptmodul (3347 Zeilen)
+│   │   └── admin.ts                # Admin-Modul (1640 Zeilen)
 │   ├── components/                 # Keine Vue-Components (Vanilla)
 │   ├── types/                      # TypeScript Interfaces
 │   ├── utils/                      # Helper Functions
@@ -375,8 +383,8 @@ Siehe [MAINTENANCE.md - Testing](MAINTENANCE.md#testing--quality-checks) für De
 - [MAINTENANCE.md](MAINTENANCE.md) - Workflows & Regeln
 - Start Coding!
 
----
+---  
 
-**Letzte Aktualisierung:** 2025-01-22
-**Version:** 1.0
-**Status:** ✅ Production Ready (Phase 2 Complete)
+**Letzte Aktualisierung:** 2025-11-23  
+**Version:** 1.8.0  
+**Status:** ✅ Production Ready (Phase 3 In Progress) (Phase 2 Complete)

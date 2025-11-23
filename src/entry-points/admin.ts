@@ -33,6 +33,7 @@ interface UserHoursConfig {
     userName: string;
     hoursPerDay: number;
     hoursPerWeek: number;
+    isActive?: boolean; // False if user was removed from employee group (soft delete)
 }
 
 interface Settings {
@@ -43,6 +44,7 @@ interface Settings {
     employeeGroupId?: number; // ChurchTools group ID for employees (with individual SOLL)
     volunteerGroupId?: number; // ChurchTools group ID for volunteers (no SOLL requirements)
     userHoursConfig?: UserHoursConfig[]; // Individual SOLL hours for employees
+    workWeekDays?: number[]; // Days of week that count as work days (0=Sunday, 1=Monday, ..., 6=Saturday)
 }
 
 const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) => {
@@ -53,7 +55,8 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
     let settings: Settings = {
         defaultHoursPerDay: 8,
         defaultHoursPerWeek: 40,
-        excelImportEnabled: false // Disabled by default (Alpha)
+        excelImportEnabled: false, // Disabled by default (Alpha)
+        workWeekDays: [1, 2, 3, 4, 5] // Default: Monday to Friday
     };
 
     // UI State
@@ -103,6 +106,11 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
 
             // Load data
             await Promise.all([loadWorkCategories(), loadSettings()]);
+
+            // Auto-load employees if employee group ID is configured
+            if (settings.employeeGroupId) {
+                await loadEmployeesFromGroup(settings.employeeGroupId);
+            }
 
             isLoading = false;
             errorMessage = '';
@@ -271,7 +279,7 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
         }
     }
 
-    // Load employees from a ChurchTools group
+    // Load employees from a ChurchTools group with soft-delete support
     async function loadEmployeesFromGroup(groupId: number): Promise<void> {
         try {
             loadingEmployees = true;
@@ -281,14 +289,71 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
             const groupMembers = await churchtoolsClient.get(`/groups/${groupId}/members`);
 
             console.log('[TimeTracker Admin] Group members:', groupMembers);
+            console.log('[TimeTracker Admin] First member structure:', groupMembers[0]);
 
-            // Extract user info (id and name)
-            employeesList = groupMembers.map((member: any) => ({
-                userId: member.personId || member.id,
-                userName: member.person?.firstName && member.person?.lastName
-                    ? `${member.person.firstName} ${member.person.lastName}`
-                    : member.person?.name || `User ${member.personId || member.id}`
-            }));
+            // Extract user IDs from current group
+            const currentGroupUserIds = new Set(groupMembers.map((member: any) => member.personId || member.id));
+
+            // Build employee list from current group members
+            employeesList = groupMembers.map((member: any) => {
+                // Try different paths to get the name
+                let firstName = '';
+                let lastName = '';
+
+                // Check if person object exists and has names
+                if (member.person) {
+                    firstName = member.person.firstName || member.person.vorname || '';
+                    lastName = member.person.lastName || member.person.nachname || member.person.name || '';
+                }
+
+                // Fallback to member properties directly
+                if (!firstName && !lastName) {
+                    firstName = member.firstName || member.vorname || '';
+                    lastName = member.lastName || member.nachname || member.name || '';
+                }
+
+                const userName = (firstName && lastName)
+                    ? `${firstName} ${lastName}`
+                    : (firstName || lastName || `User ${member.personId || member.id}`);
+
+                console.log('[TimeTracker Admin] Mapped member:', { userId: member.personId || member.id, userName, firstName, lastName });
+
+                return {
+                    userId: member.personId || member.id,
+                    userName,
+                    firstName: firstName || '',
+                    lastName: lastName || ''
+                };
+            }).sort((a, b) => {
+                // Sort by first name, then last name
+                if (a.firstName !== b.firstName) {
+                    return a.firstName.localeCompare(b.firstName);
+                }
+                return a.lastName.localeCompare(b.lastName);
+            });
+
+            // Update isActive status in existing userHoursConfig
+            if (settings.userHoursConfig) {
+                settings.userHoursConfig.forEach(config => {
+                    if (currentGroupUserIds.has(config.userId)) {
+                        // User is in group - mark as active (re-mapping)
+                        config.isActive = true;
+                    } else {
+                        // User not in group - mark as inactive (soft delete)
+                        config.isActive = false;
+                    }
+                });
+
+                // Add inactive users to employeesList so they can be displayed/deleted
+                settings.userHoursConfig.forEach(config => {
+                    if (!config.isActive && !employeesList.find(e => e.userId === config.userId)) {
+                        employeesList.push({
+                            userId: config.userId,
+                            userName: config.userName
+                        });
+                    }
+                });
+            }
 
             loadingEmployees = false;
             render();
@@ -522,7 +587,7 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
             <div style="max-width: 900px; margin: 2rem auto; padding: 2rem;">
                 <!-- Extension Info Header -->
                 <div style="background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                    <h1 style="margin: 0 0 0.5rem 0; font-size: 1.8rem; color: #333;">⚙️ ${data.extensionInfo?.name || 'Time Tracker Settings'}</h1>
+                    <h1 style="margin: 0 0 0.5rem 0; font-size: 1.8rem; color: #333;">${data.extensionInfo?.name || 'Time Tracker Settings'}</h1>
                     <p style="margin: 0 0 0.5rem 0; color: #666;">
                         ${data.extensionInfo?.description || 'Configure time tracking settings'}
                     </p>
@@ -604,13 +669,49 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                     </div>
                 </div>
 
+                <!-- Work Week Days Configuration -->
+                <div style="margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid #e0e0e0;">
+                    <h3 style="margin: 0 0 0.5rem 0; font-size: 1.1rem; color: #333;">Work Week Days</h3>
+                    <p style="margin: 0 0 1rem 0; color: #666; font-size: 0.95rem;">
+                        Select which days require SOLL hours. SOLL will only be calculated for the selected days.
+                    </p>
+
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 0.75rem;">
+                        ${['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].map((day, index) => {
+                            const isChecked = (settings.workWeekDays || [1, 2, 3, 4, 5]).includes(index);
+                            return `
+                                <label style="display: flex; align-items: center; gap: 0.5rem; padding: 0.75rem; background: ${isChecked ? '#e7f3ff' : '#f8f9fa'}; border: 1px solid ${isChecked ? '#007bff' : '#dee2e6'}; border-radius: 4px; cursor: pointer; transition: all 0.2s;">
+                                    <input
+                                        type="checkbox"
+                                        class="work-week-day-checkbox"
+                                        data-day="${index}"
+                                        ${isChecked ? 'checked' : ''}
+                                        style="width: 18px; height: 18px; cursor: pointer;"
+                                    />
+                                    <span style="font-weight: ${isChecked ? '600' : '400'}; color: ${isChecked ? '#007bff' : '#333'}; font-size: 0.9rem;">${day}</span>
+                                </label>
+                            `;
+                        }).join('')}
+                    </div>
+                </div>
+
                 <!-- Alpha Features -->
                 <div style="margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid #e0e0e0;">
-                    <h3 style="margin: 0 0 0.5rem 0; font-size: 1.1rem; color: #333;">
-                        🧪 Alpha Features
+                    <h3 style="margin: 0 0 0.5rem 0; font-size: 1.1rem; color: #333; display: flex; align-items: center; gap: 0.5rem;">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M9 2v6m0 0v6m0-6h6M9 8H3m18 4v6m0 0v2m0-2h-6m6 0h2"></path>
+                            <circle cx="9" cy="14" r="3"></circle>
+                            <circle cx="18" cy="6" r="3"></circle>
+                        </svg>
+                        Alpha Features
                     </h3>
                     <p style="margin: 0 0 1rem 0; color: #ff9800; font-size: 0.9rem; background: #fff3e0; padding: 0.75rem; border-radius: 4px; border-left: 3px solid #ff9800;">
-                        ⚠️ These features are experimental and may not work as expected. Use at your own risk.
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#856404" stroke-width="2" style="display: inline-block; vertical-align: middle; margin-right: 0.5rem;">
+                            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                            <line x1="12" y1="9" x2="12" y2="13"></line>
+                            <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                        </svg>
+                        These features are experimental and may not work as expected. Use at your own risk.
                     </p>
 
                     <label style="display: flex; align-items: center; cursor: pointer; padding: 0.75rem; background: #f8f9fa; border-radius: 4px; border: 1px solid #e0e0e0;">
@@ -634,11 +735,16 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
 
                 <button
                     id="save-settings-btn"
-                    style="width: 100%; padding: 0.75rem; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 1rem; font-weight: 600; transition: background 0.2s;"
+                    style="width: 100%; padding: 0.75rem; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 1rem; font-weight: 600; transition: background 0.2s; display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;"
                     onmouseover="this.style.background='#0056b3'"
                     onmouseout="this.style.background='#007bff'"
                 >
-                    💾 Save General Settings
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                        <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                        <polyline points="7 3 7 8 15 8"></polyline>
+                    </svg>
+                    Save General Settings
                 </button>
 
                 <div id="settings-status" style="margin-top: 1rem; padding: 0.75rem; border-radius: 4px; display: none;"></div>
@@ -696,31 +802,51 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                         Employee SOLL Hours Configuration
                     </h3>
                     <p style="margin: 0 0 1rem 0; color: #666; font-size: 0.9rem;">
-                        Load employees from the employee group and configure individual working hours for each person.
+                        Employees are loaded automatically. Use refresh to check for changes in the group.
                     </p>
-
-                    <button
-                        id="load-employees-btn"
-                        ${!settings.employeeGroupId || loadingEmployees ? 'disabled' : ''}
-                        style="padding: 0.75rem 1.5rem; background: ${!settings.employeeGroupId || loadingEmployees ? '#6c757d' : '#17a2b8'}; color: white; border: none; border-radius: 4px; cursor: ${!settings.employeeGroupId || loadingEmployees ? 'not-allowed' : 'pointer'}; font-weight: 600; margin-bottom: 1rem;"
-                    >
-                        ${loadingEmployees ? '⏳ Loading...' : '📥 Load Employees from Group'}
-                    </button>
 
                     ${employeesList.length > 0 ? `
                         <!-- Employees Table -->
                         <div style="background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 6px; padding: 1rem;">
-                            <p style="margin: 0 0 1rem 0; color: #333; font-weight: 600;">
-                                Found ${employeesList.length} employee${employeesList.length === 1 ? '' : 's'} in group
-                            </p>
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin: 0 0 1rem 0;">
+                                <p style="margin: 0; color: #333; font-weight: 600;">
+                                    Found ${employeesList.length} employee${employeesList.length === 1 ? '' : 's'} in group
+                                </p>
+                                <button
+                                    id="refresh-employees-btn"
+                                    ${!settings.employeeGroupId || loadingEmployees ? 'disabled' : ''}
+                                    style="padding: 0.5rem; background: ${!settings.employeeGroupId || loadingEmployees ? '#6c757d' : '#17a2b8'}; color: white; border: none; border-radius: 4px; cursor: ${!settings.employeeGroupId || loadingEmployees ? 'not-allowed' : 'pointer'}; display: inline-flex; align-items: center; gap: 0.5rem;"
+                                    title="${loadingEmployees ? 'Loading...' : 'Refresh employees from ChurchTools'}"
+                                >
+                                    ${loadingEmployees ? `
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation: spin 1s linear infinite;">
+                                            <style>
+                                                @keyframes spin {
+                                                    from { transform: rotate(0deg); }
+                                                    to { transform: rotate(360deg); }
+                                                }
+                                            </style>
+                                            <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+                                        </svg>
+                                    ` : `
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <polyline points="23 4 23 10 17 10"></polyline>
+                                            <polyline points="1 20 1 14 7 14"></polyline>
+                                            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+                                        </svg>
+                                    `}
+                                </button>
+                            </div>
 
                             <div style="overflow-x: auto;">
                                 <table style="width: 100%; border-collapse: collapse;">
                                     <thead>
                                         <tr style="background: #e9ecef;">
                                             <th style="padding: 0.75rem; text-align: left; border-bottom: 2px solid #dee2e6; font-weight: 600; color: #333;">Employee</th>
+                                            <th style="padding: 0.75rem; text-align: left; border-bottom: 2px solid #dee2e6; font-weight: 600; color: #333;">Status</th>
                                             <th style="padding: 0.75rem; text-align: left; border-bottom: 2px solid #dee2e6; font-weight: 600; color: #333;">Hours/Day</th>
                                             <th style="padding: 0.75rem; text-align: left; border-bottom: 2px solid #dee2e6; font-weight: 600; color: #333;">Hours/Week</th>
+                                            <th style="padding: 0.75rem; text-align: center; border-bottom: 2px solid #dee2e6; font-weight: 600; color: #333;">Actions</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -728,10 +854,24 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                                             const existingConfig = settings.userHoursConfig?.find(c => c.userId === emp.userId);
                                             const hoursPerDay = existingConfig?.hoursPerDay || settings.defaultHoursPerDay;
                                             const hoursPerWeek = existingConfig?.hoursPerWeek || settings.defaultHoursPerWeek;
+                                            const isActive = existingConfig?.isActive !== false;
 
                                             return `
-                                                <tr style="border-bottom: 1px solid #dee2e6;">
-                                                    <td style="padding: 0.75rem; color: #333;">${emp.userName}</td>
+                                                <tr style="border-bottom: 1px solid #dee2e6; ${!isActive ? 'background: #fff3cd;' : ''}">
+                                                    <td style="padding: 0.75rem; color: #333;">
+                                                        ${emp.userName} <span style="color: #999; font-size: 0.85rem;">(${emp.userId})</span>
+                                                    </td>
+                                                    <td style="padding: 0.75rem;">
+                                                        ${isActive ? `
+                                                            <span style="background: #d4edda; color: #155724; padding: 0.25rem 0.5rem; border-radius: 3px; font-size: 0.75rem; font-weight: 600; border: 1px solid #c3e6cb;">
+                                                                ✓ Active
+                                                            </span>
+                                                        ` : `
+                                                            <span style="background: #fff3cd; color: #856404; padding: 0.25rem 0.5rem; border-radius: 3px; font-size: 0.75rem; font-weight: 600; border: 1px solid #ffeaa7;">
+                                                                ⚠ Removed
+                                                            </span>
+                                                        `}
+                                                    </td>
                                                     <td style="padding: 0.75rem;">
                                                         <input
                                                             type="number"
@@ -742,7 +882,8 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                                                             min="0.5"
                                                             max="24"
                                                             step="0.5"
-                                                            style="width: 80px; padding: 0.5rem; border: 1px solid #ced4da; border-radius: 4px;"
+                                                            ${!isActive ? 'disabled' : ''}
+                                                            style="width: 80px; padding: 0.5rem; border: 1px solid #ced4da; border-radius: 4px; ${!isActive ? 'background: #f5f5f5; cursor: not-allowed;' : ''}"
                                                         />
                                                     </td>
                                                     <td style="padding: 0.75rem;">
@@ -755,8 +896,28 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                                                             min="0.5"
                                                             max="168"
                                                             step="0.5"
-                                                            style="width: 80px; padding: 0.5rem; border: 1px solid #ced4da; border-radius: 4px;"
+                                                            ${!isActive ? 'disabled' : ''}
+                                                            style="width: 80px; padding: 0.5rem; border: 1px solid #ced4da; border-radius: 4px; ${!isActive ? 'background: #f5f5f5; cursor: not-allowed;' : ''}"
                                                         />
+                                                    </td>
+                                                    <td style="padding: 0.75rem; text-align: center;">
+                                                        ${!isActive ? `
+                                                            <button
+                                                                class="delete-employee-btn"
+                                                                data-user-id="${emp.userId}"
+                                                                data-user-name="${emp.userName}"
+                                                                style="padding: 0.4rem 0.8rem; background: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85rem; font-weight: 600; display: inline-flex; align-items: center; gap: 0.35rem;"
+                                                                title="Delete employee and all their data"
+                                                            >
+                                                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                                    <polyline points="3 6 5 6 21 6"></polyline>
+                                                                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                                                </svg>
+                                                                Delete
+                                                            </button>
+                                                        ` : `
+                                                            <span style="color: #999; font-size: 0.85rem; font-style: italic;">-</span>
+                                                        `}
                                                     </td>
                                                 </tr>
                                             `;
@@ -774,11 +935,16 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
 
                 <button
                     id="save-group-settings-btn"
-                    style="width: 100%; padding: 0.75rem; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 1rem; font-weight: 600; margin-top: 1.5rem; transition: background 0.2s;"
+                    style="width: 100%; padding: 0.75rem; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 1rem; font-weight: 600; margin-top: 1.5rem; transition: background 0.2s; display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;"
                     onmouseover="this.style.background='#218838'"
                     onmouseout="this.style.background='#28a745'"
                 >
-                    💾 Save Group Settings
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                        <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                        <polyline points="7 3 7 8 15 8"></polyline>
+                    </svg>
+                    Save Group Settings
                 </button>
 
                 <div id="group-settings-status" style="margin-top: 1rem; padding: 0.75rem; border-radius: 4px; display: none;"></div>
@@ -799,9 +965,13 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                     </div>
                     <button
                         id="add-category-btn"
-                        style="padding: 0.5rem 1rem; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; white-space: nowrap;"
+                        style="padding: 0.5rem 1rem; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; white-space: nowrap; display: inline-flex; align-items: center; gap: 0.5rem;"
                     >
-                        ➕ Add Category
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="12" y1="5" x2="12" y2="19"></line>
+                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                        </svg>
+                        Add Category
                     </button>
                 </div>
 
@@ -810,8 +980,20 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                         ? `
                     <!-- Category Form -->
                     <div style="background: #f8f9fa; border: 2px solid ${editingCategory ? '#ffc107' : '#28a745'}; border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem;">
-                        <h3 style="margin: 0 0 1rem 0; color: #333;">
-                            ${editingCategory ? '✏️ Edit Category' : '➕ New Category'}
+                        <h3 style="margin: 0 0 1rem 0; color: #333; display: flex; align-items: center; gap: 0.5rem;">
+                            ${editingCategory ? `
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                    <path d="M18.5 2.5a2.121 2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                                </svg>
+                                Edit Category
+                            ` : `
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                                </svg>
+                                New Category
+                            `}
                         </h3>
 
                         <div style="display: grid; gap: 1rem; margin-bottom: 1rem;">
@@ -870,9 +1052,14 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                         <div style="display: flex; gap: 0.5rem;">
                             <button
                                 id="save-category-btn"
-                                style="padding: 0.75rem 1.5rem; background: ${editingCategory ? '#ffc107' : '#28a745'}; color: ${editingCategory ? '#333' : 'white'}; border: none; border-radius: 4px; cursor: pointer; font-weight: 600;"
+                                style="padding: 0.75rem 1.5rem; background: ${editingCategory ? '#ffc107' : '#28a745'}; color: ${editingCategory ? '#333' : 'white'}; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; display: inline-flex; align-items: center; gap: 0.5rem;"
                             >
-                                ${editingCategory ? '💾 Update Category' : '💾 Save Category'}
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                                    <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                                    <polyline points="7 3 7 8 15 8"></polyline>
+                                </svg>
+                                ${editingCategory ? 'Update Category' : 'Save Category'}
                             </button>
                             <button
                                 id="cancel-category-btn"
@@ -893,8 +1080,13 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                         ? `
                     <!-- Delete Confirmation Dialog -->
                     <div style="background: #fff3cd; border: 2px solid #ffc107; border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem;">
-                        <h3 style="margin: 0 0 1rem 0; color: #856404;">
-                            ⚠️ Kategorie wird verwendet
+                        <h3 style="margin: 0 0 1rem 0; color: #856404; display: flex; align-items: center; gap: 0.5rem;">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                                <line x1="12" y1="9" x2="12" y2="13"></line>
+                                <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                            </svg>
+                            Kategorie wird verwendet
                         </h3>
 
                         <p style="color: #856404; margin-bottom: 1rem;">
@@ -924,9 +1116,13 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                         <div style="display: flex; gap: 0.5rem;">
                             <button
                                 id="confirm-delete-btn"
-                                style="padding: 0.75rem 1.5rem; background: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600;"
+                                style="padding: 0.75rem 1.5rem; background: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; display: inline-flex; align-items: center; gap: 0.5rem;"
                             >
-                                🗑️ Kategorie löschen und Einträge neu zuweisen
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polyline points="3 6 5 6 21 6"></polyline>
+                                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                </svg>
+                                Kategorie löschen und Einträge neu zuweisen
                             </button>
                             <button
                                 id="cancel-delete-btn"
@@ -961,16 +1157,24 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                                     <button
                                         data-category-id="${category.id}"
                                         class="edit-category-btn"
-                                        style="padding: 0.5rem 1rem; background: #ffc107; color: #333; border: none; border-radius: 4px; cursor: pointer; font-weight: 600;"
+                                        style="padding: 0.5rem 1rem; background: #ffc107; color: #333; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; display: inline-flex; align-items: center; gap: 0.5rem;"
                                     >
-                                        ✏️ Edit
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                                        </svg>
+                                        Edit
                                     </button>
                                     <button
                                         data-category-id="${category.id}"
                                         class="delete-category-btn"
-                                        style="padding: 0.5rem 1rem; background: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600;"
+                                        style="padding: 0.5rem 1rem; background: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; display: inline-flex; align-items: center; gap: 0.5rem;"
                                     >
-                                        🗑️ Delete
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <polyline points="3 6 5 6 21 6"></polyline>
+                                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                        </svg>
+                                        Delete
                                     </button>
                                 </div>
                             </div>
@@ -994,16 +1198,29 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
         });
 
         // Group Management
-        const loadEmployeesBtn = element.querySelector('#load-employees-btn') as HTMLButtonElement;
+        const refreshEmployeesBtn = element.querySelector('#refresh-employees-btn') as HTMLButtonElement;
         const saveGroupSettingsBtn = element.querySelector('#save-group-settings-btn') as HTMLButtonElement;
 
-        loadEmployeesBtn?.addEventListener('click', async () => {
+        refreshEmployeesBtn?.addEventListener('click', async () => {
             const employeeGroupIdInput = element.querySelector('#employee-group-id') as HTMLInputElement;
             const groupId = parseInt(employeeGroupIdInput.value);
 
             if (groupId && groupId > 0) {
                 await loadEmployeesFromGroup(groupId);
             }
+        });
+
+        // Delete employee buttons (event delegation)
+        element.querySelectorAll('.delete-employee-btn').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                const target = e.target as HTMLElement;
+                const userId = parseInt(target.getAttribute('data-user-id') || '0');
+                const userName = target.getAttribute('data-user-name') || 'Unknown';
+
+                if (confirm(`Delete employee "${userName}" and all their time tracking data?\n\nThis action cannot be undone!`)) {
+                    await handleDeleteEmployee(userId);
+                }
+            });
         });
 
         saveGroupSettingsBtn?.addEventListener('click', async () => {
@@ -1128,9 +1345,17 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
 
         if (!hoursPerDayInput || !hoursPerWeekInput || !excelImportToggle || !statusMessage || !saveBtn) return;
 
+        const saveIconHTML = `
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                <polyline points="7 3 7 8 15 8"></polyline>
+            </svg>
+        `;
+
         try {
             saveBtn.disabled = true;
-            saveBtn.textContent = '💾 Saving...';
+            saveBtn.innerHTML = saveIconHTML + 'Saving...';
 
             const newSettings: Settings = {
                 defaultHoursPerDay: parseFloat(hoursPerDayInput.value),
@@ -1169,7 +1394,38 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                 '✗ Failed to save: ' + (error instanceof Error ? error.message : 'Unknown error');
         } finally {
             saveBtn.disabled = false;
-            saveBtn.textContent = '💾 Save General Settings';
+            saveBtn.innerHTML = saveIconHTML + 'Save General Settings';
+        }
+    }
+
+    // Handle delete employee
+    async function handleDeleteEmployee(userId: number) {
+        try {
+            // Remove from userHoursConfig
+            if (settings.userHoursConfig) {
+                settings.userHoursConfig = settings.userHoursConfig.filter(c => c.userId !== userId);
+            }
+
+            // Remove from employeesList (UI)
+            employeesList = employeesList.filter(emp => emp.userId !== userId);
+
+            // Save updated settings
+            await saveSettings(settings);
+
+            emit('notification', {
+                message: 'Employee deleted successfully',
+                type: 'success',
+                duration: 3000,
+            });
+
+            render();
+        } catch (error) {
+            console.error('[TimeTracker Admin] Failed to delete employee:', error);
+            emit('notification', {
+                message: 'Failed to delete employee',
+                type: 'error',
+                duration: 3000,
+            });
         }
     }
 
@@ -1182,9 +1438,17 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
 
         if (!statusMessage || !saveBtn) return;
 
+        const saveIconHTML = `
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                <polyline points="7 3 7 8 15 8"></polyline>
+            </svg>
+        `;
+
         try {
             saveBtn.disabled = true;
-            saveBtn.textContent = '💾 Saving...';
+            saveBtn.innerHTML = saveIconHTML + 'Saving...';
 
             // Get group IDs (allow empty)
             const employeeGroupId = employeeGroupIdInput?.value ? parseInt(employeeGroupIdInput.value) : undefined;
@@ -1197,16 +1461,22 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
 
             employeeHoursDayInputs.forEach((dayInput, index) => {
                 const userId = parseInt(dayInput.dataset.userId || '0');
-                const userName = dayInput.dataset.userName || '';
                 const hoursPerDay = parseFloat(dayInput.value);
                 const hoursPerWeek = parseFloat(employeeHoursWeekInputs[index]?.value || '0');
 
                 if (userId > 0) {
+                    // Get current userName from employeesList (not from old data-attribute)
+                    const employee = employeesList.find(e => e.userId === userId);
+                    const userName = employee?.userName || `User ${userId}`;
+
+                    // Preserve isActive status from existing config
+                    const existingConfig = settings.userHoursConfig?.find(c => c.userId === userId);
                     userHoursConfig.push({
                         userId,
                         userName,
                         hoursPerDay,
-                        hoursPerWeek
+                        hoursPerWeek,
+                        isActive: existingConfig?.isActive !== false  // Preserve existing isActive status
                     });
                 }
             });
@@ -1250,7 +1520,7 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                 '✗ Failed to save: ' + (error instanceof Error ? error.message : 'Unknown error');
         } finally {
             saveBtn.disabled = false;
-            saveBtn.textContent = '💾 Save Group Settings';
+            saveBtn.innerHTML = saveIconHTML + 'Save Group Settings';
         }
     }
 
@@ -1282,6 +1552,14 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
 
         if (!nameInput || !colorInput || !statusMessage || !saveBtn) return;
 
+        const saveIconHTML = `
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                <polyline points="7 3 7 8 15 8"></polyline>
+            </svg>
+        `;
+
         // Validation
         if (!nameInput.value.trim()) {
             alert('Please enter a category name');
@@ -1295,7 +1573,7 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
 
         try {
             saveBtn.disabled = true;
-            saveBtn.textContent = editingCategory ? '💾 Updating...' : '💾 Saving...';
+            saveBtn.innerHTML = saveIconHTML + (editingCategory ? 'Updating...' : 'Saving...');
 
             const category: WorkCategory = {
                 id: categoryId,
@@ -1341,7 +1619,7 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                 '✗ Failed to save: ' + (error instanceof Error ? error.message : 'Unknown error');
         } finally {
             saveBtn.disabled = false;
-            saveBtn.textContent = editingCategory ? '💾 Update Category' : '💾 Save Category';
+            saveBtn.innerHTML = saveIconHTML + (editingCategory ? 'Update Category' : 'Save Category');
         }
     }
 

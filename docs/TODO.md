@@ -8,9 +8,9 @@
 
 ## Aktueller Status
 
-**Letztes Update:** 2025-01-22
-**Aktuelle Phase:** Phase 2 - Stabilisierung & Bug Fixes ✅
-**Nächste Phase:** Phase 3 - Performance & UX Improvements
+**Letztes Update:** 2025-11-23
+**Aktuelle Phase:** Phase 3 - Performance & UX Improvements ⏳
+**Nächste Phase:** Phase 4 - Advanced Features
 
 ---
 
@@ -45,6 +45,9 @@
 - ✅ Category Matching (case-insensitive, ID oder Name)
 - ✅ Bulk Entry Dialog Integration
 - ✅ Export zu Excel
+- ✅ **Excel als Alpha Feature** (2025-11-22)
+  - Toggleable via Settings `excelImportEnabled`
+  - Default: disabled mit Warning UI
 
 ### Notification System
 - ✅ Custom Toast Component
@@ -64,10 +67,146 @@
 - ✅ Direct API Calls statt getCustomDataValues()
 - ✅ Category Edit/Delete nach Reload gefixt
 - ✅ Time Entries zeigen richtige Kategorien
+- ✅ **Clock Out 404 Error** (2025-11-22)
+  - Wrong KV-Store ID (timestamp vs numeric)
+  - Fixed mit besserer Metadata-Handling
+
+### Absence Management (2025-11-22)
+- ✅ Full CRUD via ChurchTools API (`/persons/{userId}/absences`)
+- ✅ Absence Reasons von Event Masterdata laden
+- ✅ Create/Edit/Delete Dialogs mit Validation
+- ✅ Absence Hours in Overtime Calculation
+- ✅ Absence Calendar View
+- ✅ Support für All-Day und Timed Absences
+
+### Break/Pause Tracking (2025-11-22)
+- ✅ `isBreak` boolean field in TimeEntry Interface
+- ✅ Break Checkbox in Clock-In Dialog
+- ✅ Break Checkbox in Manual Entry Form
+- ✅ Break Checkbox in Bulk Entry
+- ✅ Breaks excluded from work hours calculation
+- ✅ Visual distinction in entry lists (badges)
+- ✅ Break statistics in Reports
+
+### Advanced Statistics & Grouping (2025-11-22)
+- ✅ **Calendar Week Grouping**
+  - Time Entries grouped by ISO calendar week
+  - Daily/Weekly Soll vs Ist calculations
+  - Visual progress bars per week
+- ✅ **Dashboard Period Statistics**
+  - Day/Week/Month/Last Month IST/SOLL views
+  - Color-coded progress (green/red)
+  - Replaced simple stat cards
+- ✅ **Report Period Persistence**
+  - User's preferred period saved to Settings
+  - Default: 'This Week' instead of 'custom'
+  - Persists across sessions
+
+### Access Control & Individual SOLL (2025-11-22)
+- ✅ **Group-Based Access Control**
+  - ChurchTools `employeeGroupId` in Settings
+  - ChurchTools `volunteerGroupId` in Settings
+  - Access check on extension initialization
+  - Restrict to group members only
+- ✅ **Individual SOLL Hours per Employee**
+  - `userHoursConfig: UserHoursConfig[]` in Settings
+  - Admin UI for per-employee hours configuration
+  - Load employees from ChurchTools group
+  - Soft-delete support (inactive flag)
+  - SOLL calculations use user-specific hours
+
+### UI/UX Polish (2025-11-22)
+- ✅ **Removed ALL Emojis**
+  - Replaced with clean SVG icons throughout
+  - Modern minimalist design
+- ✅ **Hours Display Format**
+  - Changed from decimal (8.5h) to hours:minutes (8h 30m)
+  - Applied throughout entire UI
+- ✅ **Refresh Button**
+  - Manual data reload without page refresh
+  - Clears cache and reloads all data
+- ✅ **Visual Bug Fixes**
+  - Progress bar text overlap when target exceeded
+  - Duplicate pause badge in dashboard
+  - Edit button visibility in dashboard entries
 
 ---
 
-## Phase 3: Performance & UX ⏳ IN PLANUNG
+## Phase 3: Performance & UX ⏳ IN PROGRESS
+
+### 🔴 Priorität: Kritisch (Blocking Issues)
+
+#### User Namen zeigen "User [ID]" statt echte Namen
+**Problem:** Im Admin-Panel bei Employee SOLL Hours Config zeigen User "User [ID]" statt "Vorname Nachname"
+**Root Cause:** ChurchTools API Antwort structure unclear - `member.person.firstName` nicht verfügbar
+**Location:** `admin.ts` Zeile 317
+**Status:** Debugging erforderlich
+**Aufwand:** Klein
+**User Impact:** Hoch (Admin kann User nicht identifizieren)
+
+**Debug Steps:**
+1. Console log komplette API response von `/groups/{groupId}/members`
+2. Check welche Felder verfügbar sind
+3. Path zu firstName/lastName korrigieren
+4. Fallback zu Person API `/persons/{userId}` wenn nötig
+
+**Workaround:** Admin kann User ID notieren und in ChurchTools nachschlagen
+
+---
+
+#### Work Week Configuration per User (nicht global)
+**Problem:** Work Week Days aktuell als Overall-Setting, User wünscht per-User Config
+**Current:** `workWeekDays: number[]` global in Settings
+**Desired:** `workWeekDays: number[]` in `UserHoursConfig` pro Employee
+**Status:** Feature Request aus Konversation
+**Aufwand:** Mittel
+**User Impact:** Hoch (verschiedene Teilzeit-Modelle)
+
+**Implementation Steps:**
+1. Add `workWeekDays?: number[]` to `UserHoursConfig` interface
+2. UI in Admin: Checkbox-Grid pro Employee (wie global setting)
+3. Update `countWorkDays()` to use user-specific work week
+4. Update `getUserHours()` to include workWeekDays
+5. Default for new employees: Monday-Friday
+6. Migration: Existing employees inherit global setting
+
+**Priority:** Nach User Namen Fix
+
+---
+
+#### Internationalisierung (i18n) - Browser-Sprache
+**User Request aus Konversation:** "Wir brauchen eine Übersetzung. Dabei soll die Browsersprache berücksichtigt werden. Vorerst soll es englisch und deutsch geben. Wobei englisch fallback ist"
+
+**Features:**
+- Browser-Sprache Detection (navigator.language)
+- Deutsch und Englisch Support
+- Englisch als Fallback
+- Übersetzungen für alle UI-Texte
+- Persistence: User kann Sprache manuell wählen (override browser setting)
+
+**Status:** Feature Request aus Claude Code Konversation
+**Aufwand:** Hoch
+**User Impact:** Hoch (internationale Nutzung möglich)
+
+**Implementation Steps:**
+1. i18n Library wählen (i18next, vue-i18n, oder Vanilla)
+2. Translation Keys extrahieren aus allen UI-Strings
+3. DE Translation File erstellen (current texts)
+4. EN Translation File erstellen
+5. Browser Language Detection implementieren
+6. Language Switcher in UI (Settings oder Header)
+7. Save language preference to Settings
+8. Test mit beiden Sprachen
+
+**Technical Notes:**
+- ChurchTools API gibt Daten auf Englisch zurück (kein Problem)
+- Absence Reasons kommen von ChurchTools Event Masterdata (bereits übersetzt?)
+- Category Names bleiben user-defined (keine Übersetzung)
+- Nur UI-Elemente übersetzen (Buttons, Labels, Notifications)
+
+**Priority:** Mittel (nach kritischen Bugs)
+
+---
 
 ### 🔴 Priorität: Hoch
 

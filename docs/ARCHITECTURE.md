@@ -317,6 +317,138 @@ Bevor eine Kategorie gelöscht wird, müssen alle Zeiteinträge einer anderen Ka
 
 ---
 
+## 6. **Group-Based Access Control & Individual SOLL Hours**
+
+### User Requirement (2025-11-22)
+
+Unterschiedliche Benutzergruppen haben unterschiedliche Anforderungen:
+- **Employees**: Feste Arbeitsstunden, SOLL-Vorgaben, Überstundenberechnung
+- **Volunteers**: Keine SOLL-Vorgaben, freiwillige Zeiterfassung
+- **Per-User SOLL**: Jeder Employee kann unterschiedliche Stunden haben (Vollzeit, Teilzeit)
+
+### Design Decision: ChurchTools Group Integration + User Config
+
+**Lösung:**
+- `employeeGroupId` in Settings → ChurchTools Group ID für Employees
+- `volunteerGroupId` in Settings → ChurchTools Group ID für Volunteers
+- `userHoursConfig: UserHoursConfig[]` → Individuelle SOLL-Stunden pro Employee
+
+**UserHoursConfig Interface:**
+```typescript
+interface UserHoursConfig {
+    userId: number;
+    userName: string;
+    hoursPerDay: number;
+    hoursPerWeek: number;
+    isActive?: boolean; // False if removed from group (soft delete)
+}
+```
+
+**Access Check:**
+- Bei Initialization: `checkUserAccess()`
+- Lädt User Groups via `/persons/{userId}/groups`
+- Prüft ob User in Employee ODER Volunteer Group
+- Falls nein: Error Message, Extension nicht verfügbar
+
+**SOLL Calculation Priority:**
+1. **Prio 1:** `userHoursConfig` (individual employee hours)
+2. **Prio 2:** `defaultHoursPerDay/Week` (fallback)
+3. **Volunteers:** Optional 0 hours SOLL (kein Überstunden-Tracking)
+
+**Admin UI:**
+- "Group Management" Section
+- Load Employees Button → Lädt Members von Group
+- Table mit Employees und Input-Feldern für hours/day und hours/week
+- Soft-Delete: Inactive employees bleiben in Config (historische Daten)
+
+### Wo implementiert
+
+- `main.ts` Zeilen 244-291: `checkUserAccess()`, `getUserHours()`
+- `admin.ts` Zeilen 282-373: `loadEmployeesFromGroup()`
+- Settings Interface Zeilen 39-62
+
+### Warum diese Lösung
+
+**Alternative erwogen:** Separate User Table in KV-Store
+- ❌ Redundant zu ChurchTools Groups
+- ❌ Synchronisation-Problem
+- ❌ Admin muss doppelt pflegen
+
+**Alternative erwogen:** Alle haben gleiche SOLL
+- ❌ Teilzeit-Mitarbeiter falsch berechnet
+- ❌ 20h/Woche Mitarbeiter hätte ständig "Überstunden"
+
+**Gewählte Lösung:** ChurchTools Groups + Individual Config
+- ✅ Single Source of Truth (ChurchTools)
+- ✅ Flexibel für verschiedene Modelle
+- ✅ Soft-Delete Support
+- ✅ Auto-Sync mit Group Membership
+
+---
+
+## 7. **Break Tracking ohne Komplexität**
+
+### User Requirement (2025-11-22)
+
+Benutzer wollen Pausen erfassen, aber NICHT mit gesetzlichen Regelungen kämpfen.
+
+### Design Decision: Simple Boolean Flag
+
+**Lösung:**
+- `isBreak: boolean` in TimeEntry Interface
+- UI: Checkbox bei Clock-In und Manual Entry
+- Calculation: `if (entry.isBreak) skip from work hours`
+
+### Why NOT Complex?
+
+**Bewusst NICHT implementiert:**
+- ❌ Automatische Pausenregelung (30min ab 6h, etc.)
+- ❌ Pausenzwang nach X Stunden
+- ❌ Separate Pause-Entities mit Validation
+- ❌ Branchen-spezifische Gesetze (Arbeitszeitgesetz)
+
+### Why Simple Works
+
+**Vorteile der einfachen Lösung:**
+- ✅ User entscheidet selbst wann Pause
+- ✅ Ein zusätzliches Boolean-Feld
+- ✅ Kein Branchen-spezifisches Wissen nötig
+- ✅ Flexibel für verschiedene Organisationen
+- ✅ Kirchen-Organisation hat eigene Regelungen (nicht gesetzlich)
+
+**Visual Distinction:**
+- Break Entries haben Badge "Break" statt Kategorie
+- Andere Farbe (z.B. orange/grey)
+- Excluded from all work hour statistics
+- Aber in Entry Liste sichtbar (Transparenz)
+
+### Wo implementiert
+
+- TimeEntry Interface Zeile 35: `isBreak: boolean`
+- `main.ts` Clock-In Dialog: Break Checkbox
+- `main.ts` Manual Entry: Break Checkbox
+- `main.ts` getReportStats: Break Hours Calculation (subtracted)
+
+### Warum diese Lösung
+
+**Alternative erwogen:** Automatische Pausen nach Arbeitszeitgesetz
+- ❌ Komplex (verschiedene Regeln je nach Branche/Land)
+- ❌ Kirchen-Organisationen haben Ausnahmen
+- ❌ User will Kontrolle behalten
+
+**Alternative erwogen:** Separate Pause-Kategorie
+- ❌ User müsste Kategorie erstellen
+- ❌ Fehleranfällig (User vergisst Flag zu setzen)
+- ❌ Doppelte Buchung möglich
+
+**Gewählte Lösung:** Simple Boolean
+- ✅ Eindeutig (kein ambiguous state)
+- ✅ User-Kontrolle
+- ✅ Minimal Code-Komplexität
+- ✅ Erfüllt User-Requirement
+
+---
+
 ## Design Principles
 
 Diese Architektur-Entscheidungen folgen bestimmten Prinzipien:
@@ -367,6 +499,6 @@ Diese Architektur-Entscheidungen folgen bestimmten Prinzipien:
 
 ---
 
-**Letzte Aktualisierung:** 2025-01-22
-**Version:** 1.0
-**Status:** ✅ Alle Decisions implementiert und getestet
+**Letzte Aktualisierung:** 2025-11-23
+**Version:** 1.8.0
+**Status:** ✅ Alle Decisions implementiert und getestet (7 Design Decisions)
