@@ -799,7 +799,7 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                     </h3>
                     <p style="margin: 0 0 1rem 0; color: #666; font-size: 0.9rem;">
                         Configure <strong>individual SOLL hours and work days</strong> for each employee. These settings <strong>override the defaults above</strong>.<br>
-                        <em style="color: #28a745;">💡 Work week checkboxes save automatically.</em> <em style="color: #856404;">Hours/Day and Hours/Week require clicking "Save Group Settings" below.</em>
+                        <em style="color: #856404;">⚠️ Click "Save Group Settings" below to save all changes (hours and work week).</em>
                     </p>
 
                     ${employeesList.length > 0 ? `
@@ -1240,56 +1240,11 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
             });
         });
 
-        // Work week checkbox handlers
+        // Work week checkbox handlers (no auto-save, requires Save button like hours)
         element.querySelectorAll('.user-work-week-checkbox').forEach(checkbox => {
-            checkbox.addEventListener('change', async (e) => {
-                const target = e.target as HTMLInputElement;
-                const userId = parseInt(target.getAttribute('data-user-id') || '0');
-                const day = parseInt(target.getAttribute('data-day') || '0');
-
-                if (userId <= 0) return;
-
-                // Find or create user config (CRITICAL: Don't modify settings directly, create new object)
-                const currentUserHoursConfig = settings.userHoursConfig ? [...settings.userHoursConfig] : [];
-
-                let userConfig = currentUserHoursConfig.find(u => u.userId === userId);
-                if (!userConfig) {
-                    // Create new config with defaults
-                    const employee = employeesList.find(e => e.userId === userId);
-                    userConfig = {
-                        userId,
-                        userName: employee?.userName || `User ${userId}`,
-                        hoursPerDay: settings.defaultHoursPerDay,
-                        hoursPerWeek: settings.defaultHoursPerWeek,
-                        workWeekDays: [...(settings.workWeekDays || [1, 2, 3, 4, 5])]
-                    };
-                    currentUserHoursConfig.push(userConfig);
-                } else {
-                    // Initialize workWeekDays if not present
-                    if (!userConfig.workWeekDays) {
-                        userConfig.workWeekDays = [...(settings.workWeekDays || [1, 2, 3, 4, 5])];
-                    }
-                }
-
-                // Toggle day
-                if (target.checked) {
-                    if (!userConfig.workWeekDays!.includes(day)) {
-                        userConfig.workWeekDays!.push(day);
-                        userConfig.workWeekDays!.sort((a, b) => a - b); // Keep sorted
-                    }
-                } else {
-                    userConfig.workWeekDays = userConfig.workWeekDays!.filter(d => d !== day);
-                }
-
-                // CRITICAL: Create new settings object preserving ALL existing settings
-                const updatedSettings: Settings = {
-                    ...settings,
-                    userHoursConfig: currentUserHoursConfig
-                };
-
-                // Save and update local settings
-                await saveSettings(updatedSettings);
-                settings = updatedSettings; // Update local reference
+            checkbox.addEventListener('change', (e) => {
+                // Just mark as dirty, user must click Save Group Settings
+                // This matches the behavior of hours inputs
             });
         });
 
@@ -1539,7 +1494,19 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                     const employee = employeesList.find(e => e.userId === userId);
                     const userName = employee?.userName || `User ${userId}`;
 
-                    // Preserve isActive status and workWeekDays from existing config
+                    // Collect work week days from checkboxes for this user
+                    const workWeekDays: number[] = [];
+                    const userCheckboxes = element.querySelectorAll(`.user-work-week-checkbox[data-user-id="${userId}"]`) as NodeListOf<HTMLInputElement>;
+                    userCheckboxes.forEach(checkbox => {
+                        if (checkbox.checked) {
+                            const day = parseInt(checkbox.getAttribute('data-day') || '0');
+                            workWeekDays.push(day);
+                        }
+                    });
+                    // Sort to maintain Sun-Sat order
+                    workWeekDays.sort((a, b) => a - b);
+
+                    // Preserve isActive status from existing config
                     const existingConfig = settings.userHoursConfig?.find(c => c.userId === userId);
                     userHoursConfig.push({
                         userId,
@@ -1547,7 +1514,7 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                         hoursPerDay,
                         hoursPerWeek,
                         isActive: existingConfig?.isActive !== false,  // Preserve existing isActive status
-                        workWeekDays: existingConfig?.workWeekDays // Preserve work week days
+                        workWeekDays: workWeekDays.length > 0 ? workWeekDays : undefined // Only set if user has custom work week
                     });
                 }
             });
