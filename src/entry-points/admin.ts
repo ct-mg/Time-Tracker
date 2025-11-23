@@ -34,6 +34,7 @@ interface UserHoursConfig {
     hoursPerDay: number;
     hoursPerWeek: number;
     isActive?: boolean; // False if user was removed from employee group (soft delete)
+    workWeekDays?: number[]; // Individual work week (0=Sun, 1=Mon, ..., 6=Sat). Falls back to global setting if undefined.
 }
 
 interface Settings {

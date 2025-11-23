@@ -34,6 +34,11 @@ interface TimeEntry {
     isManual: boolean;
     isBreak: boolean; // If true, does not count towards work hours
     createdAt: string;
+    settingsSnapshot?: { // Settings at time of entry creation (for accurate historical SOLL calculations)
+        hoursPerDay: number;
+        hoursPerWeek: number;
+        workWeekDays: number[]; // 0=Sunday, 1=Monday, ..., 6=Saturday
+    };
 }
 
 interface WorkCategory {
@@ -49,6 +54,7 @@ interface UserHoursConfig {
     hoursPerDay: number;
     hoursPerWeek: number;
     isActive?: boolean; // False if user was removed from employee group (soft delete)
+    workWeekDays?: number[]; // Individual work week (0=Sun, 1=Mon, ..., 6=Sat). Falls back to global setting if undefined.
 }
 
 interface Settings {
@@ -253,7 +259,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
 
             // Check if user is in either employee or volunteer group
             const hasAccess = (settings.employeeGroupId && groupIds.includes(settings.employeeGroupId)) ||
-                             (settings.volunteerGroupId && groupIds.includes(settings.volunteerGroupId));
+                (settings.volunteerGroupId && groupIds.includes(settings.volunteerGroupId));
 
             return hasAccess;
         } catch (error) {
@@ -290,15 +296,37 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
         };
     }
 
+    // Create settings snapshot for a time entry (preserves settings at time of creation)
+    function createSettingsSnapshot(userId: number): TimeEntry['settingsSnapshot'] {
+        // Priority 1: User-specific settings
+        const userConfig = settings.userHoursConfig?.find(u => u.userId === userId);
+
+        return {
+            hoursPerDay: userConfig?.hoursPerDay ?? settings.defaultHoursPerDay,
+            hoursPerWeek: userConfig?.hoursPerWeek ?? settings.defaultHoursPerWeek,
+            workWeekDays: userConfig?.workWeekDays ?? settings.workWeekDays ?? [1, 2, 3, 4, 5]
+        };
+    }
+
     // Check if a date is a work day according to settings
-    function isWorkDay(date: Date): boolean {
+    function isWorkDay(date: Date, userId?: number): boolean {
         const dayOfWeek = date.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+
+        // Priority 1: User-specific work week
+        if (userId !== undefined && settings.userHoursConfig) {
+            const userConfig = settings.userHoursConfig.find(u => u.userId === userId);
+            if (userConfig?.workWeekDays) {
+                return userConfig.workWeekDays.includes(dayOfWeek);
+            }
+        }
+
+        // Priority 2: Global work week setting
         const workWeekDays = settings.workWeekDays || [1, 2, 3, 4, 5]; // Default: Mon-Fri
         return workWeekDays.includes(dayOfWeek);
     }
 
     // Count work days in a date range
-    function countWorkDays(startDate: Date, endDate: Date): number {
+    function countWorkDays(startDate: Date, endDate: Date, userId?: number): number {
         let count = 0;
         const current = new Date(startDate);
         current.setHours(0, 0, 0, 0);
@@ -306,7 +334,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
         end.setHours(0, 0, 0, 0);
 
         while (current <= end) {
-            if (isWorkDay(current)) {
+            if (isWorkDay(current, userId)) { // Pass userId to isWorkDay
                 count++;
             }
             current.setDate(current.getDate() + 1);
@@ -610,8 +638,8 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
             const allValues = await getCustomDataValues<TimeEntry>(cat.id, moduleId!);
             const existingValue = allValues.find(
                 (v) => v.userId === currentEntry!.userId &&
-                       v.startTime === currentEntry!.startTime &&
-                       v.endTime === null
+                    v.startTime === currentEntry!.startTime &&
+                    v.endTime === null
             );
 
             if (!existingValue) {
@@ -956,7 +984,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                     let categoryId = categoryIdOrName;
                     const categoryMatch = workCategories.find(
                         c => c.name.toLowerCase() === categoryIdOrName.toLowerCase() ||
-                             c.id.toLowerCase() === categoryIdOrName.toLowerCase()
+                            c.id.toLowerCase() === categoryIdOrName.toLowerCase()
                     );
                     if (categoryMatch) {
                         categoryId = categoryMatch.id;
@@ -1558,9 +1586,8 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
         return `
             <!-- Current Status -->
             <div style="background: ${currentEntry ? '#d4edda' : '#fff'}; border: 1px solid ${currentEntry ? '#c3e6cb' : '#ddd'}; border-radius: 8px; padding: 2rem; margin-bottom: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                ${
-                    currentEntry
-                        ? `
+                ${currentEntry
+                ? `
                     <div style="text-align: center;">
                         <div style="font-size: 1.2rem; color: #155724; margin-bottom: 1rem; font-weight: 600;">
                             🟢 Currently Working
@@ -1583,7 +1610,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                         </button>
                     </div>
                 `
-                        : `
+                : `
                     <div style="text-align: center;">
                         <div style="font-size: 1.2rem; color: #666; margin-bottom: 2rem; font-weight: 600;">
                             Not currently tracking time
@@ -1621,7 +1648,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                         </div>
                     </div>
                 `
-                }
+            }
             </div>
 
             <!-- Dashboard Statistics -->
@@ -1989,9 +2016,8 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
 
             ${renderBulkEntryForm()}
 
-            ${
-                showAddManualEntry || editingEntry
-                    ? `
+            ${showAddManualEntry || editingEntry
+                ? `
                 <!-- Add/Edit Manual Entry Form -->
                 <div style="background: ${editingEntry ? '#d1ecf1' : '#fff3cd'}; border: 1px solid ${editingEntry ? '#17a2b8' : '#ffc107'}; border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem;">
                     <h3 style="margin: 0 0 1rem 0; color: #333; display: flex; align-items: center; gap: 0.5rem;">
@@ -2080,7 +2106,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                     </div>
                 </div>
             `
-                    : ''
+                : ''
             }
 
             <!-- Entries List -->
@@ -2225,12 +2251,12 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                             </thead>
                             <tbody>
                                 ${dayEntries.map(entry => {
-                                    const start = new Date(entry.startTime);
-                                    const end = entry.endTime ? new Date(entry.endTime) : new Date();
-                                    const duration = formatDuration(end.getTime() - start.getTime());
-                                    const category = workCategories.find((c) => c.id === entry.categoryId);
+                    const start = new Date(entry.startTime);
+                    const end = entry.endTime ? new Date(entry.endTime) : new Date();
+                    const duration = formatDuration(end.getTime() - start.getTime());
+                    const category = workCategories.find((c) => c.id === entry.categoryId);
 
-                                    return `
+                    return `
                                         <tr style="border-bottom: 1px solid #e9ecef;">
                                             <td style="padding: 0.5rem;">${start.toLocaleTimeString()}</td>
                                             <td style="padding: 0.5rem;">${entry.endTime ? end.toLocaleTimeString() : '<span style="color: #28a745; font-weight: 600;">Active</span>'}</td>
@@ -2299,7 +2325,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                                             </td>
                                         </tr>
                                     `;
-                                }).join('')}
+                }).join('')}
                             </tbody>
                         </table>
                     </div>
@@ -2315,9 +2341,8 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
 
     function renderAbsences(): string {
         return `
-            ${
-                showAddAbsence || editingAbsence
-                    ? `
+            ${showAddAbsence || editingAbsence
+                ? `
             <!-- Add/Edit Absence Form -->
             <div style="background: ${editingAbsence ? '#d1ecf1' : '#d4edda'}; border: 1px solid ${editingAbsence ? '#17a2b8' : '#28a745'}; border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem;">
                 <h3 style="margin: 0 0 1rem 0; color: #333; display: flex; align-items: center; gap: 0.5rem;">
@@ -2394,12 +2419,12 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                         ${absenceReasons.length === 0 ? 'disabled' : ''}
                     >
                         ${absenceReasons.length === 0 ?
-                            '<option value="">No reasons available - check admin settings</option>' :
-                            (editingAbsence ? '' : '<option value="">-- Select a reason --</option>') +
-                            absenceReasons.map(reason => `
+                    '<option value="">No reasons available - check admin settings</option>' :
+                    (editingAbsence ? '' : '<option value="">-- Select a reason --</option>') +
+                    absenceReasons.map(reason => `
                                 <option value="${reason.id}" ${editingAbsence && editingAbsence.absenceReason.id === reason.id ? 'selected' : ''}>${reason.nameTranslated || reason.name}</option>
                             `).join('')
-                        }
+                }
                     </select>
                 </div>
                 <div style="margin-bottom: 1rem;">
@@ -2424,7 +2449,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                 </div>
             </div>
             `
-                    : ''
+                : ''
             }
 
             <!-- Absences List -->
@@ -2454,10 +2479,10 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                         </thead>
                         <tbody>
                             ${absences.map(absence => {
-                                const isAllDay = absence.startTime === null || absence.endTime === null;
-                                const start = new Date(absence.startDate);
-                                const end = new Date(absence.endDate);
-                                return `
+                const isAllDay = absence.startTime === null || absence.endTime === null;
+                const start = new Date(absence.startDate);
+                const end = new Date(absence.endDate);
+                return `
                                 <tr style="border-bottom: 1px solid #dee2e6;">
                                     <td style="padding: 0.75rem;">${start.toLocaleDateString()}${!isAllDay ? ' ' + new Date(absence.startTime!).toLocaleTimeString() : ''}</td>
                                     <td style="padding: 0.75rem;">${end.toLocaleDateString()}${!isAllDay ? ' ' + new Date(absence.endTime!).toLocaleTimeString() : ''}</td>
@@ -2623,13 +2648,13 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
             <div style="background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
                 <h2 style="margin: 0 0 1rem 0; font-size: 1.2rem; color: #333;">IST vs SOLL Comparison</h2>
                 ${(() => {
-                    const ist = parseFloat(stats.totalHours);
-                    const soll = parseFloat(stats.expectedHours);
-                    const percentage = soll > 0 ? (ist / soll) * 100 : 0;
-                    const isOverTarget = ist >= soll;
-                    const progressColor = isOverTarget ? '#28a745' : (percentage >= 80 ? '#ffc107' : '#dc3545');
+                const ist = parseFloat(stats.totalHours);
+                const soll = parseFloat(stats.expectedHours);
+                const percentage = soll > 0 ? (ist / soll) * 100 : 0;
+                const isOverTarget = ist >= soll;
+                const progressColor = isOverTarget ? '#28a745' : (percentage >= 80 ? '#ffc107' : '#dc3545');
 
-                    return `
+                return `
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 1.5rem;">
                             <div>
                                 <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.5rem;">
@@ -2702,13 +2727,13 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                             </div>
                             <div style="color: ${isOverTarget ? '#155724' : (percentage >= 80 ? '#856404' : '#721c24')}; font-size: 0.9rem;">
                                 ${isOverTarget
-                                    ? `You have worked ${formatDecimalHours(parseFloat(stats.overtime))} more than required. Great job!`
-                                    : `You need to work ${formatDecimalHours(Math.abs(parseFloat(stats.overtime)))} more to reach your target.`
-                                }
+                        ? `You have worked ${formatDecimalHours(parseFloat(stats.overtime))} more than required. Great job!`
+                        : `You need to work ${formatDecimalHours(Math.abs(parseFloat(stats.overtime)))} more to reach your target.`
+                    }
                             </div>
                         </div>
                     `;
-                })()}
+            })()}
             </div>
 
             <!-- Breakdown by Category -->
@@ -2716,12 +2741,12 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                 <h2 style="margin: 0 0 1rem 0; font-size: 1.2rem; color: #333;">Time by Category</h2>
                 <div style="display: grid; gap: 1rem;">
                     ${Object.keys(entriesByCategory)
-                        .map((catId) => {
-                            const category = workCategories.find((c) => c.id === catId);
-                            const data = entriesByCategory[catId];
-                            const percentage =
-                                (data.hours / parseFloat(stats.totalHours)) * 100;
-                            return `
+                .map((catId) => {
+                    const category = workCategories.find((c) => c.id === catId);
+                    const data = entriesByCategory[catId];
+                    const percentage =
+                        (data.hours / parseFloat(stats.totalHours)) * 100;
+                    return `
                         <div style="padding: 1rem; border: 1px solid #dee2e6; border-radius: 6px;">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
                                 <span style="background: ${category?.color || '#6c757d'}; color: white; padding: 0.25rem 0.75rem; border-radius: 4px; font-weight: 600;">
@@ -2739,8 +2764,8 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                             </div>
                         </div>
                     `;
-                        })
-                        .join('')}
+                })
+                .join('')}
                 </div>
             </div>
 
@@ -2760,27 +2785,27 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                         </thead>
                         <tbody>
                             ${absences.filter(absence => {
-                                const absenceStart = new Date(absence.startDate);
-                                const absenceEnd = new Date(absence.endDate);
-                                const fromDate = new Date(filterDateFrom);
-                                const toDate = new Date(filterDateTo);
-                                return !(absenceEnd < fromDate || absenceStart > toDate);
-                            }).map(absence => {
-                                const isAllDay = absence.startTime === null || absence.endTime === null;
-                                const start = new Date(absence.startDate);
-                                const end = new Date(absence.endDate);
+                    const absenceStart = new Date(absence.startDate);
+                    const absenceEnd = new Date(absence.endDate);
+                    const fromDate = new Date(filterDateFrom);
+                    const toDate = new Date(filterDateTo);
+                    return !(absenceEnd < fromDate || absenceStart > toDate);
+                }).map(absence => {
+                    const isAllDay = absence.startTime === null || absence.endTime === null;
+                    const start = new Date(absence.startDate);
+                    const end = new Date(absence.endDate);
 
-                                let hours = 0;
-                                if (isAllDay) {
-                                    const days = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
-                                    hours = days * userHours.hoursPerDay;
-                                } else {
-                                    const startTime = new Date(absence.startTime!);
-                                    const endTime = new Date(absence.endTime!);
-                                    hours = (endTime.getTime() - startTime.getTime()) / (1000 * 60 * 60);
-                                }
+                    let hours = 0;
+                    if (isAllDay) {
+                        const days = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+                        hours = days * userHours.hoursPerDay;
+                    } else {
+                        const startTime = new Date(absence.startTime!);
+                        const endTime = new Date(absence.endTime!);
+                        hours = (endTime.getTime() - startTime.getTime()) / (1000 * 60 * 60);
+                    }
 
-                                return `
+                    return `
                                 <tr style="border-bottom: 1px solid #dee2e6;">
                                     <td style="padding: 0.75rem;">${start.toLocaleDateString()}${!isAllDay ? ' ' + new Date(absence.startTime!).toLocaleTimeString() : ''}</td>
                                     <td style="padding: 0.75rem;">${end.toLocaleDateString()}${!isAllDay ? ' ' + new Date(absence.endTime!).toLocaleTimeString() : ''}</td>
