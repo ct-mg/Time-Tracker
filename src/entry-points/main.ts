@@ -1501,7 +1501,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
             element.innerHTML = `
                 <div style="min-height: 100vh; background: #f8f9fa; padding: 2rem;">
                     <div style="max-width: 1200px; margin: 0 auto; text-align: center; padding: 3rem;">
-                        <div style="margin-bottom: 1rem;">
+                        <div style="margin-bottom: 1rem; display: flex; justify-content: center;">
                             <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#007bff" stroke-width="2" style="animation: spin 1s linear infinite;">
                                 <style>
                                     @keyframes spin {
@@ -1650,10 +1650,9 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                                 <span style="color: #666; font-size: 0.95rem;">This is a break/pause (won't count towards work hours)</span>
                             </label>
 
-                            <button id="clock-in-btn" style="width: 100%; padding: 1rem 2rem; background: #28a745; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 1.1rem; font-weight: 600; box-shadow: 0 2px 4px rgba(0,0,0,0.2); display: inline-flex; align-items: center; gap: 0.5rem; justify-content: center;">
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                                    <circle cx="12" cy="12" r="10"></circle>
-                                    <polygon points="10 8 16 12 10 16 10 8" fill="white"></polygon>
+                            <button id="clock-in-btn" style="flex: 1; padding: 1rem; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 1rem; display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                                    <polygon points="5 3 19 12 5 21 5 3"></polygon>
                                 </svg>
                                 Clock In
                             </button>
