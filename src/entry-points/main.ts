@@ -2810,7 +2810,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                     let hours = 0;
                     if (isAllDay) {
                         const days = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
-                        const userConfig = getUserHours(user?.id);
+                        const userConfig = getUserHours();
                         hours = days * userConfig.hoursPerDay;
                     } else {
                         const startTime = new Date(absence.startTime!);
