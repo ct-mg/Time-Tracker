@@ -596,6 +596,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                 isManual: false,
                 isBreak,
                 createdAt: new Date().toISOString(),
+                settingsSnapshot: createSettingsSnapshot(user.id), // Preserve settings at time of clock-in
             };
 
             // Save to KV store
@@ -809,6 +810,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                     isManual: true,
                     isBreak: row.isBreak,
                     createdAt: new Date().toISOString(),
+                    settingsSnapshot: createSettingsSnapshot(user?.id!), // Preserve settings at time of bulk entry creation
                 };
 
                 console.log('[TimeTracker] Saving bulk entry:', newEntry);
@@ -1196,7 +1198,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
         const userHours = getUserHours();
 
         // Count actual work days in the period (respecting workWeekDays configuration)
-        const workDaysCount = countWorkDays(new Date(filterDateFrom), new Date(filterDateTo));
+        const workDaysCount = countWorkDays(new Date(filterDateFrom), new Date(filterDateTo), user?.id);
 
         // Expected hours = work days count * hours per day - absence hours
         const expectedHours = workDaysCount * userHours.hoursPerDay - absenceHours;
@@ -3109,6 +3111,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                         isManual: true,
                         isBreak: isBreakCheckbox?.checked || false,
                         createdAt: new Date().toISOString(),
+                        settingsSnapshot: createSettingsSnapshot(user?.id!), // Preserve settings at time of manual entry creation
                     };
 
                     await createCustomDataValue(
