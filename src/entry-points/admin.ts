@@ -626,7 +626,8 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
             <div style="background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
                 <h2 style="margin: 0 0 1rem 0; font-size: 1.3rem; color: #333;">General Settings</h2>
                 <p style="margin: 0 0 1.5rem 0; color: #666; font-size: 0.95rem;">
-                    Configure default work hours for overtime calculation
+                    <strong>Default values</strong> for new employees and fallback when no individual configuration exists.<br>
+                    <em style="color: #856404;">Individual employee settings (below) override these defaults.</em>
                 </p>
 
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
@@ -643,7 +644,7 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                             step="0.5"
                             style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 4px; font-size: 1rem;"
                         />
-                        <small style="color: #666; font-size: 0.85rem;">Standard working hours per day</small>
+                        <small style="color: #666; font-size: 0.85rem;">Used for new employees and when no individual config exists</small>
                     </div>
 
                     <div>
@@ -659,15 +660,16 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                             step="0.5"
                             style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 4px; font-size: 1rem;"
                         />
-                        <small style="color: #666; font-size: 0.85rem;">Standard working hours per week</small>
+                        <small style="color: #666; font-size: 0.85rem;">Used for new employees and when no individual config exists</small>
                     </div>
                 </div>
 
                 <!-- Work Week Days Configuration -->
                 <div style="margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid #e0e0e0;">
-                    <h3 style="margin: 0 0 0.5rem 0; font-size: 1.1rem; color: #333;">Work Week Days</h3>
+                    <h3 style="margin: 0 0 0.5rem 0; font-size: 1.1rem; color: #333;">Work Week Days (Default)</h3>
                     <p style="margin: 0 0 1rem 0; color: #666; font-size: 0.95rem;">
-                        Select which days require SOLL hours. SOLL will only be calculated for the selected days.
+                        Default work days for SOLL calculation. Used for new employees and as fallback.<br>
+                        <em style="color: #856404;">Employees can have individual work weeks (see table below).</em>
                     </p>
 
                     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 0.75rem;">
@@ -793,10 +795,11 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                 <!-- Employee Configuration -->
                 <div style="margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid #e0e0e0;">
                     <h3 style="margin: 0 0 0.5rem 0; font-size: 1.1rem; color: #333;">
-                        Employee SOLL Hours Configuration
+                        Individual Employee Configuration
                     </h3>
                     <p style="margin: 0 0 1rem 0; color: #666; font-size: 0.9rem;">
-                        Employees are loaded automatically. Use refresh to check for changes in the group.
+                        Configure <strong>individual SOLL hours and work days</strong> for each employee. These settings <strong>override the defaults above</strong>.<br>
+                        <em style="color: #28a745;">💡 Changes are saved automatically when you modify the checkboxes.</em>
                     </p>
 
                     ${employeesList.length > 0 ? `
