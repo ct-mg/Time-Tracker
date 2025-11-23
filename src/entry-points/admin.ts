@@ -840,6 +840,7 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                                             <th style="padding: 0.75rem; text-align: left; border-bottom: 2px solid #dee2e6; font-weight: 600; color: #333;">Status</th>
                                             <th style="padding: 0.75rem; text-align: left; border-bottom: 2px solid #dee2e6; font-weight: 600; color: #333;">Hours/Day</th>
                                             <th style="padding: 0.75rem; text-align: left; border-bottom: 2px solid #dee2e6; font-weight: 600; color: #333;">Hours/Week</th>
+                                            <th style="padding: 0.75rem; text-align: left; border-bottom: 2px solid #dee2e6; font-weight: 600; color: #333; min-width: 280px;">Work Week Days</th>
                                             <th style="padding: 0.75rem; text-align: center; border-bottom: 2px solid #dee2e6; font-weight: 600; color: #333;">Actions</th>
                                         </tr>
                                     </thead>
@@ -893,6 +894,28 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                                                             ${!isActive ? 'disabled' : ''}
                                                             style="width: 80px; padding: 0.5rem; border: 1px solid #ced4da; border-radius: 4px; ${!isActive ? 'background: #f5f5f5; cursor: not-allowed;' : ''}"
                                                         />
+                                                    </td>
+                                                    <td style="padding: 0.75rem;">
+                                                        <div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px;">
+                                                            ${['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, index) => {
+                const workWeek = existingConfig?.workWeekDays || settings.workWeekDays || [1, 2, 3, 4, 5];
+                const isChecked = workWeek.includes(index);
+                return `
+                                                                <label style="display: flex; align-items: center; justify-content: center; cursor: ${isActive ? 'pointer' : 'not-allowed'}; opacity: ${isActive ? '1' : '0.5'};" title="${['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][index]}">
+                                                                    <input
+                                                                        type="checkbox"
+                                                                        class="user-work-week-checkbox"
+                                                                        data-user-id="${emp.userId}"
+                                                                        data-day="${index}"
+                                                                        ${isChecked ? 'checked' : ''}
+                                                                        ${!isActive ? 'disabled' : ''}
+                                                                        style="width: 16px; height: 16px; cursor: ${isActive ? 'pointer' : 'not-allowed'}; margin: 0; accent-color: #007bff;"
+                                                                    />
+                                                                    <span style="font-size: 0.7rem; margin-left: 2px; color: ${isActive ? '#333' : '#999'}; user-select: none;">${day}</span>
+                                                                </label>
+                `;
+            }).join('')}
+                                                        </div>
                                                     </td>
                                                     <td style="padding: 0.75rem; text-align: center;">
                                                         ${!isActive ? `
@@ -1211,6 +1234,54 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                 if (confirm(`Delete employee "${userName}" and all their time tracking data?\n\nThis action cannot be undone!`)) {
                     await handleDeleteEmployee(userId);
                 }
+            });
+        });
+
+        // Work week checkbox handlers
+        element.querySelectorAll('.user-work-week-checkbox').forEach(checkbox => {
+            checkbox.addEventListener('change', async (e) => {
+                const target = e.target as HTMLInputElement;
+                const userId = parseInt(target.getAttribute('data-user-id') || '0');
+                const day = parseInt(target.getAttribute('data-day') || '0');
+
+                if (userId <= 0) return;
+
+                // Find or create user config
+                if (!settings.userHoursConfig) {
+                    settings.userHoursConfig = [];
+                }
+
+                let userConfig = settings.userHoursConfig.find(u => u.userId === userId);
+                if (!userConfig) {
+                    // Create new config with defaults
+                    const employee = employeesList.find(e => e.userId === userId);
+                    userConfig = {
+                        userId,
+                        userName: employee?.userName || `User ${userId}`,
+                        hoursPerDay: settings.defaultHoursPerDay,
+                        hoursPerWeek: settings.defaultHoursPerWeek,
+                        workWeekDays: [...(settings.workWeekDays || [1, 2, 3, 4, 5])]
+                    };
+                    settings.userHoursConfig.push(userConfig);
+                }
+
+                // Initialize workWeekDays if not present
+                if (!userConfig.workWeekDays) {
+                    userConfig.workWeekDays = [...(settings.workWeekDays || [1, 2, 3, 4, 5])];
+                }
+
+                // Toggle day
+                if (target.checked) {
+                    if (!userConfig.workWeekDays.includes(day)) {
+                        userConfig.workWeekDays.push(day);
+                        userConfig.workWeekDays.sort((a, b) => a - b); // Keep sorted
+                    }
+                } else {
+                    userConfig.workWeekDays = userConfig.workWeekDays.filter(d => d !== day);
+                }
+
+                // Save settings immediately
+                await saveSettings(settings);
             });
         });
 
