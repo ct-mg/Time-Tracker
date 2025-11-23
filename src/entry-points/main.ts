@@ -1501,7 +1501,17 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
             element.innerHTML = `
                 <div style="min-height: 100vh; background: #f8f9fa; padding: 2rem;">
                     <div style="max-width: 1200px; margin: 0 auto; text-align: center; padding: 3rem;">
-                        <div style="font-size: 3rem; margin-bottom: 1rem;">⏳</div>
+                        <div style="margin-bottom: 1rem;">
+                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#007bff" stroke-width="2" style="animation: spin 1s linear infinite;">
+                                <style>
+                                    @keyframes spin {
+                                        from { transform: rotate(0deg); }
+                                        to { transform: rotate(360deg); }
+                                    }
+                                </style>
+                                <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"></path>
+                            </svg>
+                        </div>
                         <p style="color: #666;">Loading Time Tracker...</p>
                     </div>
                 </div>
@@ -2800,7 +2810,8 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                     let hours = 0;
                     if (isAllDay) {
                         const days = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
-                        hours = days * userHours.hoursPerDay;
+                        const userConfig = getUserHours(user?.id);
+                        hours = days * userConfig.hoursPerDay;
                     } else {
                         const startTime = new Date(absence.startTime!);
                         const endTime = new Date(absence.endTime!);
