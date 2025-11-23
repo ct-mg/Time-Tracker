@@ -152,23 +152,63 @@
 
 ---
 
-#### Work Week Configuration per User (nicht global)
+#### Work Week Configuration per User ✅ RESOLVED
 **Problem:** Work Week Days aktuell als Overall-Setting, User wünscht per-User Config
 **Current:** `workWeekDays: number[]` global in Settings
 **Desired:** `workWeekDays: number[]` in `UserHoursConfig` pro Employee
-**Status:** Feature Request aus Konversation
+**Status:** ✅ Resolved (2025-11-23)
 **Aufwand:** Mittel
 **User Impact:** Hoch (verschiedene Teilzeit-Modelle)
 
-**Implementation Steps:**
-1. Add `workWeekDays?: number[]` to `UserHoursConfig` interface
-2. UI in Admin: Checkbox-Grid pro Employee (wie global setting)
-3. Update `countWorkDays()` to use user-specific work week
-4. Update `getUserHours()` to include workWeekDays
-5. Default for new employees: Monday-Friday
-6. Migration: Existing employees inherit global setting
+**Implementation:**
+1. ✅ Added `workWeekDays?: number[]` to `UserHoursConfig` interface
+2. ✅ Added `settingsSnapshot` to `TimeEntry` (preserves settings at creation time)
+3. ✅ UI in Admin: Checkbox-Grid pro Employee (S-M-T-W-T-F-S)
+4. ✅ Updated `isWorkDay()` and `countWorkDays()` to use user-specific work week
+5. ✅ Work week checkboxes auto-save on change
+6. ✅ Admin UI clarifies Default vs Individual settings
+7. ✅ CRITICAL FIX: Auto-save preserves all settings (was corrupting employeeGroupId)
 
-**Priority:** Nach User Namen Fix
+**Git Commits:** 
+- `93c0325` - feat: add per-user work week configuration (Phase 2-3a)
+- `2e57263` - feat: add settingsSnapshot to all entry creation points (Phase 3b)
+- `490c09f` - feat: add admin UI for per-user work week configuration (Phase 4)
+- `5e7bc5d` - fix: preserve workWeekDays when saving group settings
+- `56e5a50` - docs: clarify default vs individual settings in admin panel
+- `5b12775` - fix: CRITICAL - prevent settings corruption on auto-save
+
+**Documentation:** Updated docs/IMPLEMENTATION.md with settingsSnapshot and work week features
+
+---
+
+#### Data Safety & Schema Versioning 🔴 CRITICAL
+
+**User Request:** Settings corruption prevention and data recovery mechanisms
+
+**Status:** ⚠️ Open - Critical Priority
+**Aufwand:** Hoch
+**User Impact:** Sehr Hoch (Datenverlust-Prävention)
+
+**Requirements:**
+1. **Schema Versioning:** Settings sollten eine `schemaVersion` haben
+2. **Backup System:** Automatische Backups vor destructive operations
+3. **Migration Safety:** Changes an Settings dürfen keine Felder verlieren
+4. **Validation:** Settings validation vor dem Speichern
+5. **Recovery:** Möglichkeit Backups wiederherzustellen
+
+**Incident:** Employee Group ID wurde durch Work Week Checkbox auto-save gelöscht
+**Root Cause:** Auto-save modifizierte settings object direkt, verlor andere Felder
+**Fix:** Auto-save erstellt jetzt neues settings object mit spread operator
+
+**Implementation Steps:**
+1. Add `schemaVersion: number` to Settings interface (current: 1)
+2. Create backup before saveSettings() (store last 5 versions in separate KV category)
+3. Add settings validation function (check required fields)
+4. Add recovery UI in Admin panel (show/restore last backups)
+5. Add migration handler for future schema changes
+6. Log all settings changes (timestamp, user, what changed)
+
+**Priority:** 🔴 Sehr Hoch - Muss vor nächstem Major Feature implementiert werden
 
 ---
 
