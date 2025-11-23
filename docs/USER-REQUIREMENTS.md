@@ -258,6 +258,96 @@ Diese Features wurden diskutiert und sind für zukünftige Versionen interessant
 
 ---
 
-**Letzte Aktualisierung:** 2025-01-22
-**Maintainer:** Entwickelt mit Claude (Anthropic)
-**Version:** 1.0
+## AI Assistant Workflow Requirements
+
+**User Requirement (2025-11-23):**
+
+AI Assistants müssen folgende Workflows konsequent befolgen:
+
+### 1. Dokumentation IMMER aktuell halten
+
+**Requirement:**
+- Bei JEDER Code-Änderung müssen relevante Dokumentations-Dateien aktualisiert werden
+- Nicht erst auf Aufforderung, sondern proaktiv
+
+**Betroffene Dateien:**
+- `docs/IMPLEMENTATION.md` - Feature-Details und technische Implementierung
+- `docs/ARCHITECTURE.md` - Wenn Design Decisions getroffen werden
+- `docs/TODO.md` - Task-Status Updates (completed/in-progress)
+- `docs/KNOWN-ISSUES.md` - Bei neuen Bugs oder Fixes
+- `docs/USER-REQUIREMENTS.md` - Bei neuen User Requirements
+
+**Status:** ✅ Mandatory
+
+---
+
+### 2. TODO.md pflegen
+
+**Requirement:**
+- Wenn User sagt "Füge das zur TODO hinzu" → SOFORT in TODO.md schreiben
+- Wenn User sagt "Packe das auf die Todo Liste" → SOFORT in TODO.md schreiben
+- Keine Feature Requests vergessen oder verlieren
+
+**Format in TODO.md:**
+- Klare Problembeschreibung
+- Implementation Steps
+- Priority Level
+- User Impact
+- Status
+
+**Status:** ✅ Mandatory
+
+---
+
+### 3. Git Commits regelmäßig machen
+
+**Requirement:**
+- Nach abgeschlossenen Code-Änderungen selbst committen
+- Nicht auf User warten
+
+**Commit Message Format:**
+```
+<type>: <kurze Beschreibung>
+
+- Detaillierte Bullet Points was gemacht wurde
+- Warum diese Änderung gemacht wurde
+- Welche Files betroffen sind
+```
+
+**Types:**
+- `feat:` - Neues Feature
+- `fix:` - Bug Fix
+- `docs:` - Dokumentations-Update
+- `refactor:` - Code-Refactoring ohne Feature-Änderung
+- `test:` - Tests hinzufügen
+- `chore:` - Build/Tool/Dependencies Updates
+
+**Beispiel:**
+```
+feat: add internationalization support (i18n)
+
+- Added browser language detection
+- Created DE and EN translation files
+- Implemented language switcher in Settings
+- Fallback to English if language not supported
+- Affects: main.ts, admin.ts, new i18n/ directory
+```
+
+**Status:** ✅ Mandatory
+
+---
+
+### 4. Konsistenz bei Zusagen
+
+**Requirement:**
+- Wenn AI sagt "ich werde X tun" → dann auch SOFORT tun
+- Nicht nur reden, sondern handeln
+- User vertraut darauf, dass Zusagen eingehalten werden
+
+**Status:** ✅ Mandatory
+
+---
+
+**Letzte Aktualisierung:** 2025-11-23
+**Maintainer:** Entwickelt mit Claude (Anthropic) und Gemini (Google DeepMind)
+**Version:** 1.8.0
