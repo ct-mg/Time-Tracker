@@ -59,17 +59,17 @@ interface SettingsBackup {
 }
 
 
-const MAX_BACKUPS=5;
-const CURRENT_SCHEMA_VERSION=1;
+const MAX_BACKUPS = 5;
+const CURRENT_SCHEMA_VERSION = 1;
 
-const adminEntryPoint: EntryPoint<AdminData>=({ data, emit, element, KEY }) => {
-    let moduleId: number | null=null;
-    let workCategoriesCategory: CustomModuleDataCategory | null=null;
-    let settingsCategory: CustomModuleDataCategory | null=null;
-    let settingsBackupsCategory: CustomModuleDataCategory | null=null;
-    let workCategories: WorkCategory[]=[];
-    let backupsList: SettingsBackup[]=[];
-    let settings: Settings={
+const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) => {
+    let moduleId: number | null = null;
+    let workCategoriesCategory: CustomModuleDataCategory | null = null;
+    let settingsCategory: CustomModuleDataCategory | null = null;
+    let settingsBackupsCategory: CustomModuleDataCategory | null = null;
+    let workCategories: WorkCategory[] = [];
+    let backupsList: SettingsBackup[] = [];
+    let settings: Settings = {
         defaultHoursPerDay: 8,
         defaultHoursPerWeek: 40,
         excelImportEnabled: false, // Disabled by default (Alpha)
@@ -79,30 +79,49 @@ const adminEntryPoint: EntryPoint<AdminData>=({ data, emit, element, KEY }) => {
     };
 
     // UI State
-    let isLoading=true;
-    let errorMessage='';
-    let showAddCategory=false;
-    let editingCategory: WorkCategory | null=null;
+    let isLoading = true;
+    let errorMessage = '';
+    let showAddCategory = false;
+    let editingCategory: WorkCategory | null = null;
 
     // Deletion dialog state
-    let showDeleteDialog=false;
-    let categoryToDelete: WorkCategory | null=null;
-    let replacementCategoryId: string='';
-    let affectedEntriesCount: number=0;
+    let showDeleteDialog = false;
+    let categoryToDelete: WorkCategory | null = null;
+    let replacementCategoryId: string = '';
+    let affectedEntriesCount: number = 0;
 
     // Group Management state
-    let loadingEmployees=false;
-    let employeesList: Array<{ userId: number; userName: string }>=[];
+    let loadingEmployees = false;
+    let employeesList: Array<{ userId: number; userName: string }> = [];
 
     // Dirty state tracking for unsaved changes warning
-    let hasUnsavedGeneralChanges=false;
-    let hasUnsavedGroupChanges=false;
+    let hasUnsavedGeneralChanges = false;
+    let hasUnsavedGroupChanges = false;
+
+    // Original state snapshots for smart change detection
+    let originalGeneralSettings: {
+        defaultHoursPerDay: number;
+        defaultHoursPerWeek: number;
+        excelImportEnabled: boolean;
+        workWeekDays: number[];
+    } = {
+        defaultHoursPerDay: 8,
+        defaultHoursPerWeek: 40,
+        excelImportEnabled: false,
+        workWeekDays: [1, 2, 3, 4, 5]
+    };
+
+    let originalGroupSettings: {
+        employeeGroupId?: number;
+        volunteerGroupId?: number;
+        userHoursConfig?: UserHoursConfig[];
+    } = {};
 
     // Browser warning for unsaved changes
-    const handleBeforeUnload=(e: BeforeUnloadEvent) => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
         if (hasUnsavedGeneralChanges || hasUnsavedGroupChanges) {
             e.preventDefault();
-            e.returnValue=''; // Modern browsers show generic message
+            e.returnValue = ''; // Modern browsers show generic message
         }
     };
     window.addEventListener('beforeunload', handleBeforeUnload);
@@ -110,29 +129,29 @@ const adminEntryPoint: EntryPoint<AdminData>=({ data, emit, element, KEY }) => {
     // Initialize and load settings
     async function initialize() {
         try {
-            isLoading=true;
+            isLoading = true;
             render();
 
             // Get or create extension module
-            const extensionModule=await getOrCreateModule(
+            const extensionModule = await getOrCreateModule(
                 KEY,
                 data.extensionInfo?.name || 'Time Tracker',
                 data.extensionInfo?.description || 'Time tracking for church employees'
             );
-            moduleId=extensionModule.id;
+            moduleId = extensionModule.id;
 
             // Get or create categories
-            workCategoriesCategory=await getOrCreateCategory(
+            workCategoriesCategory = await getOrCreateCategory(
                 'workcategories',
                 'Work Categories',
                 'Categories for time tracking'
             );
-            settingsCategory=await getOrCreateCategory(
+            settingsCategory = await getOrCreateCategory(
                 'settings',
                 'Settings',
                 'Extension configuration settings'
             );
-            settingsBackupsCategory=await getOrCreateCategory(
+            settingsBackupsCategory = await getOrCreateCategory(
                 'settings_backups',
                 'Settings Backups',
                 'Automatic backups of extension settings'
@@ -145,7 +164,7 @@ const adminEntryPoint: EntryPoint<AdminData>=({ data, emit, element, KEY }) => {
             await Promise.all([
                 loadWorkCategories(),
                 loadSettings(),
-                (async () => { backupsList=await getBackups(); })()
+                (async () => { backupsList = await getBackups(); })()
             ]);
 
             // Auto-load employees if employee group ID is configured
@@ -153,13 +172,13 @@ const adminEntryPoint: EntryPoint<AdminData>=({ data, emit, element, KEY }) => {
                 await loadEmployeesFromGroup(settings.employeeGroupId);
             }
 
-            isLoading=false;
-            errorMessage='';
+            isLoading = false;
+            errorMessage = '';
             render();
         } catch (error) {
             console.error('[TimeTracker Admin] Initialization error:', error);
-            isLoading=false;
-            errorMessage=error instanceof Error ? error.message : 'Failed to initialize';
+            isLoading = false;
+            errorMessage = error instanceof Error ? error.message : 'Failed to initialize';
             render();
         }
     }
@@ -170,12 +189,12 @@ const adminEntryPoint: EntryPoint<AdminData>=({ data, emit, element, KEY }) => {
         name: string,
         description: string
     ): Promise<CustomModuleDataCategory> {
-        const existing=await getCustomDataCategory<object>(shorty);
+        const existing = await getCustomDataCategory<object>(shorty);
         if (existing) {
             return existing;
         }
 
-        const created=await createCustomDataCategory(
+        const created = await createCustomDataCategory(
             {
                 customModuleId: moduleId!,
                 name,
@@ -195,17 +214,17 @@ const adminEntryPoint: EntryPoint<AdminData>=({ data, emit, element, KEY }) => {
     // One-time cleanup: Remove old default categories
     async function removeOldDefaultCategories(): Promise<void> {
         try {
-            const values=await getCustomDataValues<WorkCategory>(
+            const values = await getCustomDataValues<WorkCategory>(
                 workCategoriesCategory!.id,
                 moduleId!
             );
 
-            const categoriesToRemove=['Office Work', 'Pastoral Care', 'Event Preparation', 'Administration'];
-            let removedCount=0;
+            const categoriesToRemove = ['Office Work', 'Pastoral Care', 'Event Preparation', 'Administration'];
+            let removedCount = 0;
 
             for (const value of values) {
                 if (categoriesToRemove.includes(value.name)) {
-                    const kvStoreId=(value as any).id;
+                    const kvStoreId = (value as any).id;
                     if (kvStoreId && typeof kvStoreId === 'number') {
                         try {
                             await deleteCustomDataValue(
@@ -222,7 +241,7 @@ const adminEntryPoint: EntryPoint<AdminData>=({ data, emit, element, KEY }) => {
                 }
             }
 
-            if (removedCount> 0) {
+            if (removedCount > 0) {
                 console.log(`[TimeTracker Admin] Cleanup complete. Removed ${removedCount} old default categories.`);
             }
         } catch (error) {
@@ -240,9 +259,9 @@ const adminEntryPoint: EntryPoint<AdminData>=({ data, emit, element, KEY }) => {
                 );
 
             // Parse each value and preserve both string ID and numeric kvStoreId
-            workCategories=rawValues.map(rawVal => {
-                const kvStoreId=rawVal.id; // Numeric KV-Store ID
-                const parsedCategory=JSON.parse(rawVal.value) as WorkCategory;
+            workCategories = rawValues.map(rawVal => {
+                const kvStoreId = rawVal.id; // Numeric KV-Store ID
+                const parsedCategory = JSON.parse(rawVal.value) as WorkCategory;
 
                 return {
                     id: parsedCategory.id, // String ID from stored data
@@ -255,25 +274,25 @@ const adminEntryPoint: EntryPoint<AdminData>=({ data, emit, element, KEY }) => {
             console.log('[TimeTracker Admin] Loaded categories:', workCategories);
         } catch (error) {
             console.error('[TimeTracker Admin] Failed to load categories:', error);
-            workCategories=[];
+            workCategories = [];
         }
     }
 
     // Load settings
     async function loadSettings(): Promise<void> {
         try {
-            const values=await getCustomDataValues<Settings>(
+            const values = await getCustomDataValues<Settings>(
                 settingsCategory!.id,
                 moduleId!
             );
 
-            if (values.length> 0) {
-                settings=values[0];
+            if (values.length > 0) {
+                settings = values[0];
 
                 // Migration: Ensure schemaVersion exists
                 if (!settings.schemaVersion) {
-                    settings.schemaVersion=1;
-                    settings.lastModified=Date.now();
+                    settings.schemaVersion = 1;
+                    settings.lastModified = Date.now();
                 }
             } else {
                 // Create default settings
@@ -285,6 +304,20 @@ const adminEntryPoint: EntryPoint<AdminData>=({ data, emit, element, KEY }) => {
                     moduleId!
                 );
             }
+
+            // Initialize original state snapshots for smart change detection
+            originalGeneralSettings = {
+                defaultHoursPerDay: settings.defaultHoursPerDay,
+                defaultHoursPerWeek: settings.defaultHoursPerWeek,
+                excelImportEnabled: settings.excelImportEnabled,
+                workWeekDays: settings.workWeekDays ? [...settings.workWeekDays] : [1, 2, 3, 4, 5]
+            };
+
+            originalGroupSettings = {
+                employeeGroupId: settings.employeeGroupId,
+                volunteerGroupId: settings.volunteerGroupId,
+                userHoursConfig: settings.userHoursConfig ? JSON.parse(JSON.stringify(settings.userHoursConfig)) : undefined
+            };
         } catch (error) {
             console.error('[TimeTracker Admin] Failed to load settings:', error);
         }
@@ -314,16 +347,16 @@ const adminEntryPoint: EntryPoint<AdminData>=({ data, emit, element, KEY }) => {
     async function createBackup(currentSettings: Settings, summary: string): Promise<void> {
         try {
             // Load existing backups
-            const backupValues=await getCustomDataValues<SettingsBackup>(
+            const backupValues = await getCustomDataValues<SettingsBackup>(
                 settingsBackupsCategory!.id,
                 moduleId!
             );
 
             // Sort by timestamp descending
-            const backups=backupValues.sort((a, b) => b.timestamp - a.timestamp);
+            const backups = backupValues.sort((a, b) => b.timestamp - a.timestamp);
 
             // Create new backup
-            const newBackup: SettingsBackup={
+            const newBackup: SettingsBackup = {
                 timestamp: Date.now(),
                 settings: JSON.parse(JSON.stringify(currentSettings)), // Deep copy
                 summary,
@@ -340,10 +373,10 @@ const adminEntryPoint: EntryPoint<AdminData>=({ data, emit, element, KEY }) => {
             );
 
             // Prune old backups if we exceed MAX_BACKUPS
-            if (backups.length>= MAX_BACKUPS) {
-                const backupsToDelete=backups.slice(MAX_BACKUPS - 1); // Keep 4, add 1=5
+            if (backups.length >= MAX_BACKUPS) {
+                const backupsToDelete = backups.slice(MAX_BACKUPS - 1); // Keep 4, add 1 = 5
                 for (const backup of backupsToDelete) {
-                    const kvStoreId=(backup as any).id;
+                    const kvStoreId = (backup as any).id;
                     if (kvStoreId) {
                         await deleteCustomDataValue(settingsBackupsCategory!.id, kvStoreId);
                     }
@@ -360,7 +393,7 @@ const adminEntryPoint: EntryPoint<AdminData>=({ data, emit, element, KEY }) => {
     // Get backups
     async function getBackups(): Promise<SettingsBackup[]> {
         try {
-            const values=await getCustomDataValues<SettingsBackup>(
+            const values = await getCustomDataValues<SettingsBackup>(
                 settingsBackupsCategory!.id,
                 moduleId!
             );
@@ -378,8 +411,8 @@ const adminEntryPoint: EntryPoint<AdminData>=({ data, emit, element, KEY }) => {
         }
 
         try {
-            const backups=await getBackups();
-            const backupToRestore=backups.find((b: any) => b.id === backupId);
+            const backups = await getBackups();
+            const backupToRestore = backups.find((b: any) => b.id === backupId);
 
             if (!backupToRestore) {
                 alert('Backup not found!');
@@ -392,7 +425,7 @@ const adminEntryPoint: EntryPoint<AdminData>=({ data, emit, element, KEY }) => {
             alert('Settings restored successfully!');
 
             // Reload backups list
-            backupsList=await getBackups();
+            backupsList = await getBackups();
             render();
         } catch (e) {
             console.error('[TimeTracker Admin] Restore failed:', e);
@@ -401,9 +434,9 @@ const adminEntryPoint: EntryPoint<AdminData>=({ data, emit, element, KEY }) => {
     }
 
     // Save settings with validation and backup
-    async function saveSettings(newSettings: Settings, changeSummary: string='Settings updated'): Promise<void> {
+    async function saveSettings(newSettings: Settings, changeSummary: string = 'Settings updated'): Promise<void> {
         // 1. Validate
-        const validation=validateSettings(newSettings);
+        const validation = validateSettings(newSettings);
         if (!validation.isValid) {
             throw new Error(`Settings validation failed: ${validation.error}`);
         }
@@ -415,16 +448,16 @@ const adminEntryPoint: EntryPoint<AdminData>=({ data, emit, element, KEY }) => {
             }
 
             // 3. Update Metadata
-            newSettings.lastModified=Date.now();
-            newSettings.schemaVersion=CURRENT_SCHEMA_VERSION;
+            newSettings.lastModified = Date.now();
+            newSettings.schemaVersion = CURRENT_SCHEMA_VERSION;
 
-            const values=await getCustomDataValues<Settings>(
+            const values = await getCustomDataValues<Settings>(
                 settingsCategory!.id,
                 moduleId!
             );
 
-            if (values.length> 0) {
-                const settingId=(values[0] as any).id;
+            if (values.length > 0) {
+                const settingId = (values[0] as any).id;
                 await updateCustomDataValue(
                     settingsCategory!.id,
                     settingId,
@@ -444,8 +477,9 @@ const adminEntryPoint: EntryPoint<AdminData>=({ data, emit, element, KEY }) => {
             }
 
             // Update local state
-            settings=newSettings;
-            // Note: Dirty flags are reset in the calling function (handleSaveSettings or handleSaveGroupSettings)
+            settings = newSettings;
+            // Note: Dirty flags reset in calling functions
+
 
         } catch (error) {
             console.error('[TimeTracker Admin] Failed to save settings:', error);
@@ -456,17 +490,17 @@ const adminEntryPoint: EntryPoint<AdminData>=({ data, emit, element, KEY }) => {
     // Load employees from a ChurchTools group with soft-delete support
     async function loadEmployeesFromGroup(groupId: number): Promise<void> {
         try {
-            loadingEmployees=true;
+            loadingEmployees = true;
             render();
 
             // Get members of the group from ChurchTools API
-            const groupMembers=await churchtoolsClient.get(`/groups/${groupId}/members`) as any[];
+            const groupMembers = await churchtoolsClient.get(`/groups/${groupId}/members`) as any[];
 
             // Extract user IDs from current group
-            const currentGroupUserIds=new Set(groupMembers.map((member: { personId?: number; id?: number }) => member.personId || member.id));
+            const currentGroupUserIds = new Set(groupMembers.map((member: { personId?: number; id?: number }) => member.personId || member.id));
 
             // Build employee list from current group members
-            employeesList=groupMembers.map((member: {
+            employeesList = groupMembers.map((member: {
                 personId?: number;
                 id?: number;
                 person?: { domainAttributes?: { firstName?: string; lastName?: string } };
@@ -476,22 +510,22 @@ const adminEntryPoint: EntryPoint<AdminData>=({ data, emit, element, KEY }) => {
                 nachname?: string;
                 name?: string;
             }) => {
-                let firstName='';
-                let lastName='';
+                let firstName = '';
+                let lastName = '';
 
                 // Names are in person.domainAttributes (ChurchTools API structure)
                 if (member.person?.domainAttributes) {
-                    firstName=member.person.domainAttributes.firstName || '';
-                    lastName=member.person.domainAttributes.lastName || '';
+                    firstName = member.person.domainAttributes.firstName || '';
+                    lastName = member.person.domainAttributes.lastName || '';
                 }
 
                 // Fallback to member properties directly (if API structure changes)
                 if (!firstName && !lastName) {
-                    firstName=member.firstName || member.vorname || '';
-                    lastName=member.lastName || member.nachname || member.name || '';
+                    firstName = member.firstName || member.vorname || '';
+                    lastName = member.lastName || member.nachname || member.name || '';
                 }
 
-                const userName=(firstName && lastName)
+                const userName = (firstName && lastName)
                     ? `${firstName} ${lastName}`
                     : (firstName || lastName || `User ${member.personId || member.id}`);
 
@@ -514,10 +548,10 @@ const adminEntryPoint: EntryPoint<AdminData>=({ data, emit, element, KEY }) => {
                 settings.userHoursConfig.forEach(config => {
                     if (currentGroupUserIds.has(config.userId)) {
                         // User is in group - mark as active (re-mapping)
-                        config.isActive=true;
+                        config.isActive = true;
                     } else {
                         // User not in group - mark as inactive (soft delete)
-                        config.isActive=false;
+                        config.isActive = false;
                     }
                 });
 
@@ -532,12 +566,12 @@ const adminEntryPoint: EntryPoint<AdminData>=({ data, emit, element, KEY }) => {
                 });
             }
 
-            loadingEmployees=false;
+            loadingEmployees = false;
             render();
         } catch (error) {
             console.error('[TimeTracker Admin] Failed to load employees:', error);
-            loadingEmployees=false;
-            employeesList=[];
+            loadingEmployees = false;
+            employeesList = [];
 
             emit('notification:show', {
                 message: 'Failed to load employees from group. Please check the group ID.',
@@ -553,8 +587,8 @@ const adminEntryPoint: EntryPoint<AdminData>=({ data, emit, element, KEY }) => {
     async function saveCategory(category: WorkCategory): Promise<void> {
         try {
             // Prepare data without kvStoreId (that's metadata, not part of the stored value)
-            const { kvStoreId, ...categoryData }=category;
-            const valueData=JSON.stringify(categoryData);
+            const { kvStoreId, ...categoryData } = category;
+            const valueData = JSON.stringify(categoryData);
 
             if (kvStoreId) {
                 // Update existing - we have a kvStoreId
@@ -566,9 +600,9 @@ const adminEntryPoint: EntryPoint<AdminData>=({ data, emit, element, KEY }) => {
                 );
 
                 // Update in local array
-                const index=workCategories.findIndex((c) => c.kvStoreId === kvStoreId);
+                const index = workCategories.findIndex((c) => c.kvStoreId === kvStoreId);
                 if (index !== -1) {
-                    workCategories[index]=category;
+                    workCategories[index] = category;
                 }
             } else {
                 // Create new - no kvStoreId yet
@@ -592,10 +626,10 @@ const adminEntryPoint: EntryPoint<AdminData>=({ data, emit, element, KEY }) => {
     // Check how many time entries use a specific category
     async function countEntriesUsingCategory(categoryId: string): Promise<number> {
         try {
-            const timeEntriesCategory=await getCustomDataCategory<object>('timeentries');
+            const timeEntriesCategory = await getCustomDataCategory<object>('timeentries');
             if (!timeEntriesCategory) return 0;
 
-            const timeEntries=await getCustomDataValues<{ categoryId: string }>(
+            const timeEntries = await getCustomDataValues<{ categoryId: string }>(
                 timeEntriesCategory.id,
                 moduleId!
             );
@@ -610,7 +644,7 @@ const adminEntryPoint: EntryPoint<AdminData>=({ data, emit, element, KEY }) => {
     // Reassign all time entries from one category to another
     async function reassignTimeEntries(fromCategoryId: string, toCategoryId: string): Promise<void> {
         try {
-            const timeEntriesCategory=await getCustomDataCategory<object>('timeentries');
+            const timeEntriesCategory = await getCustomDataCategory<object>('timeentries');
             if (!timeEntriesCategory) return;
 
             // Get raw values to access kvStoreId
@@ -619,20 +653,20 @@ const adminEntryPoint: EntryPoint<AdminData>=({ data, emit, element, KEY }) => {
                     `/custommodules/${moduleId}/customdatacategories/${timeEntriesCategory.id}/customdatavalues`
                 );
 
-            const toCategory=workCategories.find(c => c.id === toCategoryId);
+            const toCategory = workCategories.find(c => c.id === toCategoryId);
             if (!toCategory) {
                 throw new Error('Replacement category not found');
             }
 
-            let updatedCount=0;
+            let updatedCount = 0;
 
             for (const rawVal of rawValues) {
-                const entry=JSON.parse(rawVal.value);
+                const entry = JSON.parse(rawVal.value);
 
                 if (entry.categoryId === fromCategoryId) {
                     // Update the entry with new category
-                    entry.categoryId=toCategoryId;
-                    entry.categoryName=toCategory.name;
+                    entry.categoryId = toCategoryId;
+                    entry.categoryName = toCategory.name;
 
                     await updateCustomDataValue(
                         timeEntriesCategory.id,
@@ -655,19 +689,19 @@ const adminEntryPoint: EntryPoint<AdminData>=({ data, emit, element, KEY }) => {
     // Initiate category deletion (check for usage first)
     async function initiateDeleteCategory(categoryId: string): Promise<void> {
         try {
-            const category=workCategories.find((c) => c.id === categoryId);
+            const category = workCategories.find((c) => c.id === categoryId);
             if (!category) {
                 throw new Error('Category not found');
             }
 
             // Check if any entries use this category
-            affectedEntriesCount=await countEntriesUsingCategory(categoryId);
+            affectedEntriesCount = await countEntriesUsingCategory(categoryId);
 
-            if (affectedEntriesCount> 0) {
+            if (affectedEntriesCount > 0) {
                 // Show dialog to select replacement category
-                categoryToDelete=category;
-                showDeleteDialog=true;
-                replacementCategoryId=workCategories.find(c => c.id !== categoryId)?.id || '';
+                categoryToDelete = category;
+                showDeleteDialog = true;
+                replacementCategoryId = workCategories.find(c => c.id !== categoryId)?.id || '';
                 render();
             } else {
                 // No entries using this category, delete immediately
@@ -703,10 +737,10 @@ const adminEntryPoint: EntryPoint<AdminData>=({ data, emit, element, KEY }) => {
             await deleteCategory(categoryToDelete.id);
 
             // Reset dialog state
-            showDeleteDialog=false;
-            categoryToDelete=null;
-            replacementCategoryId='';
-            affectedEntriesCount=0;
+            showDeleteDialog = false;
+            categoryToDelete = null;
+            replacementCategoryId = '';
+            affectedEntriesCount = 0;
 
             emit('notification', {
                 message: 'Category deleted and entries reassigned successfully!',
@@ -727,10 +761,10 @@ const adminEntryPoint: EntryPoint<AdminData>=({ data, emit, element, KEY }) => {
 
     // Cancel deletion
     function cancelDeleteCategory(): void {
-        showDeleteDialog=false;
-        categoryToDelete=null;
-        replacementCategoryId='';
-        affectedEntriesCount=0;
+        showDeleteDialog = false;
+        categoryToDelete = null;
+        replacementCategoryId = '';
+        affectedEntriesCount = 0;
         render();
     }
 
@@ -738,7 +772,7 @@ const adminEntryPoint: EntryPoint<AdminData>=({ data, emit, element, KEY }) => {
     async function deleteCategory(categoryId: string): Promise<void> {
         try {
             // Find the category in our local array (which has kvStoreId)
-            const category=workCategories.find((c) => c.id === categoryId);
+            const category = workCategories.find((c) => c.id === categoryId);
 
             if (category && category.kvStoreId) {
                 await deleteCustomDataValue(
@@ -748,7 +782,7 @@ const adminEntryPoint: EntryPoint<AdminData>=({ data, emit, element, KEY }) => {
                 );
 
                 // Remove from local array
-                workCategories=workCategories.filter((c) => c.id !== categoryId);
+                workCategories = workCategories.filter((c) => c.id !== categoryId);
             } else {
                 throw new Error('Category not found or missing kvStoreId');
             }
@@ -759,17 +793,111 @@ const adminEntryPoint: EntryPoint<AdminData>=({ data, emit, element, KEY }) => {
     }
 
     // Render UI
+    // Check if current values differ from original state
+    function checkGeneralChanges(): boolean {
+        const hoursPerDayInput = element.querySelector('#hours-per-day') as HTMLInputElement;
+        const hoursPerWeekInput = element.querySelector('#hours-per-week') as HTMLInputElement;
+        const excelImportToggle = element.querySelector('#excel-import-toggle') as HTMLInputElement;
+        
+        if (!hoursPerDayInput || !hoursPerWeekInput || !excelImportToggle) return false;
+
+        // Check simple values
+        if (parseFloat(hoursPerDayInput.value) !== originalGeneralSettings.defaultHoursPerDay) return true;
+        if (parseFloat(hoursPerWeekInput.value) !== originalGeneralSettings.defaultHoursPerWeek) return true;
+        if (excelImportToggle.checked !== originalGeneralSettings.excelImportEnabled) return true;
+
+        // Check work week days
+        const currentWorkWeekDays: number[] = [];
+        element.querySelectorAll('.work-week-day-checkbox').forEach((checkbox, index) => {
+            if ((checkbox as HTMLInputElement).checked) {
+                currentWorkWeekDays.push(index);
+            }
+        });
+        
+        if (currentWorkWeekDays.length !== originalGeneralSettings.workWeekDays.length) return true;
+        if (!currentWorkWeekDays.every((day, idx) => day === originalGeneralSettings.workWeekDays[idx])) return true;
+
+        return false;
+    }
+
+    function checkGroupChanges(): boolean {
+        const employeeGroupIdInput = element.querySelector('#employee-group-id') as HTMLInputElement;
+        const volunteerGroupIdInput = element.querySelector('#volunteer-group-id') as HTMLInputElement;
+        
+        if (!employeeGroupIdInput || !volunteerGroupIdInput) return false;
+
+        // Check group IDs
+        const currentEmployeeGroupId = employeeGroupIdInput.value ? parseInt(employeeGroupIdInput.value) : undefined;
+        const currentVolunteerGroupId = volunteerGroupIdInput.value ? parseInt(volunteerGroupIdInput.value) : undefined;
+        
+        if (currentEmployeeGroupId !== originalGroupSettings.employeeGroupId) return true;
+        if (currentVolunteerGroupId !== originalGroupSettings.volunteerGroupId) return true;
+
+        // Check user hours configs
+        const currentUserConfigs: UserHoursConfig[] = [];
+        employeesList.forEach((emp) => {
+            const dayInput = element.querySelector(`.employee-hours-day[data-user-id="${emp.userId}"]`) as HTMLInputElement;
+            const weekInput = element.querySelector(`.employee-hours-week[data-user-id="${emp.userId}"]`) as HTMLInputElement;
+            
+            if (dayInput && weekInput) {
+                const hoursPerDay = parseFloat(dayInput.value) || originalGeneralSettings.defaultHoursPerDay;
+                const hoursPerWeek = parseFloat(weekInput.value) || originalGeneralSettings.defaultHoursPerWeek;
+                
+                // Check work week days for this user
+                const workWeekDays: number[] = [];
+                element.querySelectorAll(`.user-work-week-checkbox[data-user-id="${emp.userId}"]`).forEach((checkbox) => {
+                    const day = parseInt((checkbox as HTMLInputElement).dataset.day!);
+                    if ((checkbox as HTMLInputElement).checked) {
+                        workWeekDays.push(day);
+                    }
+                });
+                
+                currentUserConfigs.push({
+                    userId: emp.userId,
+                    userName: emp.userName,
+                    hoursPerDay,
+                    hoursPerWeek,
+                    workWeekDays: workWeekDays.length > 0 ? workWeekDays : undefined
+                });
+            }
+        });
+
+        // Compare with original
+        const originalConfigs = originalGroupSettings.userHoursConfig || [];
+        if (currentUserConfigs.length !== originalConfigs.length) return true;
+        
+        for (const current of currentUserConfigs) {
+            const original = originalConfigs.find(c => c.userId === current.userId);
+            if (!original) return true;
+            if (current.hoursPerDay !== original.hoursPerDay) return true;
+            if (current.hoursPerWeek !== original.hoursPerWeek) return true;
+            
+            // Compare work week days
+            const currentDays = current.workWeekDays || [];
+            const originalDays = original.workWeekDays || [];
+            if (currentDays.length !== originalDays.length) return true;
+            if (!currentDays.every((day, idx) => day === originalDays[idx])) return true;
+        }
+
+        return false;
+    }
+
     // Update save button visual state based on dirty flag
     function updateSaveButtonState() {
-        const saveGroupBtn=element.querySelector('#save-group-settings-btn') as HTMLButtonElement;
-        const saveGeneralBtn=element.querySelector('#save-settings-btn') as HTMLButtonElement;
+        // Check if there are actual changes
+        hasUnsavedGeneralChanges = checkGeneralChanges();
+        hasUnsavedGroupChanges = checkGroupChanges();
 
-        const updateButton=(btn: HTMLButtonElement, label: string, isDirty: boolean) => {
+        const saveGroupBtn = element.querySelector('#save-group-settings-btn') as HTMLButtonElement;
+        const saveGeneralBtn = element.querySelector('#save-settings-btn') as HTMLButtonElement;
+
+        const updateButton = (btn: HTMLButtonElement, label: string, isDirty: boolean) => {
+            if (!btn) return;
+            
             if (isDirty) {
-                btn.style.background='#dc3545'; // Red
-                btn.style.animation='pulse 2s ease-in-out infinite';
-                btn.innerHTML=`
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 0.5rem;">
+                btn.style.cssText = 'width: 100%; display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 0.75rem 1.5rem; background: #dc3545 !important; color: white !important; border: none !important; border-radius: 4px !important; cursor: pointer !important; font-size: 1rem !important; font-weight: 600 !important; transition: background 0.2s !important; animation: pulse 2s ease-in-out infinite;';
+                btn.innerHTML = `
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
                         <polyline points="17 21 17 13 7 13 7 21"></polyline>
                         <polyline points="7 3 7 8 15 8"></polyline>
@@ -777,10 +905,9 @@ const adminEntryPoint: EntryPoint<AdminData>=({ data, emit, element, KEY }) => {
                     Save ${label} (Unsaved Changes!)
                 `;
             } else {
-                btn.style.background='#28a745'; // Green
-                btn.style.animation='';
-                btn.innerHTML=`
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 0.5rem;">
+                btn.style.cssText = 'width: 100%; display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 0.75rem 1.5rem; background: #28a745 !important; color: white !important; border: none !important; border-radius: 4px !important; cursor: pointer !important; font-size: 1rem !important; font-weight: 600 !important; transition: background 0.2s !important;';
+                btn.innerHTML = `
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M5 13l4 4L19 7"></path>
                     </svg>
                     ${label} Saved
@@ -802,9 +929,9 @@ const adminEntryPoint: EntryPoint<AdminData>=({ data, emit, element, KEY }) => {
             `;
         }
 
-        const backupsHtml=backupsList.map(backup => {
-            const date=new Date(backup.timestamp).toLocaleString();
-            const id=(backup as any).id; // KV Store ID
+        const backupsHtml = backupsList.map(backup => {
+            const date = new Date(backup.timestamp).toLocaleString();
+            const id = (backup as any).id; // KV Store ID
             return `
                 <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.75rem; border-bottom: 1px solid #eee;">
                     <div>
@@ -832,7 +959,7 @@ const adminEntryPoint: EntryPoint<AdminData>=({ data, emit, element, KEY }) => {
     }
 
     function render() {
-        element.innerHTML=`
+        element.innerHTML = `
             <div style="max-width: 900px; margin: 2rem auto; padding: 2rem;">
                 <!-- Extension Info Header -->
                 <div style="background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
@@ -841,24 +968,27 @@ const adminEntryPoint: EntryPoint<AdminData>=({ data, emit, element, KEY }) => {
                         ${data.extensionInfo?.description || 'Configure time tracking settings'}
                     </p>
                     <div style="display: flex; gap: 1rem; margin-top: 1rem; font-size: 0.85rem; color: #999;">
-                        <span>Version: ${data.extensionInfo?.version || '1.0.0'}</span>
-                        <span>Key: ${data.extensionInfo?.key || 'unknown'}</span>
+                        <span><strong>Version:</strong> ${data.extensionInfo?.version || 'N/A'}</span>
+                        <span><strong>Key:</strong> ${data.extensionInfo?.key || KEY || 'N/A'}</span>
+                        ${data.extensionInfo?.author?.name ? `<span><strong>Author:</strong> ${data.extensionInfo.author.name}</span>` : ''}
                     </div>
                 </div>
 
-            ${isLoading
+                ${isLoading
                 ? `
-                    <div style="display: flex; flex-direction: column; justify-content: center; align-items: center; height: 400px; width: 100%;">
-                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#007bff" stroke-width="2" style="animation: spin 1s linear infinite;">
-                            <style>
-                                @keyframes spin {
-                                    from { transform: rotate(0deg); }
-                                    to { transform: rotate(360deg); }
-                                }
-                            </style>
-                            <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"></path>
-                        </svg>
-                        <p style="margin-top: 1rem; color: #666;">Loading settings...</p>
+                    <div style="max-width: 1200px; margin: 0 auto; text-align: center; padding: 3rem;">
+                        <div style="margin-bottom: 1rem; display: flex; justify-content: center;">
+                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#007bff" stroke-width="2" style="animation: spin 1s linear infinite;">
+                                <style>
+                                    @keyframes spin {
+                                        from { transform: rotate(0deg); }
+                                        to { transform: rotate(360deg); }
+                                    }
+                                </style>
+                                <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"></path>
+                            </svg>
+                        </div>
+                        <p>Loading settings...</p>
                     </div>
                 `
                 : errorMessage
@@ -879,64 +1009,66 @@ const adminEntryPoint: EntryPoint<AdminData>=({ data, emit, element, KEY }) => {
 
         if (!isLoading && !errorMessage) {
             attachEventHandlers();
+            // Initialize button states after render
+            setTimeout(() => updateSaveButtonState(), 0);
         }
     }
 
-
     function renderGeneralSettings(): string {
         return `
+            <!-- General Settings -->
             <div style="background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-            <h2 style="margin: 0 0 1rem 0; font-size: 1.3rem; color: #333;" > General Settings </h2>
-                <p style="margin: 0 0 1.5rem 0; color: #666; font-size: 0.95rem;" >
-                    <strong>Default values </strong> for new employees and fallback when no individual configuration exists.<br>
-                        <em style="color: #856404;" > Individual employee settings(below) override these defaults.</em>
-                            </p>
+                <h2 style="margin: 0 0 1rem 0; font-size: 1.3rem; color: #333;">General Settings</h2>
+                <p style="margin: 0 0 1.5rem 0; color: #666; font-size: 0.95rem;">
+                    <strong>Default values</strong> for new employees and fallback when no individual configuration exists.<br>
+                    <em style="color: #856404;">Individual employee settings (below) override these defaults.</em>
+                </p>
 
-                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;" >
-                                <div>
-                                <label style="display: block; margin-bottom: 0.5rem; color: #333; font-weight: 600;" >
-                                    Default Hours per Day
-                                        </label>
-                                        <input
-        type="number"
-        id="hours-per-day"
-        value="${settings.defaultHoursPerDay}"
-        min="1"
-        max="24"
-        step="0.5"
-        style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 4px; font-size: 1rem;"
-            />
-            <small style="color: #666; font-size: 0.85rem;" > Used for new employees and when no individual config exists </small>
-                </div>
-
-                <div>
-                <label style="display: block; margin-bottom: 0.5rem; color: #333; font-weight: 600;" >
-                    Default Hours per Week
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
+                    <div>
+                        <label style="display: block; margin-bottom: 0.5rem; color: #333; font-weight: 600;">
+                            Default Hours per Day
                         </label>
                         <input
-        type="number"
-        id="hours-per-week"
-        value="${settings.defaultHoursPerWeek}"
-        min="1"
-        max="168"
-        step="0.5"
-        style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 4px; font-size: 1rem;"
-            />
-            <small style="color: #666; font-size: 0.85rem;" > Used for new employees and when no individual config exists </small>
-                </div>
+                            type="number"
+                            id="hours-per-day"
+                            value="${settings.defaultHoursPerDay}"
+                            min="1"
+                            max="24"
+                            step="0.5"
+                            style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 4px; font-size: 1rem;"
+                        />
+                        <small style="color: #666; font-size: 0.85rem;">Used for new employees and when no individual config exists</small>
+                    </div>
+
+                    <div>
+                        <label style="display: block; margin-bottom: 0.5rem; color: #333; font-weight: 600;">
+                            Default Hours per Week
+                        </label>
+                        <input
+                            type="number"
+                            id="hours-per-week"
+                            value="${settings.defaultHoursPerWeek}"
+                            min="1"
+                            max="168"
+                            step="0.5"
+                            style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 4px; font-size: 1rem;"
+                        />
+                        <small style="color: #666; font-size: 0.85rem;">Used for new employees and when no individual config exists</small>
+                    </div>
                 </div>
 
-                < !--Work Week Days Configuration-- >
-                    <div style="margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid #e0e0e0;" >
-                        <h3 style="margin: 0 0 0.5rem 0; font-size: 1.1rem; color: #333;" > Work Week Days(Default) </h3>
-                            <p style="margin: 0 0 1rem 0; color: #666; font-size: 0.95rem;" >
-                                Default work days for SOLL calculation.Used for new employees and as fallback.<br>
-                                    <em style="color: #856404;" > Employees can have individual work weeks(see table below).</em>
-                                        </p>
+                <!-- Work Week Days Configuration -->
+                <div style="margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid #e0e0e0;">
+                    <h3 style="margin: 0 0 0.5rem 0; font-size: 1.1rem; color: #333;">Work Week Days (Default)</h3>
+                    <p style="margin: 0 0 1rem 0; color: #666; font-size: 0.95rem;">
+                        Default work days for SOLL calculation. Used for new employees and as fallback.<br>
+                        <em style="color: #856404;">Employees can have individual work weeks (see table below).</em>
+                    </p>
 
-                                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 0.75rem;" >
-                                            ${['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].map((day, index) => {
-            const isChecked=(settings.workWeekDays || [1, 2, 3, 4, 5]).includes(index);
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 0.75rem;">
+                        ${['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].map((day, index) => {
+            const isChecked = (settings.workWeekDays || [1, 2, 3, 4, 5]).includes(index);
             return `
                                 <label style="display: flex; align-items: center; gap: 0.5rem; padding: 0.75rem; background: ${isChecked ? '#e7f3ff' : '#f8f9fa'}; border: 1px solid ${isChecked ? '#007bff' : '#dee2e6'}; border-radius: 4px; cursor: pointer; transition: all 0.2s;">
                                     <input
@@ -949,123 +1081,118 @@ const adminEntryPoint: EntryPoint<AdminData>=({ data, emit, element, KEY }) => {
                                     <span style="font-weight: ${isChecked ? '600' : '400'}; color: ${isChecked ? '#007bff' : '#333'}; font-size: 0.9rem;">${day}</span>
                                 </label>
                             `;
-        }).join('')
-            }
-        </div>
-            </div>
+        }).join('')}
+                    </div>
+                </div>
 
-            < !--Alpha Features-- >
-                <div style="margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid #e0e0e0;" >
-                    <h3 style="margin: 0 0 0.5rem 0; font-size: 1.1rem; color: #333; display: flex; align-items: center; gap: 0.5rem;" >
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke - width="2" >
-                            <path d="M9 2v6m0 0v6m0-6h6M9 8H3m18 4v6m0 0v2m0-2h-6m6 0h2" > </path>
-                                <circle cx="9" cy="14" r="3" > </circle>
-                                    <circle cx="18" cy="6" r="3" > </circle>
-                                        </svg>
+                <!-- Alpha Features -->
+                <div style="margin-top: 2.5rem; padding-top: 1.5rem; border-top: 1px solid #e0e0e0;">
+                    <h3 style="margin: 0 0 0.5rem 0; font-size: 1.1rem; color: #333; display: flex; align-items: center; gap: 0.5rem;">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M9 2v6m0 0v6m0-6h6M9 8H3m18 4v6m0 0v2m0-2h-6m6 0h2"></path>
+                            <circle cx="9" cy="14" r="3"></circle>
+                            <circle cx="18" cy="6" r="3"></circle>
+                        </svg>
                         Alpha Features
-            </h3>
-            <p style="margin: 0 0 1rem 0; color: #ff9800; font-size: 0.9rem; background: #fff3e0; padding: 0.75rem; border-radius: 4px; border-left: 3px solid #ff9800;" >
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#856404" stroke - width="2" style="display: inline-block; vertical-align: middle; margin-right: 0.5rem;" >
-                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" > </path>
-                        <line x1="12" y1="9" x2="12" y2="13" > </line>
-                            <line x1="12" y1="17" x2="12.01" y2="17" > </line>
-                                </svg>
-                        These features are experimental and may not work as expected.Use at your own risk.
+                    </h3>
+                    <p style="margin: 0 0 1rem 0; color: #ff9800; font-size: 0.9rem; background: #fff3e0; padding: 0.75rem; border-radius: 4px; border-left: 3px solid #ff9800;">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#856404" stroke-width="2" style="display: inline-block; vertical-align: middle; margin-right: 0.5rem;">
+                            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                            <line x1="12" y1="9" x2="12" y2="13"></line>
+                            <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                        </svg>
+                        These features are experimental and may not work as expected. Use at your own risk.
                     </p>
 
-            <label style="display: flex; align-items: center; cursor: pointer; padding: 0.75rem; background: #f8f9fa; border-radius: 4px; border: 1px solid #e0e0e0;" >
-                <input
+                    <label style="display: flex; align-items: center; cursor: pointer; padding: 0.75rem; background: #f8f9fa; border-radius: 4px; border: 1px solid #e0e0e0;">
+                        <input
                             type="checkbox"
-        id="excel-import-toggle"
+                            id="excel-import-toggle"
                             ${settings.excelImportEnabled ? 'checked' : ''}
-        style="width: 20px; height: 20px; margin-right: 0.75rem; cursor: pointer;"
-            />
-            <div style="flex: 1;" >
-                <div style="font-weight: 600; color: #333; margin-bottom: 0.25rem;" >
-                    Enable Excel Import / Export
-                        <span style="background: #ff9800; color: white; padding: 0.125rem 0.5rem; border-radius: 3px; font-size: 0.75rem; margin-left: 0.5rem; font-weight: 700;" > ALPHA </span>
+                            style="width: 20px; height: 20px; margin-right: 0.75rem; cursor: pointer;"
+                        />
+                        <div style="flex: 1;">
+                            <div style="font-weight: 600; color: #333; margin-bottom: 0.25rem;">
+                                Enable Excel Import/Export
+                                <span style="background: #ff9800; color: white; padding: 0.125rem 0.5rem; border-radius: 3px; font-size: 0.75rem; margin-left: 0.5rem; font-weight: 700;">ALPHA</span>
                             </div>
-                            <div style="color: #666; font-size: 0.85rem;" >
-                                Bulk import time entries from Excel templates.Currently experiencing issues.
+                            <div style="color: #666; font-size: 0.85rem;">
+                                Bulk import time entries from Excel templates. Currently experiencing issues.
                             </div>
-                                    </div>
-                                    </label>
-                                    </div>
-
-                                    <button
-        id="save-settings-btn"
-        style="width: 100%; padding: 0.75rem; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 1rem; font-weight: 600; transition: background 0.2s; display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;"
-        onmouseover="this.style.background='#0056b3'"
-        onmouseout="this.style.background='#007bff'"
-            >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke - width="2" >
-                <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" > </path>
-                    <polyline points="17 21 17 13 7 13 7 21" > </polyline>
-                        <polyline points="7 3 7 8 15 8" > </polyline>
-                            </svg>
-                    Save General Settings
-            </button>
-
-            <div id="settings-status" style="margin-top: 1rem; padding: 0.75rem; border-radius: 4px; display: none;" > </div>
+                        </div>
+                    </label>
                 </div>
-                    `;
+
+                <button
+                    id="save-settings-btn"
+                    style="width: 100%; padding: 0.75rem 1.5rem; background: #28a745 !important; color: white !important; border: none !important; border-radius: 4px !important; cursor: pointer !important; font-size: 1rem !important; font-weight: 600 !important; display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; margin-top: 3rem; transition: background 0.2s !important;"
+                >
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M5 13l4 4L19 7"></path>
+                    </svg>
+                    General Settings Saved
+                </button>
+
+                <div id="settings-status" style="margin-top: 1rem; padding: 0.75rem; border-radius: 4px; display: none;"></div>
+            </div>
+        `;
     }
 
     function renderGroupManagement(): string {
         // Initialize userHoursConfig if not present
         if (!settings.userHoursConfig) {
-            settings.userHoursConfig=[];
+            settings.userHoursConfig = [];
         }
 
         return `
-                < !--Group Management-- >
-                    <div style="background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);" >
-                        <h2 style="margin: 0 0 1rem 0; font-size: 1.3rem; color: #333;" >👥 Group Management & Access Control </h2>
-                            <p style="margin: 0 0 1.5rem 0; color: #666; font-size: 0.95rem;" >
-                                Configure ChurchTools groups for employees and volunteers.Employees get individual SOLL hours, volunteers track time without SOLL requirements.
+            <!-- Group Management -->
+            <div style="background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                <h2 style="margin: 0 0 1rem 0; font-size: 1.3rem; color: #333;">👥 Group Management & Access Control</h2>
+                <p style="margin: 0 0 1.5rem 0; color: #666; font-size: 0.95rem;">
+                    Configure ChurchTools groups for employees and volunteers. Employees get individual SOLL hours, volunteers track time without SOLL requirements.
                 </p>
 
-                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;" >
-                                        <div>
-                                        <label style="display: block; margin-bottom: 0.5rem; color: #333; font-weight: 600;" >
-                                            Employee Group ID
-                                                </label>
-                                                <input
-        type="number"
-        id="employee-group-id"
-        value="${settings.employeeGroupId || ''}"
-        placeholder="e.g., 42"
-        style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 4px; font-size: 1rem;"
-            />
-            <small style="color: #666; font-size: 0.85rem;" > ChurchTools group for employees with individual SOLL hours </small>
-                </div>
-
-                <div>
-                <label style="display: block; margin-bottom: 0.5rem; color: #333; font-weight: 600;" >
-                    Volunteer Group ID
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
+                    <div>
+                        <label style="display: block; margin-bottom: 0.5rem; color: #333; font-weight: 600;">
+                            Employee Group ID
                         </label>
                         <input
-        type="number"
-        id="volunteer-group-id"
-        value="${settings.volunteerGroupId || ''}"
-        placeholder="e.g., 43"
-        style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 4px; font-size: 1rem;"
-            />
-            <small style="color: #666; font-size: 0.85rem;" > ChurchTools group for volunteers(no SOLL requirements) </small>
-                </div>
+                            type="number"
+                            id="employee-group-id"
+                            value="${settings.employeeGroupId || ''}"
+                            placeholder="e.g., 42"
+                            style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 4px; font-size: 1rem;"
+                        />
+                        <small style="color: #666; font-size: 0.85rem;">ChurchTools group for employees with individual SOLL hours</small>
+                    </div>
+
+                    <div>
+                        <label style="display: block; margin-bottom: 0.5rem; color: #333; font-weight: 600;">
+                            Volunteer Group ID
+                        </label>
+                        <input
+                            type="number"
+                            id="volunteer-group-id"
+                            value="${settings.volunteerGroupId || ''}"
+                            placeholder="e.g., 43"
+                            style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 4px; font-size: 1rem;"
+                        />
+                        <small style="color: #666; font-size: 0.85rem;">ChurchTools group for volunteers (no SOLL requirements)</small>
+                    </div>
                 </div>
 
-                < !--Employee Configuration-- >
-            <div style= "margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid #e0e0e0;" >
-            <h3 style= "margin: 0 0 0.5rem 0; font-size: 1.1rem; color: #333;" >
-                Individual Employee Configuration
+                <!-- Employee Configuration -->
+                <div style="margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid #e0e0e0;">
+                    <h3 style="margin: 0 0 0.5rem 0; font-size: 1.1rem; color: #333;">
+                        Individual Employee Configuration
                     </h3>
-                    <p style="margin: 0 0 1rem 0; color: #666; font-size: 0.9rem;" >
-                        Configure <strong> individual SOLL hours and work days <strong> for each employee. These settings <strong>override the defaults above</strong>.<br>
-                            <em style="color: #856404;" >⚠️ Click "Save Group Settings" below to save all changes(hours and work week).</em>
-                                </p>
+                    <p style="margin: 0 0 1rem 0; color: #666; font-size: 0.9rem;">
+                        Configure <strong>individual SOLL hours and work days</strong> for each employee. These settings <strong>override the defaults above</strong>.<br>
+                        <em style="color: #856404;">⚠️ Click "Save Group Settings" below to save all changes (hours and work week).</em>
+                    </p>
 
-                    ${employeesList.length> 0 ? `
+                    ${employeesList.length > 0 ? `
                         <!-- Employees Table -->
                         <div style="background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 6px; padding: 1rem;">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin: 0 0 1rem 0;">
@@ -1112,10 +1239,10 @@ const adminEntryPoint: EntryPoint<AdminData>=({ data, emit, element, KEY }) => {
                                     </thead>
                                     <tbody>
                                         ${employeesList.map(emp => {
-            const existingConfig=settings.userHoursConfig?.find(c => c.userId === emp.userId);
-            const hoursPerDay=existingConfig?.hoursPerDay || settings.defaultHoursPerDay;
-            const hoursPerWeek=existingConfig?.hoursPerWeek || settings.defaultHoursPerWeek;
-            const isActive=existingConfig?.isActive !== false;
+            const existingConfig = settings.userHoursConfig?.find(c => c.userId === emp.userId);
+            const hoursPerDay = existingConfig?.hoursPerDay || settings.defaultHoursPerDay;
+            const hoursPerWeek = existingConfig?.hoursPerWeek || settings.defaultHoursPerWeek;
+            const isActive = existingConfig?.isActive !== false;
 
             return `
                                                 <tr style="border-bottom: 1px solid #dee2e6; ${!isActive ? 'background: #fff3cd;' : ''}">
@@ -1124,7 +1251,7 @@ const adminEntryPoint: EntryPoint<AdminData>=({ data, emit, element, KEY }) => {
                                                     </td>
                                                     <td style="padding: 0.75rem;">
                                                         ${isActive ? `
-                                                            <span style="background: #d4edda; color: #155724; padding: 0.25rem 0.5rem; border-radius: 3px; font-size: 0.75rem; font-weight: 600; border: 1px solid #c3e6cb;">
+                                                            <span style="background: #d4edda; color: #155724; padding: 0.25rem 0.5rem; border-radius: 3px; font-size: 0.75rem; font-weight: 600; border: 1px solid #c3e6cb; white-space: nowrap;">
                                                                 ✓ Active
                                                             </span>
                                                         ` : `
@@ -1164,8 +1291,8 @@ const adminEntryPoint: EntryPoint<AdminData>=({ data, emit, element, KEY }) => {
                                                     <td style="padding: 0.75rem;">
                                                         <div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px;">
                                                             ${['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, index) => {
-                const workWeek=existingConfig?.workWeekDays || settings.workWeekDays || [1, 2, 3, 4, 5];
-                const isChecked=workWeek.includes(index);
+                const workWeek = existingConfig?.workWeekDays || settings.workWeekDays || [1, 2, 3, 4, 5];
+                const isChecked = workWeek.includes(index);
                 return `
                                                                 <label style="display: flex; align-items: center; justify-content: center; cursor: ${isActive ? 'pointer' : 'not-allowed'}; opacity: ${isActive ? '1' : '0.5'};" title="${['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][index]}">
                                                                     <input
@@ -1213,51 +1340,46 @@ const adminEntryPoint: EntryPoint<AdminData>=({ data, emit, element, KEY }) => {
                         <p style="color: #666; font-style: italic; background: #f8f9fa; padding: 1rem; border-radius: 4px; border-left: 3px solid #6c757d;">
                             Click "Load Employees" to fetch the employee list from ChurchTools.
                         </p>
-                    ` : '')
-            }
-        </div>
-
-            <button
-        id="save-group-settings-btn"
-        style="width: 100%; padding: 0.75rem; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 1rem; font-weight: 600; margin-top: 1.5rem; transition: background 0.2s; display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;"
-        onmouseover="this.style.background='#218838'"
-        onmouseout="this.style.background='#28a745'"
-            >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke - width="2" >
-                <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" > </path>
-                    <polyline points="17 21 17 13 7 13 7 21" > </polyline>
-                        <polyline points="7 3 7 8 15 8" > </polyline>
-                            </svg>
-                    Save Group Settings
-            </button>
-
-            <div id="group-settings-status" style="margin-top: 1rem; padding: 0.75rem; border-radius: 4px; display: none;" > </div>
+                    ` : '')}
                 </div>
-                    `;
+
+                <button
+                    id="save-group-settings-btn"
+                    style="width: 100%; padding: 0.75rem 1.5rem; background: #28a745 !important; color: white !important; border: none !important; border-radius: 4px !important; cursor: pointer !important; font-size: 1rem !important; font-weight: 600 !important; margin-top: 3rem; display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; transition: background 0.2s !important;"
+                >
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M5 13l4 4L19 7"></path>
+                    </svg>
+                    Group Settings Saved
+                </button>
+
+                <div id="group-settings-status" style="margin-top: 1rem; padding: 0.75rem; border-radius: 4px; display: none;"></div>
+            </div>
+        `;
     }
 
     function renderWorkCategories(): string {
         return `
-                < !--Work Categories-- >
-                    <div style="background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);" >
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;" >
-                            <div>
-                            <h2 style="margin: 0 0 0.25rem 0; font-size: 1.3rem; color: #333;" > Work Categories </h2>
-                                <p style="margin: 0; color: #666; font-size: 0.95rem;" >
-                                    Manage categories for tracking different types of work
-                                        </p>
-                                        </div>
-                                        <button
-        id="add-category-btn"
-        style="padding: 0.5rem 1rem; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; white-space: nowrap; display: inline-flex; align-items: center; gap: 0.5rem;"
-            >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke - width="2" >
-                <line x1="12" y1="5" x2="12" y2="19" > </line>
-                    <line x1="5" y1="12" x2="19" y2="12" > </line>
+            <!-- Work Categories -->
+            <div style="background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                    <div>
+                        <h2 style="margin: 0 0 0.25rem 0; font-size: 1.3rem; color: #333;">Work Categories</h2>
+                        <p style="margin: 0; color: #666; font-size: 0.95rem;">
+                            Manage categories for tracking different types of work
+                        </p>
+                    </div>
+                    <button
+                        id="add-category-btn"
+                        style="padding: 0.5rem 1rem; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; white-space: nowrap; display: inline-flex; align-items: center; gap: 0.5rem;"
+                    >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="12" y1="5" x2="12" y2="19"></line>
+                            <line x1="5" y1="12" x2="19" y2="12"></line>
                         </svg>
                         Add Category
-            </button>
-            </div>
+                    </button>
+                </div>
 
                 ${showAddCategory || editingCategory
                 ? `
@@ -1418,8 +1540,8 @@ const adminEntryPoint: EntryPoint<AdminData>=({ data, emit, element, KEY }) => {
                 : ''
             }
 
-        <!--Categories List-- >
-            ${workCategories.length === 0
+                <!-- Categories List -->
+                ${workCategories.length === 0
                 ? '<p style="color: #666; text-align: center; padding: 2rem;">No categories defined yet. Click "Add Category" to create one.</p>'
                 : `
                     <div style="display: grid; gap: 1rem;">
@@ -1465,57 +1587,28 @@ const adminEntryPoint: EntryPoint<AdminData>=({ data, emit, element, KEY }) => {
                     </div>
                 `
             }
-        </div>
-            `;
+            </div>
+        `;
     }
 
     // Attach event handlers
     function attachEventHandlers() {
         // General Settings
-        const saveSettingsBtn=element.querySelector('#save-settings-btn') as HTMLButtonElement;
-
-        // Track changes in General Settings
-        const hoursPerDayInput=element.querySelector('#hours-per-day');
-        const hoursPerWeekInput=element.querySelector('#hours-per-week');
-        const excelImportToggle=element.querySelector('#excel-import-toggle');
-
-        [hoursPerDayInput, hoursPerWeekInput, excelImportToggle].forEach(input => {
-            input?.addEventListener('change', () => {
-                hasUnsavedGeneralChanges=true;
-                updateSaveButtonState();
-            });
-            input?.addEventListener('input', () => {
-                hasUnsavedGeneralChanges=true;
-                updateSaveButtonState();
-            });
-        });
-
-        // Track changes in Group Settings (Dynamic inputs)
-        const userInputs=element.querySelectorAll('input[id^="hours-per-day-user-"], input[id^="hours-per-week-user-"], input[id^="work-days-user-"]');
-        userInputs.forEach(input => {
-            input.addEventListener('change', () => {
-                hasUnsavedGroupChanges=true;
-                updateSaveButtonState();
-            });
-            input.addEventListener('input', () => {
-                hasUnsavedGroupChanges=true;
-                updateSaveButtonState();
-            });
-        });
+        const saveSettingsBtn = element.querySelector('#save-settings-btn') as HTMLButtonElement;
 
         saveSettingsBtn?.addEventListener('click', async () => {
             await handleSaveSettings();
         });
 
         // Group Management
-        const refreshEmployeesBtn=element.querySelector('#refresh-employees-btn') as HTMLButtonElement;
-        const saveGroupSettingsBtn=element.querySelector('#save-group-settings-btn') as HTMLButtonElement;
+        const refreshEmployeesBtn = element.querySelector('#refresh-employees-btn') as HTMLButtonElement;
+        const saveGroupSettingsBtn = element.querySelector('#save-group-settings-btn') as HTMLButtonElement;
 
         refreshEmployeesBtn?.addEventListener('click', async () => {
-            const employeeGroupIdInput=element.querySelector('#employee-group-id') as HTMLInputElement;
-            const groupId=parseInt(employeeGroupIdInput.value);
+            const employeeGroupIdInput = element.querySelector('#employee-group-id') as HTMLInputElement;
+            const groupId = parseInt(employeeGroupIdInput.value);
 
-            if (groupId && groupId> 0) {
+            if (groupId && groupId > 0) {
                 await loadEmployeesFromGroup(groupId);
             }
         });
@@ -1523,40 +1616,77 @@ const adminEntryPoint: EntryPoint<AdminData>=({ data, emit, element, KEY }) => {
         // Delete employee buttons (event delegation)
         element.querySelectorAll('.delete-employee-btn').forEach(btn => {
             btn.addEventListener('click', async (e) => {
-                const target=e.target as HTMLElement;
-                const userId=parseInt(target.getAttribute('data-user-id') || '0');
-                const userName=target.getAttribute('data-user-name') || 'Unknown';
+                const target = e.target as HTMLElement;
+                const userId = parseInt(target.getAttribute('data-user-id') || '0');
+                const userName = target.getAttribute('data-user-name') || 'Unknown';
 
-                if (confirm(`Delete employee "${userName}" and all their time tracking data ?\n\nThis action cannot be undone!`)) {
+                if (confirm(`Delete employee "${userName}" and all their time tracking data?\n\nThis action cannot be undone!`)) {
                     await handleDeleteEmployee(userId);
                 }
             });
         });
 
+        // Work week checkbox handlers - use smart change detection
+        element.querySelectorAll('.user-work-week-checkbox').forEach(checkbox => {
+            checkbox.addEventListener('change', () => {
+                updateSaveButtonState(); // Smart detection checks actual changes
+            });
+        });
 
+        // Hours input handlers - use smart change detection
+        element.querySelectorAll('.employee-hours-day, .employee-hours-week').forEach(input => {
+            input.addEventListener('input', () => {
+                updateSaveButtonState(); // Smart detection checks actual changes
+            });
+        });
 
+        // General Settings inputs (hours/day, hours/week) - use smart change detection
+        element.querySelectorAll('#hours-per-day, #hours-per-week').forEach(input => {
+            input.addEventListener('input', () => {
+                updateSaveButtonState(); // Smart detection checks actual changes
+            });
+        });
 
+        // Excel import toggle - use smart change detection
+        const excelImportToggle = element.querySelector('#excel-import-toggle');
+        excelImportToggle?.addEventListener('change', () => {
+            updateSaveButtonState(); // Smart detection checks actual changes
+        });
+
+        // Global work week checkboxes - use smart change detection
+        element.querySelectorAll('.work-week-day-checkbox').forEach(checkbox => {
+            checkbox.addEventListener('change', () => {
+                updateSaveButtonState(); // Smart detection checks actual changes
+            });
+        });
+
+        // Group ID inputs - use smart change detection
+        element.querySelectorAll('#employee-group-id, #volunteer-group-id').forEach(input => {
+            input.addEventListener('input', () => {
+                updateSaveButtonState(); // Smart detection checks actual changes
+            });
+        });
 
         saveGroupSettingsBtn?.addEventListener('click', async () => {
             await handleSaveGroupSettings();
         });
 
         // Work Categories
-        const addCategoryBtn=element.querySelector('#add-category-btn') as HTMLButtonElement;
-        const cancelCategoryBtn=element.querySelector(
+        const addCategoryBtn = element.querySelector('#add-category-btn') as HTMLButtonElement;
+        const cancelCategoryBtn = element.querySelector(
             '#cancel-category-btn'
         ) as HTMLButtonElement;
-        const saveCategoryBtn=element.querySelector('#save-category-btn') as HTMLButtonElement;
+        const saveCategoryBtn = element.querySelector('#save-category-btn') as HTMLButtonElement;
 
         addCategoryBtn?.addEventListener('click', () => {
-            showAddCategory=true;
-            editingCategory=null;
+            showAddCategory = true;
+            editingCategory = null;
             render();
         });
 
         cancelCategoryBtn?.addEventListener('click', () => {
-            showAddCategory=false;
-            editingCategory=null;
+            showAddCategory = false;
+            editingCategory = null;
             render();
         });
 
@@ -1565,41 +1695,41 @@ const adminEntryPoint: EntryPoint<AdminData>=({ data, emit, element, KEY }) => {
         });
 
         // Color picker sync
-        const colorPicker=element.querySelector('#category-color') as HTMLInputElement;
-        const colorHex=element.querySelector('#category-color-hex') as HTMLInputElement;
+        const colorPicker = element.querySelector('#category-color') as HTMLInputElement;
+        const colorHex = element.querySelector('#category-color-hex') as HTMLInputElement;
 
         colorPicker?.addEventListener('input', (e) => {
-            const color=(e.target as HTMLInputElement).value;
-            if (colorHex) colorHex.value=color;
+            const color = (e.target as HTMLInputElement).value;
+            if (colorHex) colorHex.value = color;
         });
 
         colorHex?.addEventListener('input', (e) => {
-            const color=(e.target as HTMLInputElement).value;
+            const color = (e.target as HTMLInputElement).value;
             if (/^#[0-9A-Fa-f]{6}$/.test(color) && colorPicker) {
-                colorPicker.value=color;
+                colorPicker.value = color;
             }
         });
 
         // Edit/Delete category buttons
-        const editCategoryBtns=element.querySelectorAll('.edit-category-btn');
-        const deleteCategoryBtns=element.querySelectorAll('.delete-category-btn');
+        const editCategoryBtns = element.querySelectorAll('.edit-category-btn');
+        const deleteCategoryBtns = element.querySelectorAll('.delete-category-btn');
 
         editCategoryBtns.forEach((btn) => {
             btn.addEventListener('click', (e) => {
                 e.stopPropagation();
                 e.preventDefault();
 
-                const target=e.currentTarget as HTMLElement;
-                const categoryId=target.dataset.categoryId;
+                const target = e.currentTarget as HTMLElement;
+                const categoryId = target.dataset.categoryId;
                 console.log('[TimeTracker Admin] Edit button clicked, categoryId:', categoryId);
                 console.log('[TimeTracker Admin] Available categories:', workCategories);
 
-                const category=workCategories.find((c) => c.id === categoryId);
+                const category = workCategories.find((c) => c.id === categoryId);
                 console.log('[TimeTracker Admin] Found category:', category);
 
                 if (category) {
-                    editingCategory={ ...category }; // Create a copy
-                    showAddCategory=false;
+                    editingCategory = { ...category }; // Create a copy
+                    showAddCategory = false;
                     render();
                 } else {
                     console.error('[TimeTracker Admin] Category not found for ID:', categoryId);
@@ -1613,8 +1743,8 @@ const adminEntryPoint: EntryPoint<AdminData>=({ data, emit, element, KEY }) => {
                 e.stopPropagation();
                 e.preventDefault();
 
-                const target=e.currentTarget as HTMLElement;
-                const categoryId=target.dataset.categoryId;
+                const target = e.currentTarget as HTMLElement;
+                const categoryId = target.dataset.categoryId;
                 console.log('[TimeTracker Admin] Delete button clicked, categoryId:', categoryId);
 
                 if (categoryId) {
@@ -1627,34 +1757,34 @@ const adminEntryPoint: EntryPoint<AdminData>=({ data, emit, element, KEY }) => {
         });
 
         // Delete dialog handlers
-        const confirmDeleteBtn=element.querySelector('#confirm-delete-btn');
+        const confirmDeleteBtn = element.querySelector('#confirm-delete-btn');
         if (confirmDeleteBtn) {
             confirmDeleteBtn.addEventListener('click', () => {
                 confirmDeleteCategory();
             });
         }
 
-        const cancelDeleteBtn=element.querySelector('#cancel-delete-btn');
+        const cancelDeleteBtn = element.querySelector('#cancel-delete-btn');
         if (cancelDeleteBtn) {
             cancelDeleteBtn.addEventListener('click', () => {
                 cancelDeleteCategory();
             });
         }
 
-        const replacementCategorySelect=element.querySelector('#replacement-category-select') as HTMLSelectElement;
+        const replacementCategorySelect = element.querySelector('#replacement-category-select') as HTMLSelectElement;
         if (replacementCategorySelect) {
             replacementCategorySelect.addEventListener('change', (e) => {
-                replacementCategoryId=(e.target as HTMLSelectElement).value;
+                replacementCategoryId = (e.target as HTMLSelectElement).value;
             });
         }
 
         // Restore backup handlers
         element.querySelectorAll('.restore-backup-btn').forEach(btn => {
             btn.addEventListener('click', async (e) => {
-                const target=e.target as HTMLElement;
-                const button=target.closest('.restore-backup-btn') as HTMLElement;
+                const target = e.target as HTMLElement;
+                const button = target.closest('.restore-backup-btn') as HTMLElement;
                 if (button) {
-                    const id=parseInt(button.getAttribute('data-backup-id') || '0');
+                    const id = parseInt(button.getAttribute('data-backup-id') || '0');
                     if (id) {
                         await handleRestoreBackup(id);
                     }
@@ -1665,45 +1795,66 @@ const adminEntryPoint: EntryPoint<AdminData>=({ data, emit, element, KEY }) => {
 
     // Handle save general settings
     async function handleSaveSettings() {
-        const hoursPerDayInput=element.querySelector('#hours-per-day') as HTMLInputElement;
-        const hoursPerWeekInput=element.querySelector('#hours-per-week') as HTMLInputElement;
-        const excelImportToggle=element.querySelector('#excel-import-toggle') as HTMLInputElement;
-        const statusMessage=element.querySelector('#settings-status') as HTMLElement;
-        const saveBtn=element.querySelector('#save-settings-btn') as HTMLButtonElement;
+        const hoursPerDayInput = element.querySelector('#hours-per-day') as HTMLInputElement;
+        const hoursPerWeekInput = element.querySelector('#hours-per-week') as HTMLInputElement;
+        const excelImportToggle = element.querySelector('#excel-import-toggle') as HTMLInputElement;
+        const statusMessage = element.querySelector('#settings-status') as HTMLElement;
+        const saveBtn = element.querySelector('#save-settings-btn') as HTMLButtonElement;
 
         if (!hoursPerDayInput || !hoursPerWeekInput || !excelImportToggle || !statusMessage || !saveBtn) return;
 
-        const saveIconHTML=`
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke - width="2" >
-                <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" > </path>
-                    <polyline points="17 21 17 13 7 13 7 21" > </polyline>
-                        <polyline points="7 3 7 8 15 8" > </polyline>
-                            </svg>
-                                `;
+        const saveIconHTML = `
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                <polyline points="7 3 7 8 15 8"></polyline>
+            </svg>
+        `;
 
         try {
-            saveBtn.disabled=true;
-            saveBtn.innerHTML=saveIconHTML + 'Saving...';
+            saveBtn.disabled = true;
+            saveBtn.innerHTML = saveIconHTML + 'Saving...';
 
-            const newSettings: Settings={
+
+            // Collect work week days from checkboxes
+            const workWeekDays: number[] = [];
+            const workWeekCheckboxes = element.querySelectorAll('.work-week-day-checkbox') as NodeListOf<HTMLInputElement>;
+            workWeekCheckboxes.forEach(checkbox => {
+                if (checkbox.checked) {
+                    const day = parseInt(checkbox.getAttribute('data-day') || '0');
+                    workWeekDays.push(day);
+                }
+            });
+            workWeekDays.sort((a, b) => a - b);
+
+            const newSettings: Settings = {
                 ...settings,
                 defaultHoursPerDay: parseFloat(hoursPerDayInput.value),
                 defaultHoursPerWeek: parseFloat(hoursPerWeekInput.value),
                 excelImportEnabled: excelImportToggle.checked,
+                workWeekDays: workWeekDays,
             };
 
             await saveSettings(newSettings);
 
+            // Update original snapshots after successful save
+            originalGeneralSettings = {
+                defaultHoursPerDay: newSettings.defaultHoursPerDay,
+                defaultHoursPerWeek: newSettings.defaultHoursPerWeek,
+                excelImportEnabled: newSettings.excelImportEnabled,
+                workWeekDays: [...newSettings.workWeekDays!]
+            };
+
             // Reset dirty state after successful save
-            hasUnsavedGeneralChanges=false;
+            hasUnsavedGeneralChanges = false;
             updateSaveButtonState();
 
             // Show success message
-            statusMessage.style.display='block';
-            statusMessage.style.background='#d4edda';
-            statusMessage.style.border='1px solid #c3e6cb';
-            statusMessage.style.color='#155724';
-            statusMessage.textContent='✓ Settings saved successfully!';
+            statusMessage.style.display = 'block';
+            statusMessage.style.background = '#d4edda';
+            statusMessage.style.border = '1px solid #c3e6cb';
+            statusMessage.style.color = '#155724';
+            statusMessage.textContent = '✓ Settings saved successfully!';
 
             // Emit notification to ChurchTools
             emit('notification:show', {
@@ -1713,21 +1864,21 @@ const adminEntryPoint: EntryPoint<AdminData>=({ data, emit, element, KEY }) => {
             });
 
             setTimeout(() => {
-                statusMessage.style.display='none';
+                statusMessage.style.display = 'none';
             }, 3000);
         } catch (error) {
             console.error('[TimeTracker Admin] Save settings error:', error);
 
             // Show error message
-            statusMessage.style.display='block';
-            statusMessage.style.background='#f8d7da';
-            statusMessage.style.border='1px solid #f5c6cb';
-            statusMessage.style.color='#721c24';
+            statusMessage.style.display = 'block';
+            statusMessage.style.background = '#f8d7da';
+            statusMessage.style.border = '1px solid #f5c6cb';
+            statusMessage.style.color = '#721c24';
             statusMessage.textContent =
                 '✗ Failed to save: ' + (error instanceof Error ? error.message : 'Unknown error');
         } finally {
-            saveBtn.disabled=false;
-            saveBtn.innerHTML=saveIconHTML + 'Save General Settings';
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = saveIconHTML + 'Save General Settings';
         }
     }
 
@@ -1736,11 +1887,11 @@ const adminEntryPoint: EntryPoint<AdminData>=({ data, emit, element, KEY }) => {
         try {
             // Remove from userHoursConfig
             if (settings.userHoursConfig) {
-                settings.userHoursConfig=settings.userHoursConfig.filter(c => c.userId !== userId);
+                settings.userHoursConfig = settings.userHoursConfig.filter(c => c.userId !== userId);
             }
 
             // Remove from employeesList (UI)
-            employeesList=employeesList.filter(emp => emp.userId !== userId);
+            employeesList = employeesList.filter(emp => emp.userId !== userId);
 
             // Save updated settings
             await saveSettings(settings);
@@ -1764,32 +1915,32 @@ const adminEntryPoint: EntryPoint<AdminData>=({ data, emit, element, KEY }) => {
 
     // Handle save group settings
     async function handleSaveGroupSettings() {
-        const employeeGroupIdInput=element.querySelector('#employee-group-id') as HTMLInputElement;
-        const volunteerGroupIdInput=element.querySelector('#volunteer-group-id') as HTMLInputElement;
-        const statusMessage=element.querySelector('#group-settings-status') as HTMLElement;
-        const saveBtn=element.querySelector('#save-group-settings-btn') as HTMLButtonElement;
+        const employeeGroupIdInput = element.querySelector('#employee-group-id') as HTMLInputElement;
+        const volunteerGroupIdInput = element.querySelector('#volunteer-group-id') as HTMLInputElement;
+        const statusMessage = element.querySelector('#group-settings-status') as HTMLElement;
+        const saveBtn = element.querySelector('#save-group-settings-btn') as HTMLButtonElement;
 
         if (!statusMessage || !saveBtn) return;
 
-        const saveIconHTML=`
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke - width="2" >
-                                <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" > </path>
-                                    <polyline points="17 21 17 13 7 13 7 21" > </polyline>
-                                        <polyline points="7 3 7 8 15 8" > </polyline>
-                                            </svg>
-                                                `;
+        const saveIconHTML = `
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                <polyline points="7 3 7 8 15 8"></polyline>
+            </svg>
+        `;
 
         try {
-            saveBtn.disabled=true;
-            saveBtn.innerHTML=saveIconHTML + 'Saving...';
+            saveBtn.disabled = true;
+            saveBtn.innerHTML = saveIconHTML + 'Saving...';
 
             // Get group IDs (allow empty)
-            const employeeGroupId=employeeGroupIdInput?.value ? parseInt(employeeGroupIdInput.value) : undefined;
-            const volunteerGroupId=volunteerGroupIdInput?.value ? parseInt(volunteerGroupIdInput.value) : undefined;
+            const employeeGroupId = employeeGroupIdInput?.value ? parseInt(employeeGroupIdInput.value) : undefined;
+            const volunteerGroupId = volunteerGroupIdInput?.value ? parseInt(volunteerGroupIdInput.value) : undefined;
 
             // Collect global work week days
-            const globalWorkWeekDays: number[]=[];
-            const globalWorkWeekCheckboxes=element.querySelectorAll('.global-work-week-checkbox') as NodeListOf<HTMLInputElement>;
+            const globalWorkWeekDays: number[] = [];
+            const globalWorkWeekCheckboxes = element.querySelectorAll('.global-work-week-checkbox') as NodeListOf<HTMLInputElement>;
             globalWorkWeekCheckboxes.forEach(checkbox => {
                 if (checkbox.checked) {
                     globalWorkWeekDays.push(parseInt(checkbox.getAttribute('data-day') || '0'));
@@ -1798,26 +1949,26 @@ const adminEntryPoint: EntryPoint<AdminData>=({ data, emit, element, KEY }) => {
             globalWorkWeekDays.sort((a, b) => a - b);
 
             // Collect individual employee hours from table
-            const userHoursConfig: UserHoursConfig[]=[];
-            const employeeHoursDayInputs=element.querySelectorAll('.employee-hours-day') as NodeListOf<HTMLInputElement>;
-            const employeeHoursWeekInputs=element.querySelectorAll('.employee-hours-week') as NodeListOf<HTMLInputElement>;
+            const userHoursConfig: UserHoursConfig[] = [];
+            const employeeHoursDayInputs = element.querySelectorAll('.employee-hours-day') as NodeListOf<HTMLInputElement>;
+            const employeeHoursWeekInputs = element.querySelectorAll('.employee-hours-week') as NodeListOf<HTMLInputElement>;
 
             employeeHoursDayInputs.forEach((dayInput, index) => {
-                const userId=parseInt(dayInput.dataset.userId || '0');
-                const hoursPerDay=parseFloat(dayInput.value);
-                const hoursPerWeek=parseFloat(employeeHoursWeekInputs[index]?.value || '0');
+                const userId = parseInt(dayInput.dataset.userId || '0');
+                const hoursPerDay = parseFloat(dayInput.value);
+                const hoursPerWeek = parseFloat(employeeHoursWeekInputs[index]?.value || '0');
 
-                if (userId> 0) {
+                if (userId > 0) {
                     // Get current userName from employeesList (not from old data-attribute)
-                    const employee=employeesList.find(e => e.userId === userId);
-                    const userName=employee?.userName || `User ${userId} `;
+                    const employee = employeesList.find(e => e.userId === userId);
+                    const userName = employee?.userName || `User ${userId}`;
 
                     // Collect work week days from checkboxes for this user
-                    const workWeekDays: number[]=[];
-                    const userCheckboxes=element.querySelectorAll(`.user - work - week - checkbox[data - user - id="${userId}"]`) as NodeListOf<HTMLInputElement>;
+                    const workWeekDays: number[] = [];
+                    const userCheckboxes = element.querySelectorAll(`.user-work-week-checkbox[data-user-id="${userId}"]`) as NodeListOf<HTMLInputElement>;
                     userCheckboxes.forEach(checkbox => {
                         if (checkbox.checked) {
-                            const day=parseInt(checkbox.getAttribute('data-day') || '0');
+                            const day = parseInt(checkbox.getAttribute('data-day') || '0');
                             workWeekDays.push(day);
                         }
                     });
@@ -1825,20 +1976,20 @@ const adminEntryPoint: EntryPoint<AdminData>=({ data, emit, element, KEY }) => {
                     workWeekDays.sort((a, b) => a - b);
 
                     // Preserve isActive status from existing config
-                    const existingConfig=settings.userHoursConfig?.find(c => c.userId === userId);
+                    const existingConfig = settings.userHoursConfig?.find(c => c.userId === userId);
                     userHoursConfig.push({
                         userId,
                         userName,
                         hoursPerDay,
                         hoursPerWeek,
                         isActive: existingConfig?.isActive !== false,  // Preserve existing isActive status
-                        workWeekDays: workWeekDays.length> 0 ? workWeekDays : undefined // Only set if user has custom work week
+                        workWeekDays: workWeekDays.length > 0 ? workWeekDays : undefined // Only set if user has custom work week
                     });
                 }
             });
 
             // Create new settings object with group settings
-            const newSettings: Settings={
+            const newSettings: Settings = {
                 ...settings,
                 employeeGroupId,
                 volunteerGroupId,
@@ -1846,16 +1997,23 @@ const adminEntryPoint: EntryPoint<AdminData>=({ data, emit, element, KEY }) => {
                 workWeekDays: globalWorkWeekDays
             }; await saveSettings(newSettings);
 
+            // Update original snapshots after successful save
+            originalGroupSettings = {
+                employeeGroupId: newSettings.employeeGroupId,
+                volunteerGroupId: newSettings.volunteerGroupId,
+                userHoursConfig: newSettings.userHoursConfig ? JSON.parse(JSON.stringify(newSettings.userHoursConfig)) : undefined
+            };
+
             // Reset dirty state after successful save
-            hasUnsavedGroupChanges=false;
+            hasUnsavedGroupChanges = false;
             updateSaveButtonState();
 
             // Show success message
-            statusMessage.style.display='block';
-            statusMessage.style.background='#d4edda';
-            statusMessage.style.border='1px solid #c3e6cb';
-            statusMessage.style.color='#155724';
-            statusMessage.textContent=`✓ Group settings saved successfully! Configured ${userHoursConfig.length} employee${userHoursConfig.length === 1 ? '' : 's'}.`;
+            statusMessage.style.display = 'block';
+            statusMessage.style.background = '#d4edda';
+            statusMessage.style.border = '1px solid #c3e6cb';
+            statusMessage.style.color = '#155724';
+            statusMessage.textContent = `✓ Group settings saved successfully! Configured ${userHoursConfig.length} employee${userHoursConfig.length === 1 ? '' : 's'}.`;
 
             // Emit notification to ChurchTools
             emit('notification:show', {
@@ -1865,37 +2023,37 @@ const adminEntryPoint: EntryPoint<AdminData>=({ data, emit, element, KEY }) => {
             });
 
             setTimeout(() => {
-                statusMessage.style.display='none';
+                statusMessage.style.display = 'none';
             }, 3000);
         } catch (error) {
             console.error('[TimeTracker Admin] Save group settings error:', error);
 
             // Show error message
-            statusMessage.style.display='block';
-            statusMessage.style.background='#f8d7da';
-            statusMessage.style.border='1px solid #f5c6cb';
-            statusMessage.style.color='#721c24';
+            statusMessage.style.display = 'block';
+            statusMessage.style.background = '#f8d7da';
+            statusMessage.style.border = '1px solid #f5c6cb';
+            statusMessage.style.color = '#721c24';
             statusMessage.textContent =
                 '✗ Failed to save: ' + (error instanceof Error ? error.message : 'Unknown error');
         } finally {
-            saveBtn.disabled=false;
-            saveBtn.innerHTML=saveIconHTML + 'Save Group Settings';
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = saveIconHTML + 'Save Group Settings';
         }
     }
 
     // Generate a valid category ID from a name
     function generateCategoryId(name: string): string {
         // Convert to lowercase, remove special chars, replace spaces with nothing
-        let id=name
+        let id = name
             .toLowerCase()
             .replace(/[^a-z0-9\s]/g, '') // Remove special characters
             .replace(/\s+/g, ''); // Remove spaces
 
         // Make sure it's unique
-        let finalId=id;
-        let counter=1;
+        let finalId = id;
+        let counter = 1;
         while (workCategories.some((c) => c.id === finalId)) {
-            finalId=`${id}${counter} `;
+            finalId = `${id}${counter}`;
             counter++;
         }
 
@@ -1904,20 +2062,20 @@ const adminEntryPoint: EntryPoint<AdminData>=({ data, emit, element, KEY }) => {
 
     // Handle save category
     async function handleSaveCategory() {
-        const nameInput=element.querySelector('#category-name') as HTMLInputElement;
-        const colorInput=element.querySelector('#category-color') as HTMLInputElement;
-        const statusMessage=element.querySelector('#category-form-status') as HTMLElement;
-        const saveBtn=element.querySelector('#save-category-btn') as HTMLButtonElement;
+        const nameInput = element.querySelector('#category-name') as HTMLInputElement;
+        const colorInput = element.querySelector('#category-color') as HTMLInputElement;
+        const statusMessage = element.querySelector('#category-form-status') as HTMLElement;
+        const saveBtn = element.querySelector('#save-category-btn') as HTMLButtonElement;
 
         if (!nameInput || !colorInput || !statusMessage || !saveBtn) return;
 
-        const saveIconHTML=`
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke - width="2" >
-                <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" > </path>
-                    <polyline points="17 21 17 13 7 13 7 21" > </polyline>
-                        <polyline points="7 3 7 8 15 8" > </polyline>
-                            </svg>
-                                `;
+        const saveIconHTML = `
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                <polyline points="7 3 7 8 15 8"></polyline>
+            </svg>
+        `;
 
         // Validation
         if (!nameInput.value.trim()) {
@@ -1926,15 +2084,15 @@ const adminEntryPoint: EntryPoint<AdminData>=({ data, emit, element, KEY }) => {
         }
 
         // Generate ID from name (only for new categories)
-        const categoryId=editingCategory
+        const categoryId = editingCategory
             ? editingCategory.id
             : generateCategoryId(nameInput.value.trim());
 
         try {
-            saveBtn.disabled=true;
-            saveBtn.innerHTML=saveIconHTML + (editingCategory ? 'Updating...' : 'Saving...');
+            saveBtn.disabled = true;
+            saveBtn.innerHTML = saveIconHTML + (editingCategory ? 'Updating...' : 'Saving...');
 
-            const category: WorkCategory={
+            const category: WorkCategory = {
                 id: categoryId,
                 name: nameInput.value.trim(),
                 color: colorInput.value,
@@ -1944,11 +2102,11 @@ const adminEntryPoint: EntryPoint<AdminData>=({ data, emit, element, KEY }) => {
             await saveCategory(category);
 
             // Show success message
-            statusMessage.style.display='block';
-            statusMessage.style.background='#d4edda';
-            statusMessage.style.border='1px solid #c3e6cb';
-            statusMessage.style.color='#155724';
-            statusMessage.textContent=editingCategory
+            statusMessage.style.display = 'block';
+            statusMessage.style.background = '#d4edda';
+            statusMessage.style.border = '1px solid #c3e6cb';
+            statusMessage.style.color = '#155724';
+            statusMessage.textContent = editingCategory
                 ? '✓ Category updated successfully!'
                 : '✓ Category created successfully!';
 
@@ -1962,23 +2120,23 @@ const adminEntryPoint: EntryPoint<AdminData>=({ data, emit, element, KEY }) => {
             });
 
             setTimeout(() => {
-                showAddCategory=false;
-                editingCategory=null;
+                showAddCategory = false;
+                editingCategory = null;
                 render();
             }, 1500);
         } catch (error) {
             console.error('[TimeTracker Admin] Save category error:', error);
 
             // Show error message
-            statusMessage.style.display='block';
-            statusMessage.style.background='#f8d7da';
-            statusMessage.style.border='1px solid #f5c6cb';
-            statusMessage.style.color='#721c24';
+            statusMessage.style.display = 'block';
+            statusMessage.style.background = '#f8d7da';
+            statusMessage.style.border = '1px solid #f5c6cb';
+            statusMessage.style.color = '#721c24';
             statusMessage.textContent =
                 '✗ Failed to save: ' + (error instanceof Error ? error.message : 'Unknown error');
         } finally {
-            saveBtn.disabled=false;
-            saveBtn.innerHTML=saveIconHTML + (editingCategory ? 'Update Category' : 'Save Category');
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = saveIconHTML + (editingCategory ? 'Update Category' : 'Save Category');
         }
     }
 
