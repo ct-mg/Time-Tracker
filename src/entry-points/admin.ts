@@ -799,7 +799,7 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                     </h3>
                     <p style="margin: 0 0 1rem 0; color: #666; font-size: 0.9rem;">
                         Configure <strong>individual SOLL hours and work days</strong> for each employee. These settings <strong>override the defaults above</strong>.<br>
-                        <em style="color: #28a745;">💡 Changes are saved automatically when you modify the checkboxes.</em>
+                        <em style="color: #28a745;">💡 Work week checkboxes save automatically.</em> <em style="color: #856404;">Hours/Day and Hours/Week require clicking "Save Group Settings" below.</em>
                     </p>
 
                     ${employeesList.length > 0 ? `
@@ -1249,12 +1249,10 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
 
                 if (userId <= 0) return;
 
-                // Find or create user config
-                if (!settings.userHoursConfig) {
-                    settings.userHoursConfig = [];
-                }
+                // Find or create user config (CRITICAL: Don't modify settings directly, create new object)
+                const currentUserHoursConfig = settings.userHoursConfig ? [...settings.userHoursConfig] : [];
 
-                let userConfig = settings.userHoursConfig.find(u => u.userId === userId);
+                let userConfig = currentUserHoursConfig.find(u => u.userId === userId);
                 if (!userConfig) {
                     // Create new config with defaults
                     const employee = employeesList.find(e => e.userId === userId);
@@ -1265,26 +1263,33 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                         hoursPerWeek: settings.defaultHoursPerWeek,
                         workWeekDays: [...(settings.workWeekDays || [1, 2, 3, 4, 5])]
                     };
-                    settings.userHoursConfig.push(userConfig);
-                }
-
-                // Initialize workWeekDays if not present
-                if (!userConfig.workWeekDays) {
-                    userConfig.workWeekDays = [...(settings.workWeekDays || [1, 2, 3, 4, 5])];
+                    currentUserHoursConfig.push(userConfig);
+                } else {
+                    // Initialize workWeekDays if not present
+                    if (!userConfig.workWeekDays) {
+                        userConfig.workWeekDays = [...(settings.workWeekDays || [1, 2, 3, 4, 5])];
+                    }
                 }
 
                 // Toggle day
                 if (target.checked) {
-                    if (!userConfig.workWeekDays.includes(day)) {
-                        userConfig.workWeekDays.push(day);
-                        userConfig.workWeekDays.sort((a, b) => a - b); // Keep sorted
+                    if (!userConfig.workWeekDays!.includes(day)) {
+                        userConfig.workWeekDays!.push(day);
+                        userConfig.workWeekDays!.sort((a, b) => a - b); // Keep sorted
                     }
                 } else {
-                    userConfig.workWeekDays = userConfig.workWeekDays.filter(d => d !== day);
+                    userConfig.workWeekDays = userConfig.workWeekDays!.filter(d => d !== day);
                 }
 
-                // Save settings immediately
-                await saveSettings(settings);
+                // CRITICAL: Create new settings object preserving ALL existing settings
+                const updatedSettings: Settings = {
+                    ...settings,
+                    userHoursConfig: currentUserHoursConfig
+                };
+
+                // Save and update local settings
+                await saveSettings(updatedSettings);
+                settings = updatedSettings; // Update local reference
             });
         });
 
