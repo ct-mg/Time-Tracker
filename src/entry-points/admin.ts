@@ -1531,14 +1531,15 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                     const employee = employeesList.find(e => e.userId === userId);
                     const userName = employee?.userName || `User ${userId}`;
 
-                    // Preserve isActive status from existing config
+                    // Preserve isActive status and workWeekDays from existing config
                     const existingConfig = settings.userHoursConfig?.find(c => c.userId === userId);
                     userHoursConfig.push({
                         userId,
                         userName,
                         hoursPerDay,
                         hoursPerWeek,
-                        isActive: existingConfig?.isActive !== false  // Preserve existing isActive status
+                        isActive: existingConfig?.isActive !== false,  // Preserve existing isActive status
+                        workWeekDays: existingConfig?.workWeekDays // Preserve work week days
                     });
                 }
             });
