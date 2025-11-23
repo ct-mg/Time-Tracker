@@ -288,25 +288,21 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
             // Get members of the group from ChurchTools API
             const groupMembers = await churchtoolsClient.get(`/groups/${groupId}/members`);
 
-            console.log('[TimeTracker Admin] Group members:', groupMembers);
-            console.log('[TimeTracker Admin] First member structure:', groupMembers[0]);
-
             // Extract user IDs from current group
             const currentGroupUserIds = new Set(groupMembers.map((member: any) => member.personId || member.id));
 
             // Build employee list from current group members
             employeesList = groupMembers.map((member: any) => {
-                // Try different paths to get the name
                 let firstName = '';
                 let lastName = '';
 
-                // Check if person object exists and has names
-                if (member.person) {
-                    firstName = member.person.firstName || member.person.vorname || '';
-                    lastName = member.person.lastName || member.person.nachname || member.person.name || '';
+                // Names are in person.domainAttributes (ChurchTools API structure)
+                if (member.person?.domainAttributes) {
+                    firstName = member.person.domainAttributes.firstName || '';
+                    lastName = member.person.domainAttributes.lastName || '';
                 }
 
-                // Fallback to member properties directly
+                // Fallback to member properties directly (if API structure changes)
                 if (!firstName && !lastName) {
                     firstName = member.firstName || member.vorname || '';
                     lastName = member.lastName || member.nachname || member.name || '';
@@ -315,8 +311,6 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                 const userName = (firstName && lastName)
                     ? `${firstName} ${lastName}`
                     : (firstName || lastName || `User ${member.personId || member.id}`);
-
-                console.log('[TimeTracker Admin] Mapped member:', { userId: member.personId || member.id, userName, firstName, lastName });
 
                 return {
                     userId: member.personId || member.id,
@@ -598,26 +592,25 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                     </div>
                 </div>
 
-                ${
-                    isLoading
-                        ? `
+                ${isLoading
+                ? `
                     <div style="padding: 3rem; text-align: center; color: #666;">
                         <div style="font-size: 2rem; margin-bottom: 1rem;">⏳</div>
                         <p>Loading settings...</p>
                     </div>
                 `
-                        : errorMessage
-                          ? `
+                : errorMessage
+                    ? `
                     <div style="padding: 1.5rem; background: #fee; border: 1px solid #fcc; border-radius: 8px; color: #c00; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
                         <strong>Error:</strong> ${errorMessage}
                     </div>
                 `
-                          : `
+                    : `
                     ${renderGeneralSettings()}
                     ${renderGroupManagement()}
                     ${renderWorkCategories()}
                 `
-                }
+            }
             </div>
         `;
 
@@ -678,8 +671,8 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
 
                     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 0.75rem;">
                         ${['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].map((day, index) => {
-                            const isChecked = (settings.workWeekDays || [1, 2, 3, 4, 5]).includes(index);
-                            return `
+            const isChecked = (settings.workWeekDays || [1, 2, 3, 4, 5]).includes(index);
+            return `
                                 <label style="display: flex; align-items: center; gap: 0.5rem; padding: 0.75rem; background: ${isChecked ? '#e7f3ff' : '#f8f9fa'}; border: 1px solid ${isChecked ? '#007bff' : '#dee2e6'}; border-radius: 4px; cursor: pointer; transition: all 0.2s;">
                                     <input
                                         type="checkbox"
@@ -691,7 +684,7 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                                     <span style="font-weight: ${isChecked ? '600' : '400'}; color: ${isChecked ? '#007bff' : '#333'}; font-size: 0.9rem;">${day}</span>
                                 </label>
                             `;
-                        }).join('')}
+        }).join('')}
                     </div>
                 </div>
 
@@ -851,12 +844,12 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                                     </thead>
                                     <tbody>
                                         ${employeesList.map(emp => {
-                                            const existingConfig = settings.userHoursConfig?.find(c => c.userId === emp.userId);
-                                            const hoursPerDay = existingConfig?.hoursPerDay || settings.defaultHoursPerDay;
-                                            const hoursPerWeek = existingConfig?.hoursPerWeek || settings.defaultHoursPerWeek;
-                                            const isActive = existingConfig?.isActive !== false;
+            const existingConfig = settings.userHoursConfig?.find(c => c.userId === emp.userId);
+            const hoursPerDay = existingConfig?.hoursPerDay || settings.defaultHoursPerDay;
+            const hoursPerWeek = existingConfig?.hoursPerWeek || settings.defaultHoursPerWeek;
+            const isActive = existingConfig?.isActive !== false;
 
-                                            return `
+            return `
                                                 <tr style="border-bottom: 1px solid #dee2e6; ${!isActive ? 'background: #fff3cd;' : ''}">
                                                     <td style="padding: 0.75rem; color: #333;">
                                                         ${emp.userName} <span style="color: #999; font-size: 0.85rem;">(${emp.userId})</span>
@@ -921,7 +914,7 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                                                     </td>
                                                 </tr>
                                             `;
-                                        }).join('')}
+        }).join('')}
                                     </tbody>
                                 </table>
                             </div>
@@ -975,9 +968,8 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                     </button>
                 </div>
 
-                ${
-                    showAddCategory || editingCategory
-                        ? `
+                ${showAddCategory || editingCategory
+                ? `
                     <!-- Category Form -->
                     <div style="background: #f8f9fa; border: 2px solid ${editingCategory ? '#ffc107' : '#28a745'}; border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem;">
                         <h3 style="margin: 0 0 1rem 0; color: #333; display: flex; align-items: center; gap: 0.5rem;">
@@ -1072,12 +1064,11 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                         <div id="category-form-status" style="margin-top: 1rem; padding: 0.75rem; border-radius: 4px; display: none;"></div>
                     </div>
                 `
-                        : ''
-                }
+                : ''
+            }
 
-                ${
-                    showDeleteDialog && categoryToDelete
-                        ? `
+                ${showDeleteDialog && categoryToDelete
+                ? `
                     <!-- Delete Confirmation Dialog -->
                     <div style="background: #fff3cd; border: 2px solid #ffc107; border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem;">
                         <h3 style="margin: 0 0 1rem 0; color: #856404; display: flex; align-items: center; gap: 0.5rem;">
@@ -1107,9 +1098,9 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                                 style="width: 100%; padding: 0.75rem; border: 1px solid #ffc107; border-radius: 4px; background: white;"
                             >
                                 ${workCategories
-                                    .filter(c => c.id !== categoryToDelete!.id)
-                                    .map(c => `<option value="${c.id}" ${c.id === replacementCategoryId ? 'selected' : ''}>${c.name}</option>`)
-                                    .join('')}
+                    .filter(c => c.id !== categoryToDelete!.id)
+                    .map(c => `<option value="${c.id}" ${c.id === replacementCategoryId ? 'selected' : ''}>${c.name}</option>`)
+                    .join('')}
                             </select>
                         </div>
 
@@ -1133,18 +1124,17 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                         </div>
                     </div>
                 `
-                        : ''
-                }
+                : ''
+            }
 
                 <!-- Categories List -->
-                ${
-                    workCategories.length === 0
-                        ? '<p style="color: #666; text-align: center; padding: 2rem;">No categories defined yet. Click "Add Category" to create one.</p>'
-                        : `
+                ${workCategories.length === 0
+                ? '<p style="color: #666; text-align: center; padding: 2rem;">No categories defined yet. Click "Add Category" to create one.</p>'
+                : `
                     <div style="display: grid; gap: 1rem;">
                         ${workCategories
-                            .map(
-                                (category) => `
+                    .map(
+                        (category) => `
                             <div style="display: flex; align-items: center; justify-content: space-between; padding: 1rem; border: 1px solid #dee2e6; border-radius: 6px; background: #f8f9fa;">
                                 <div style="display: flex; align-items: center; gap: 1rem; flex: 1;">
                                     <div style="width: 40px; height: 40px; background: ${category.color}; border-radius: 6px; border: 2px solid #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.1);"></div>
@@ -1179,11 +1169,11 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                                 </div>
                             </div>
                         `
-                            )
-                            .join('')}
+                    )
+                    .join('')}
                     </div>
                 `
-                }
+            }
             </div>
         `;
     }
