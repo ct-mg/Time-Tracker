@@ -302,10 +302,19 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
             const groupMembers = await churchtoolsClient.get(`/groups/${groupId}/members`);
 
             // Extract user IDs from current group
-            const currentGroupUserIds = new Set(groupMembers.map((member: any) => member.personId || member.id));
+            const currentGroupUserIds = new Set(groupMembers.map((member: { personId?: number; id?: number }) => member.personId || member.id));
 
             // Build employee list from current group members
-            employeesList = groupMembers.map((member: any) => {
+            employeesList = groupMembers.map((member: {
+                personId?: number;
+                id?: number;
+                person?: { domainAttributes?: { firstName?: string; lastName?: string } };
+                firstName?: string;
+                lastName?: string;
+                vorname?: string;
+                nachname?: string;
+                name?: string;
+            }) => {
                 let firstName = '';
                 let lastName = '';
 
@@ -331,7 +340,7 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                     firstName: firstName || '',
                     lastName: lastName || ''
                 };
-            }).sort((a, b) => {
+            }).sort((a: { firstName: string; lastName: string }, b: { firstName: string; lastName: string }) => {
                 // Sort by first name, then last name
                 if (a.firstName !== b.firstName) {
                     return a.firstName.localeCompare(b.firstName);

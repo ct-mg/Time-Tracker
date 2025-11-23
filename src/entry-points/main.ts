@@ -254,8 +254,8 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
 
         try {
             // Get user's groups from ChurchTools
-            const userGroups = await churchtoolsClient.get(`/persons/${user.id}/groups`);
-            const groupIds = userGroups.map((g: any) => g.id);
+            const userGroups = await churchtoolsClient.get(`/persons/${user.id}/groups`) as Array<{ id: number }>;
+            const groupIds = userGroups.map((g: { id: number }) => g.id);
 
             // Check if user is in either employee or volunteer group
             const hasAccess = (settings.employeeGroupId && groupIds.includes(settings.employeeGroupId)) ||
@@ -1571,7 +1571,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                         </style>
                     </div>
 
-                    ${renderCurrentView(stats)}
+                    ${renderCurrentView()}
                 </div>
             </div>
         `;
@@ -1579,10 +1579,11 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
         attachEventHandlers();
     }
 
-    function renderCurrentView(stats: any): string {
+    // Render the appropriate view based on currentView
+    function renderCurrentView(): string {
         switch (currentView) {
             case 'dashboard':
-                return renderDashboard(stats);
+                return renderDashboard();
             case 'entries':
                 return renderEntries();
             case 'absences':
@@ -1594,7 +1595,8 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
         }
     }
 
-    function renderDashboard(stats: any): string {
+    function renderDashboard(): string {
+        const stats = calculateStats(); // Calculate stats here instead of passing as parameter
         return `
             <!-- Current Status -->
             <div style="background: ${currentEntry ? '#d4edda' : '#fff'}; border: 1px solid ${currentEntry ? '#c3e6cb' : '#ddd'}; border-radius: 8px; padding: 2rem; margin-bottom: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
@@ -2183,7 +2185,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
 
         let html = '<div style="display: flex; flex-direction: column; gap: 1.5rem;">';
 
-        for (const [weekKey, week] of sortedWeeks) {
+        for (const [, week] of sortedWeeks) { // weekKey unused, use _ or omit
             // Calculate week totals
             const weekWorkEntries = Array.from(week.days.values())
                 .flat()
