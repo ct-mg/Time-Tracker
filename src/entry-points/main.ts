@@ -258,8 +258,8 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
             const groupIds = userGroups.map((g: { id: number }) => g.id);
 
             // Check if user is in either employee or volunteer group
-            const hasAccess = (settings.employeeGroupId && groupIds.includes(settings.employeeGroupId)) ||
-                (settings.volunteerGroupId && groupIds.includes(settings.volunteerGroupId));
+            const hasAccess = (!!settings.employeeGroupId && groupIds.includes(settings.employeeGroupId)) ||
+                (!!settings.volunteerGroupId && groupIds.includes(settings.volunteerGroupId));
 
             return hasAccess;
         } catch (error) {
@@ -1594,7 +1594,6 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
     }
 
     function renderDashboard(): string {
-        const stats = calculateStats(); // Calculate stats here instead of passing as parameter
         return `
             <!-- Current Status -->
             <div style="background: ${currentEntry ? '#d4edda' : '#fff'}; border: 1px solid ${currentEntry ? '#c3e6cb' : '#ddd'}; border-radius: 8px; padding: 2rem; margin-bottom: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
@@ -2537,6 +2536,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
     }
 
     function renderReports(): string {
+        const stats = calculateStats();
         // Group entries by category
         const entriesByCategory: { [key: string]: { hours: number; count: number } } = {};
         getFilteredEntries().forEach((entry) => {
