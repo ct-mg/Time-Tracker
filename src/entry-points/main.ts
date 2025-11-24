@@ -1628,22 +1628,22 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
                                 <rect x="6" y="4" width="12" height="16" rx="2"></rect>
                             </svg>
-                            Clock Out
+                            ${t('dashboard.clockOut')}
                         </button>
                     </div>
                 `
                 : `
                     <div style="text-align: center;">
                         <div style="font-size: 1.2rem; color: #666; margin-bottom: 2rem; font-weight: 600;">
-                            Not currently tracking time
+                            ${t('dashboard.currentlyWorking')}
                         </div>
                         <div style="max-width: 500px; margin: 0 auto;">
-                            <label for="clock-in-category" style="display: block; margin-bottom: 0.5rem; color: #333; font-weight: 500; text-align: left;">Category</label>
+                            <label for="clock-in-category" style="display: block; margin-bottom: 0.5rem; color: #333; font-weight: 500; text-align: left;">${t('dashboard.category')}</label>
                             <select id="clock-in-category" name="category" style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 4px; margin-bottom: 1rem; font-size: 1rem;">
                                 ${workCategories.map((cat) => `<option value="${cat.id}">${cat.name}</option>`).join('')}
                             </select>
 
-                            <label for="clock-in-description" style="display: block; margin-bottom: 0.5rem; color: #333; font-weight: 500; text-align: left;">Description (optional)</label>
+                            <label for="clock-in-description" style="display: block; margin-bottom: 0.5rem; color: #333; font-weight: 500; text-align: left;">${t('dashboard.description')}</label>
                             <input
                                 type="text"
                                 id="clock-in-description"
@@ -1679,7 +1679,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
                 <!-- Today -->
                 <div style="background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                    <div style="color: #666; font-size: 0.9rem; margin-bottom: 0.5rem; font-weight: 600;">Heute</div>
+                    <div style="color: #666; font-size: 0.9rem; margin-bottom: 0.5rem; font-weight: 600;">${t('dashboard.stats.today')}</div>
                     <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.5rem;">
                         <div>
                             <div style="color: #999; font-size: 0.75rem;">IST</div>
@@ -1701,7 +1701,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
 
                 <!-- This Week -->
                 <div style="background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                    <div style="color: #666; font-size: 0.9rem; margin-bottom: 0.5rem; font-weight: 600;">Diese Woche (KW ${dashStats.week.weekNumber})</div>
+                    <div style="color: #666; font-size: 0.9rem; margin-bottom: 0.5rem; font-weight: 600;">${t('dashboard.stats.thisWeek')} (KW ${dashStats.week.weekNumber})</div>
                     <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.5rem;">
                         <div>
                             <div style="color: #999; font-size: 0.75rem;">IST</div>
@@ -1723,7 +1723,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
 
                 <!-- This Month -->
                 <div style="background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                    <div style="color: #666; font-size: 0.9rem; margin-bottom: 0.5rem; font-weight: 600;">Dieser Monat</div>
+                    <div style="color: #666; font-size: 0.9rem; margin-bottom: 0.5rem; font-weight: 600;">${t('dashboard.stats.thisMonth')}</div>
                     <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.5rem;">
                         <div>
                             <div style="color: #999; font-size: 0.75rem;">IST</div>
@@ -1745,7 +1745,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
 
                 <!-- Last Month -->
                 <div style="background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                    <div style="color: #666; font-size: 0.9rem; margin-bottom: 0.5rem; font-weight: 600;">Letzter Monat</div>
+                    <div style="color: #666; font-size: 0.9rem; margin-bottom: 0.5rem; font-weight: 600;">${t('dashboard.stats.lastMonth')}</div>
                     <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.5rem;">
                         <div>
                             <div style="color: #999; font-size: 0.75rem;">IST</div>
