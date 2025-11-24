@@ -169,6 +169,7 @@
     "ct.extension.timetracker.admin.reassignTo": "Reassign to",
     "ct.extension.timetracker.admin.saveSettings": "Save Settings",
     "ct.extension.timetracker.admin.settingsSaved": "Settings saved",
+    "ct.extension.timetracker.admin.settingsSavedSuccess": "Settings saved successfully!",
     "ct.extension.timetracker.admin.settingsSaveFailed": "Failed to save settings",
     "ct.extension.timetracker.admin.categorySaved": "Category saved",
     "ct.extension.timetracker.admin.categorySaveFailed": "Failed to save category",

@@ -169,6 +169,7 @@
     "ct.extension.timetracker.admin.reassignTo": "Neu zuordnen zu",
     "ct.extension.timetracker.admin.saveSettings": "Einstellungen speichern",
     "ct.extension.timetracker.admin.settingsSaved": "Einstellungen gespeichert",
+    "ct.extension.timetracker.admin.settingsSavedSuccess": "Einstellungen erfolgreich gespeichert!",
     "ct.extension.timetracker.admin.settingsSaveFailed": "Fehler beim Speichern der Einstellungen",
     "ct.extension.timetracker.admin.categorySaved": "Kategorie gespeichert",
     "ct.extension.timetracker.admin.categorySaveFailed": "Fehler beim Speichern der Kategorie",

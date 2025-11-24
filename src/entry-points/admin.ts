@@ -1897,6 +1897,15 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
 
             await saveSettings(newSettings);
 
+            // Check if language changed - if so, re-initialize i18n and re-render
+            if (newSettings.language !== settings.language) {
+                const languageToUse = (newSettings.language || 'auto') === 'auto' ? detectBrowserLanguage() : (newSettings.language || 'de');
+                await initI18n(languageToUse);
+                settings = newSettings; // Update settings before re-render
+                render(); // Re-render entire page with new language
+                return; // Early return to avoid showing success message (render() will show it)
+            }
+
             // Update original snapshots after successful save
             originalGeneralSettings = {
                 defaultHoursPerDay: newSettings.defaultHoursPerDay,
@@ -1914,11 +1923,11 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
             statusMessage.style.background = '#d4edda';
             statusMessage.style.border = '1px solid #c3e6cb';
             statusMessage.style.color = '#155724';
-            statusMessage.textContent = '✓ Settings saved successfully!';
+            statusMessage.textContent = '✓ ' + t('ct.extension.timetracker.admin.settingsSavedSuccess');
 
             // Emit notification to ChurchTools
             emit('notification:show', {
-                message: 'Settings saved successfully!',
+                message: t('ct.extension.timetracker.admin.settingsSavedSuccess'),
                 type: 'success',
                 duration: 3000,
             });
