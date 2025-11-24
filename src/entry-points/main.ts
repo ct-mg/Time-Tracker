@@ -58,6 +58,7 @@ interface UserHoursConfig {
     workWeekDays?: number[]; // Individual work week (0=Sun, 1=Mon, ..., 6=Sat). Falls back to global setting if undefined.
 }
 
+
 interface Settings {
     defaultHoursPerDay: number;
     defaultHoursPerWeek: number;
@@ -67,7 +68,9 @@ interface Settings {
     volunteerGroupId?: number; // ChurchTools group ID for volunteers (no SOLL requirements)
     userHoursConfig?: UserHoursConfig[]; // Individual SOLL hours for employees
     workWeekDays?: number[]; // Days of week that count as work days (0=Sunday, 1=Monday, ..., 6=Saturday). Default: [1,2,3,4,5] (Mon-Fri)
+    language?: 'auto' | 'de' | 'en'; // UI language (auto = browser detection)
 }
+
 
 const mainEntryPoint: EntryPoint<MainModuleData> = ({
     element,
@@ -183,10 +186,17 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
             const module = await getModule(KEY);
             moduleId = module.id;
 
-            // Load data
+            // Load settings first (needed for language detection)
+            await loadSettings();
+
+            // Initialize i18n with user's language preference
+            const language = settings.language || 'auto';
+            const languageToUse = language === 'auto' ? detectBrowserLanguage() : language;
+            await initI18n(languageToUse);
+
+            // Load remaining data
             await Promise.all([
                 loadWorkCategories(),
-                loadSettings(),
                 loadTimeEntries(),
                 loadAbsences(),
                 loadAbsenceReasons(),
