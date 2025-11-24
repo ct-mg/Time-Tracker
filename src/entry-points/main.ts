@@ -3369,7 +3369,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
         const target = e.target as HTMLElement;
 
         // Check if clicked element is an edit button
-        const editBtn = target.closest('ct.extension.timetracker..edit-entry-btn') as HTMLElement;
+        const editBtn = target.closest('.edit-entry-btn') as HTMLElement;
         if (editBtn) {
             const startTime = editBtn.dataset.entryStart;
             const entry = timeEntries.find((e) => e.startTime === startTime);
@@ -3383,7 +3383,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
         }
 
         // Check if clicked element is a delete button
-        const deleteBtn = target.closest('ct.extension.timetracker..delete-entry-btn') as HTMLElement;
+        const deleteBtn = target.closest('.delete-entry-btn') as HTMLElement;
         if (deleteBtn) {
             const startTime = deleteBtn.dataset.entryStart;
             const entry = timeEntries.find((e) => e.startTime === startTime);
