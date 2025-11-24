@@ -3077,6 +3077,34 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
             render();
         });
 
+        // Bulk Edit toggle
+        const bulkEditToggle = element.querySelector('#bulk-edit-toggle');
+        bulkEditToggle?.addEventListener('click', () => {
+            bulkEditMode = !bulkEditMode;
+            selectedEntryIds.clear();
+            render();
+        });
+
+        // Bulk apply category
+        const bulkApplyBtn = element.querySelector('#bulk-apply-category');
+        bulkApplyBtn?.addEventListener('click', async () => {
+            const categorySelect = element.querySelector('#bulk-category-select') as HTMLSelectElement;
+            const newCategoryId = categorySelect.value;
+
+            if (confirm(t('ct.extension.timetracker.bulkEdit.confirmChange').replace('{count}', selectedEntryIds.size.toString()))) {
+                await bulkUpdateCategory(Array.from(selectedEntryIds), newCategoryId);
+            }
+            render();
+        });
+
+        // Bulk cancel
+        const bulkCancelBtn = element.querySelector('#bulk-cancel');
+        bulkCancelBtn?.addEventListener('click', () => {
+            selectedEntryIds.clear();
+            bulkEditMode = false;
+            render();
+        });
+
         exportCsvBtn?.addEventListener('click', () => {
             exportToCSV();
         });
