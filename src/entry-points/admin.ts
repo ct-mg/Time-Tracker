@@ -11,6 +11,7 @@ import {
     deleteCustomDataValue,
 } from '../utils/kv-store';
 import { churchtoolsClient } from '@churchtools/churchtools-client';
+import { initI18n, detectBrowserLanguage, t } from '../utils/i18n';
 
 /**
  * Time Tracker Admin Configuration
@@ -140,6 +141,14 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                 data.extensionInfo?.description || 'Time tracking for church employees'
             );
             moduleId = extensionModule.id;
+
+            // Load settings first (needed for language detection)
+            await loadSettings();
+
+            // Initialize i18n with user's language preference
+            const language = settings.language || 'auto';
+            const languageToUse = language === 'auto' ? detectBrowserLanguage() : language;
+            await initI18n(languageToUse);
 
             // Get or create categories
             workCategoriesCategory = await getOrCreateCategory(
@@ -326,11 +335,11 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
 
     // Validate settings integrity
     function validateSettings(settingsToValidate: Settings): { isValid: boolean; error?: string } {
-        if (!settingsToValidate) return { isValid: false, error: 'Settings object is null or undefined' };
+        if (!settingsToValidate) return { isValid: false, error: t('ct.extension.timetracker.admin.validation.settingsNull') };
 
         // Check required fields
-        if (typeof settingsToValidate.defaultHoursPerDay !== 'number') return { isValid: false, error: 'defaultHoursPerDay is missing or invalid' };
-        if (typeof settingsToValidate.defaultHoursPerWeek !== 'number') return { isValid: false, error: 'defaultHoursPerWeek is missing or invalid' };
+        if (typeof settingsToValidate.defaultHoursPerDay !== 'number') return { isValid: false, error: t('ct.extension.timetracker.admin.validation.hoursPerDayInvalid') };
+        if (typeof settingsToValidate.defaultHoursPerWeek !== 'number') return { isValid: false, error: t('ct.extension.timetracker.admin.validation.hoursPerWeekInvalid') };
 
         // Check integrity of optional fields if they exist
         if (settingsToValidate.employeeGroupId !== undefined && typeof settingsToValidate.employeeGroupId !== 'number') {
@@ -407,7 +416,7 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
 
     // Restore backup
     async function handleRestoreBackup(backupId: number) {
-        if (!confirm('Are you sure you want to restore this backup? Current settings will be overwritten.')) {
+        if (!confirm(t('ct.extension.timetracker.admin.restoreBackupConfirm'))) {
             return;
         }
 
@@ -416,26 +425,26 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
             const backupToRestore = backups.find((b: any) => b.id === backupId);
 
             if (!backupToRestore) {
-                alert('Backup not found!');
+                alert(t('ct.extension.timetracker.admin.backupNotFound'));
                 return;
             }
 
             // We use saveSettings to restore, which will create a NEW backup of the current state before restoring!
             await saveSettings(backupToRestore.settings, `Restored from backup ${new Date(backupToRestore.timestamp).toLocaleString()}`);
 
-            alert('Settings restored successfully!');
+            alert(t('ct.extension.timetracker.admin.backupRestored'));
 
             // Reload backups list
             backupsList = await getBackups();
             render();
         } catch (e) {
             console.error('[TimeTracker Admin] Restore failed:', e);
-            alert('Failed to restore backup: ' + (e instanceof Error ? e.message : 'Unknown error'));
+            alert(t('ct.extension.timetracker.admin.backupRestoreFailed') + ': ' + (e instanceof Error ? e.message : 'Unknown error'));
         }
     }
 
     // Save settings with validation and backup
-    async function saveSettings(newSettings: Settings, changeSummary: string = 'Settings updated'): Promise<void> {
+    async function saveSettings(newSettings: Settings, changeSummary: string = t('ct.extension.timetracker.admin.settingsUpdated').replace('{version}', (newSettings.schemaVersion || 1).toString())): Promise<void> {
         // 1. Validate
         const validation = validateSettings(newSettings);
         if (!validation.isValid) {
@@ -575,7 +584,7 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
             employeesList = [];
 
             emit('notification:show', {
-                message: 'Failed to load employees from group. Please check the group ID.',
+                message: t('ct.extension.timetracker.admin.employeeLoadFailed'),
                 type: 'error',
                 duration: 5000,
             });
@@ -708,7 +717,7 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                 // No entries using this category, delete immediately
                 await deleteCategory(categoryId);
                 emit('notification', {
-                    message: 'Category deleted successfully!',
+                    message: t('ct.extension.timetracker.admin.categoryDeleted'),
                     type: 'success',
                     duration: 3000,
                 });
@@ -744,7 +753,7 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
             affectedEntriesCount = 0;
 
             emit('notification', {
-                message: 'Category deleted and entries reassigned successfully!',
+                message: t('ct.extension.timetracker.admin.categoryDeletedReassigned'),
                 type: 'success',
                 duration: 3000,
             });
@@ -924,8 +933,8 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
         if (backupsList.length === 0) {
             return `
                 <div style="margin-top: 3rem; border-top: 1px solid #eee; padding-top: 2rem;">
-                    <h3 style="color: #333; margin-bottom: 1rem;">Data Safety & Recovery</h3>
-                    <p style="color: #666; font-style: italic;">No backups available yet. Backups are created automatically when you save settings.</p>
+                    <h3 style="color: #333; margin-bottom: 1rem;">${t('ct.extension.timetracker.admin.settingsBackup')}</h3>
+                    <p style="color: #666; font-style: italic;">${t('ct.extension.timetracker.admin.noBackups')}</p>
                 </div>
             `;
         }
@@ -940,7 +949,7 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                         <div style="font-size: 0.85rem; color: #666;">${backup.summary || 'No summary'} (v${backup.version})</div>
                     </div>
                     <button class="restore-backup-btn btn btn-sm btn-outline-secondary" data-backup-id="${id}" style="padding: 0.25rem 0.5rem; border: 1px solid #ccc; background: #fff; border-radius: 4px; cursor: pointer;">
-                        Restore
+                        ${t('ct.extension.timetracker.admin.restoreBackup')}
                     </button>
                 </div>
             `;
@@ -948,10 +957,10 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
 
         return `
             <div style="margin-top: 3rem; border-top: 1px solid #eee; padding-top: 2rem;">
-                <h3 style="color: #333; margin-bottom: 1rem;">Data Safety & Recovery</h3>
+                <h3 style="color: #333; margin-bottom: 1rem;">${t('ct.extension.timetracker.admin.settingsBackup')}</h3>
                 <div style="background: #fff; border: 1px solid #ddd; border-radius: 8px; overflow: hidden;">
                     <div style="padding: 1rem; background: #f8f9fa; border-bottom: 1px solid #ddd; font-size: 0.9rem; color: #666;">
-                        Last ${backupsList.length} Backups
+                        ${t('ct.extension.timetracker.admin.lastBackups').replace('{count}', backupsList.length.toString())}
                     </div>
                     ${backupsHtml}
                 </div>
@@ -964,13 +973,13 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
             <div style="max-width: 900px; margin: 2rem auto; padding: 2rem;">
                 <!-- Extension Info Header -->
                 <div style="background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                    <h1 style="margin: 0 0 0.5rem 0; font-size: 1.8rem; color: #333;">${data.extensionInfo?.name || 'Time Tracker Settings'}</h1>
+                    <h1 style="margin: 0 0 0.5rem 0; font-size: 1.8rem; color: #333;">${t('ct.extension.timetracker.admin.title')}</h1>
                     <p style="margin: 0 0 0.5rem 0; color: #666;">
-                        ${data.extensionInfo?.description || 'Configure time tracking settings'}
+                        ${t('ct.extension.timetracker.admin.description')}
                     </p>
                     <div style="display: flex; gap: 1rem; margin-top: 1rem; font-size: 0.85rem; color: #999;">
-                        <span><strong>Version:</strong> ${data.extensionInfo?.version || 'N/A'}</span>
-                        <span><strong>Key:</strong> ${data.extensionInfo?.key || KEY || 'N/A'}</span>
+                        <span><strong>${t('ct.extension.timetracker.admin.version')}:</strong> ${data.extensionInfo?.version || 'N/A'}</span>
+                        <span><strong>${t('ct.extension.timetracker.admin.key')}:</strong> ${data.extensionInfo?.key || KEY || 'N/A'}</span>
                         ${data.extensionInfo?.author?.name ? `<span><strong>Author:</strong> ${data.extensionInfo.author.name}</span>` : ''}
                     </div>
                 </div>
@@ -1019,16 +1028,15 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
         return `
             <!-- General Settings -->
             <div style="background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                <h2 style="margin: 0 0 1rem 0; font-size: 1.3rem; color: #333;">General Settings</h2>
+                <h2 style="margin: 0 0 1rem 0; font-size: 1.3rem; color: #333;">${t('ct.extension.timetracker.admin.generalSettings')}</h2>
                 <p style="margin: 0 0 1.5rem 0; color: #666; font-size: 0.95rem;">
-                    <strong>Default values</strong> for new employees and fallback when no individual configuration exists.<br>
-                    <em style="color: #856404;">Individual employee settings (below) override these defaults.</em>
+                    ${t('ct.extension.timetracker.admin.generalSettingsHelp')}
                 </p>
 
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
                     <div>
                         <label style="display: block; margin-bottom: 0.5rem; color: #333; font-weight: 600;">
-                            Default Hours per Day
+                            ${t('ct.extension.timetracker.admin.hoursPerDay')}
                         </label>
                         <input
                             type="number"
@@ -1039,12 +1047,12 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                             step="0.5"
                             style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 4px; font-size: 1rem;"
                         />
-                        <small style="color: #666; font-size: 0.85rem;">Used for new employees and when no individual config exists</small>
+                        <small style="color: #666; font-size: 0.85rem;">${t('ct.extension.timetracker.admin.hoursHelp')}</small>
                     </div>
 
                     <div>
                         <label style="display: block; margin-bottom: 0.5rem; color: #333; font-weight: 600;">
-                            Default Hours per Week
+                            ${t('ct.extension.timetracker.admin.hoursPerWeek')}
                         </label>
                         <input
                             type="number"
@@ -1055,14 +1063,14 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                             step="0.5"
                             style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 4px; font-size: 1rem;"
                         />
-                        <small style="color: #666; font-size: 0.85rem;">Used for new employees and when no individual config exists</small>
+                        <small style="color: #666; font-size: 0.85rem;">${t('ct.extension.timetracker.admin.hoursHelp')}</small>
                     </div>
                 </div>
 
                 <!-- Language Selection -->
                 <div style="margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid #e0e0e0;">
                     <label style="display: block; margin-bottom: 0.5rem; color: #333; font-weight: 600;">
-                        Language / Sprache
+                        ${t('ct.extension.timetracker.admin.language')}
                     </label>
                     <select
                         id="language-select"
@@ -1073,22 +1081,29 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                         <option value="en" ${settings.language === 'en' ? 'selected' : ''}>🇬🇧 English</option>
                     </select>
                     <small style="color: #666; font-size: 0.85rem; display: block; margin-top: 0.5rem;">
-                        Changes take effect after saving and reloading the page
+                        ${t('ct.extension.timetracker.admin.languageHelp')}
                     </small>
                 </div>
 
                 <!-- Work Week Days Configuration -->
                 <div style="margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid #e0e0e0;">
-                    <h3 style="margin: 0 0 0.5rem 0; font-size: 1.1rem; color: #333;">Work Week Days (Default)</h3>
+                    <h3 style="margin: 0 0 0.5rem 0; font-size: 1.1rem; color: #333;">${t('ct.extension.timetracker.admin.workWeekDays')}</h3>
                     <p style="margin: 0 0 1rem 0; color: #666; font-size: 0.95rem;">
-                        Default work days for SOLL calculation. Used for new employees and as fallback.<br>
-                        <em style="color: #856404;">Employees can have individual work weeks (see table below).</em>
+                        ${t('ct.extension.timetracker.admin.workWeekDaysHelp')}
                     </p>
 
                     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 0.75rem;">
-                        ${['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].map((day, index) => {
-            const isChecked = (settings.workWeekDays || [1, 2, 3, 4, 5]).includes(index);
-            return `
+                        ${[
+                t('ct.extension.timetracker.common.weekDaysFull.sun'),
+                t('ct.extension.timetracker.common.weekDaysFull.mon'),
+                t('ct.extension.timetracker.common.weekDaysFull.tue'),
+                t('ct.extension.timetracker.common.weekDaysFull.wed'),
+                t('ct.extension.timetracker.common.weekDaysFull.thu'),
+                t('ct.extension.timetracker.common.weekDaysFull.fri'),
+                t('ct.extension.timetracker.common.weekDaysFull.sat')
+            ].map((day, index) => {
+                const isChecked = (settings.workWeekDays || [1, 2, 3, 4, 5]).includes(index);
+                return `
                                 <label style="display: flex; align-items: center; gap: 0.5rem; padding: 0.75rem; background: ${isChecked ? '#e7f3ff' : '#f8f9fa'}; border: 1px solid ${isChecked ? '#007bff' : '#dee2e6'}; border-radius: 4px; cursor: pointer; transition: all 0.2s;">
                                     <input
                                         type="checkbox"
@@ -1100,11 +1115,11 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                                     <span style="font-weight: ${isChecked ? '600' : '400'}; color: ${isChecked ? '#007bff' : '#333'}; font-size: 0.9rem;">${day}</span>
                                 </label>
                             `;
-        }).join('')}
+            }).join('')}
                     </div>
                 </div>
 
-                <!-- Alpha Features -->
+                <!-- ${t('ct.extension.timetracker.admin.alphaFeatures')} -->
                 <div style="margin-top: 2.5rem; padding-top: 1.5rem; border-top: 1px solid #e0e0e0;">
                     <h3 style="margin: 0 0 0.5rem 0; font-size: 1.1rem; color: #333; display: flex; align-items: center; gap: 0.5rem;">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -1112,7 +1127,7 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                             <circle cx="9" cy="14" r="3"></circle>
                             <circle cx="18" cy="6" r="3"></circle>
                         </svg>
-                        Alpha Features
+                        ${t('ct.extension.timetracker.admin.alphaFeatures')}
                     </h3>
                     <p style="margin: 0 0 1rem 0; color: #ff9800; font-size: 0.9rem; background: #fff3e0; padding: 0.75rem; border-radius: 4px; border-left: 3px solid #ff9800;">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#856404" stroke-width="2" style="display: inline-block; vertical-align: middle; margin-right: 0.5rem;">
@@ -1120,7 +1135,7 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                             <line x1="12" y1="9" x2="12" y2="13"></line>
                             <line x1="12" y1="17" x2="12.01" y2="17"></line>
                         </svg>
-                        These features are experimental and may not work as expected. Use at your own risk.
+                        ${t('ct.extension.timetracker.admin.alphaWarning')}
                     </p>
 
                     <label style="display: flex; align-items: center; cursor: pointer; padding: 0.75rem; background: #f8f9fa; border-radius: 4px; border: 1px solid #e0e0e0;">
@@ -1132,11 +1147,11 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                         />
                         <div style="flex: 1;">
                             <div style="font-weight: 600; color: #333; margin-bottom: 0.25rem;">
-                                Enable Excel Import/Export
+                                ${t('ct.extension.timetracker.admin.excelImportEnabled')}
                                 <span style="background: #ff9800; color: white; padding: 0.125rem 0.5rem; border-radius: 3px; font-size: 0.75rem; margin-left: 0.5rem; font-weight: 700;">ALPHA</span>
                             </div>
                             <div style="color: #666; font-size: 0.85rem;">
-                                Bulk import time entries from Excel templates. Currently experiencing issues.
+                                ${t('ct.extension.timetracker.admin.excelImportDescription')}
                             </div>
                         </div>
                     </label>
@@ -1149,7 +1164,7 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M5 13l4 4L19 7"></path>
                     </svg>
-                    General Settings Saved
+                    ${t('ct.extension.timetracker.admin.settingsSaved')}
                 </button>
 
                 <div id="settings-status" style="margin-top: 1rem; padding: 0.75rem; border-radius: 4px; display: none;"></div>
@@ -1166,15 +1181,15 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
         return `
             <!-- Group Management -->
             <div style="background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                <h2 style="margin: 0 0 1rem 0; font-size: 1.3rem; color: #333;">👥 Group Management & Access Control</h2>
+                <h2 style="margin: 0 0 1rem 0; font-size: 1.3rem; color: #333;">👥 ${t('ct.extension.timetracker.admin.employeeConfig')}</h2>
                 <p style="margin: 0 0 1.5rem 0; color: #666; font-size: 0.95rem;">
-                    Configure ChurchTools groups for employees and volunteers. Employees get individual SOLL hours, volunteers track time without SOLL requirements.
+                    ${t('ct.extension.timetracker.admin.employeeGroupHelp')}
                 </p>
 
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
                     <div>
                         <label style="display: block; margin-bottom: 0.5rem; color: #333; font-weight: 600;">
-                            Employee Group ID
+                            ${t('ct.extension.timetracker.admin.employeeGroup')}
                         </label>
                         <input
                             type="number"
@@ -1183,12 +1198,12 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                             placeholder="e.g., 42"
                             style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 4px; font-size: 1rem;"
                         />
-                        <small style="color: #666; font-size: 0.85rem;">ChurchTools group for employees with individual SOLL hours</small>
+                        <small style="color: #666; font-size: 0.85rem;">${t('ct.extension.timetracker.admin.employeeGroupHelp')}</small>
                     </div>
 
                     <div>
                         <label style="display: block; margin-bottom: 0.5rem; color: #333; font-weight: 600;">
-                            Volunteer Group ID
+                            ${t('ct.extension.timetracker.admin.volunteerGroup')}
                         </label>
                         <input
                             type="number"
@@ -1197,18 +1212,17 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                             placeholder="e.g., 43"
                             style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 4px; font-size: 1rem;"
                         />
-                        <small style="color: #666; font-size: 0.85rem;">ChurchTools group for volunteers (no SOLL requirements)</small>
+                        <small style="color: #666; font-size: 0.85rem;">${t('ct.extension.timetracker.admin.volunteerGroupHelp')}</small>
                     </div>
                 </div>
 
                 <!-- Employee Configuration -->
                 <div style="margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid #e0e0e0;">
                     <h3 style="margin: 0 0 0.5rem 0; font-size: 1.1rem; color: #333;">
-                        Individual Employee Configuration
+                        ${t('ct.extension.timetracker.admin.individualSettings')}
                     </h3>
                     <p style="margin: 0 0 1rem 0; color: #666; font-size: 0.9rem;">
-                        Configure <strong>individual SOLL hours and work days</strong> for each employee. These settings <strong>override the defaults above</strong>.<br>
-                        <em style="color: #856404;">⚠️ Click "Save Group Settings" below to save all changes (hours and work week).</em>
+                        ${t('ct.extension.timetracker.admin.individualSettingsHelp')}
                     </p>
 
                     ${employeesList.length > 0 ? `
@@ -1216,7 +1230,7 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                         <div style="background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 6px; padding: 1rem;">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin: 0 0 1rem 0;">
                                 <p style="margin: 0; color: #333; font-weight: 600;">
-                                    Found ${employeesList.length} employee${employeesList.length === 1 ? '' : 's'} in group
+                                    ${t('ct.extension.timetracker.admin.foundEmployees').replace('{count}', employeesList.length.toString())}
                                 </p>
                                 <button
                                     id="refresh-employees-btn"
@@ -1248,12 +1262,12 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                                 <table style="width: 100%; border-collapse: collapse;">
                                     <thead>
                                         <tr style="background: #e9ecef;">
-                                            <th style="padding: 0.75rem; text-align: left; border-bottom: 2px solid #dee2e6; font-weight: 600; color: #333;">Employee</th>
-                                            <th style="padding: 0.75rem; text-align: left; border-bottom: 2px solid #dee2e6; font-weight: 600; color: #333;">Status</th>
+                                            <th style="padding: 0.75rem; text-align: left; border-bottom: 2px solid #dee2e6; font-weight: 600; color: #333;">${t('ct.extension.timetracker.admin.employee')}</th>
+                                            <th style="padding: 0.75rem; text-align: left; border-bottom: 2px solid #dee2e6; font-weight: 600; color: #333;">${t('ct.extension.timetracker.admin.status')}</th>
                                             <th style="padding: 0.75rem; text-align: left; border-bottom: 2px solid #dee2e6; font-weight: 600; color: #333;">Hours/Day</th>
                                             <th style="padding: 0.75rem; text-align: left; border-bottom: 2px solid #dee2e6; font-weight: 600; color: #333;">Hours/Week</th>
-                                            <th style="padding: 0.75rem; text-align: left; border-bottom: 2px solid #dee2e6; font-weight: 600; color: #333; min-width: 280px;">Work Week Days</th>
-                                            <th style="padding: 0.75rem; text-align: center; border-bottom: 2px solid #dee2e6; font-weight: 600; color: #333;">Actions</th>
+                                            <th style="padding: 0.75rem; text-align: left; border-bottom: 2px solid #dee2e6; font-weight: 600; color: #333; min-width: 280px;">${t('ct.extension.timetracker.admin.workWeekDays')}</th>
+                                            <th style="padding: 0.75rem; text-align: center; border-bottom: 2px solid #dee2e6; font-weight: 600; color: #333;">${t('ct.extension.timetracker.timeEntries.actions')}</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -1271,11 +1285,11 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                                                     <td style="padding: 0.75rem;">
                                                         ${isActive ? `
                                                             <span style="background: #d4edda; color: #155724; padding: 0.25rem 0.5rem; border-radius: 3px; font-size: 0.75rem; font-weight: 600; border: 1px solid #c3e6cb; white-space: nowrap;">
-                                                                ✓ Active
+                                                                ✓ ${t('ct.extension.timetracker.admin.active')}
                                                             </span>
                                                         ` : `
                                                             <span style="background: #fff3cd; color: #856404; padding: 0.25rem 0.5rem; border-radius: 3px; font-size: 0.75rem; font-weight: 600; border: 1px solid #ffeaa7;">
-                                                                ⚠ Removed
+                                                                ⚠ ${t('ct.extension.timetracker.admin.removed')}
                                                             </span>
                                                         `}
                                                     </td>
@@ -1309,11 +1323,27 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                                                     </td>
                                                     <td style="padding: 0.75rem;">
                                                         <div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px;">
-                                                            ${['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, index) => {
-                const workWeek = existingConfig?.workWeekDays || settings.workWeekDays || [1, 2, 3, 4, 5];
-                const isChecked = workWeek.includes(index);
-                return `
-                                                                <label style="display: flex; align-items: center; justify-content: center; cursor: ${isActive ? 'pointer' : 'not-allowed'}; opacity: ${isActive ? '1' : '0.5'};" title="${['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][index]}">
+                                                            ${[
+                    t('ct.extension.timetracker.common.weekDays.sun'),
+                    t('ct.extension.timetracker.common.weekDays.mon'),
+                    t('ct.extension.timetracker.common.weekDays.tue'),
+                    t('ct.extension.timetracker.common.weekDays.wed'),
+                    t('ct.extension.timetracker.common.weekDays.thu'),
+                    t('ct.extension.timetracker.common.weekDays.fri'),
+                    t('ct.extension.timetracker.common.weekDays.sat')
+                ].map((day, index) => {
+                    const workWeek = existingConfig?.workWeekDays || settings.workWeekDays || [1, 2, 3, 4, 5];
+                    const isChecked = workWeek.includes(index);
+                    return `
+                                                                <label style="display: flex; align-items: center; justify-content: center; cursor: ${isActive ? 'pointer' : 'not-allowed'}; opacity: ${isActive ? '1' : '0.5'};" title="${[
+                            t('ct.extension.timetracker.common.weekDaysFull.sun'),
+                            t('ct.extension.timetracker.common.weekDaysFull.mon'),
+                            t('ct.extension.timetracker.common.weekDaysFull.tue'),
+                            t('ct.extension.timetracker.common.weekDaysFull.wed'),
+                            t('ct.extension.timetracker.common.weekDaysFull.thu'),
+                            t('ct.extension.timetracker.common.weekDaysFull.fri'),
+                            t('ct.extension.timetracker.common.weekDaysFull.sat')
+                        ][index]}">
                                                                     <input
                                                                         type="checkbox"
                                                                         class="user-work-week-checkbox"
@@ -1326,7 +1356,7 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                                                                     <span style="font-size: 0.7rem; margin-left: 2px; color: ${isActive ? '#333' : '#999'}; user-select: none;">${day}</span>
                                                                 </label>
                 `;
-            }).join('')}
+                }).join('')}
                                                         </div>
                                                     </td>
                                                     <td style="padding: 0.75rem; text-align: center;">
@@ -1336,13 +1366,13 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                                                                 data-user-id="${emp.userId}"
                                                                 data-user-name="${emp.userName}"
                                                                 style="padding: 0.4rem 0.8rem; background: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85rem; font-weight: 600; display: inline-flex; align-items: center; gap: 0.35rem;"
-                                                                title="Delete employee and all their data"
+                                                                title="${t('ct.extension.timetracker.admin.deleteEmployeeTooltip')}"
                                                             >
                                                                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                                                     <polyline points="3 6 5 6 21 6"></polyline>
                                                                     <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
                                                                 </svg>
-                                                                Delete
+                                                                ${t('ct.extension.timetracker.common.delete')}
                                                             </button>
                                                         ` : `
                                                             <span style="color: #999; font-size: 0.85rem; font-style: italic;">-</span>
@@ -1357,7 +1387,7 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                         </div>
                     ` : (!loadingEmployees && settings.employeeGroupId ? `
                         <p style="color: #666; font-style: italic; background: #f8f9fa; padding: 1rem; border-radius: 4px; border-left: 3px solid #6c757d;">
-                            Click "Load Employees" to fetch the employee list from ChurchTools.
+                            ${t('ct.extension.timetracker.admin.clickLoadEmployees')}
                         </p>
                     ` : '')}
                 </div>
@@ -1369,7 +1399,7 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M5 13l4 4L19 7"></path>
                     </svg>
-                    Group Settings Saved
+                    ${t('ct.extension.timetracker.admin.settingsSaved')}
                 </button>
 
                 <div id="group-settings-status" style="margin-top: 1rem; padding: 0.75rem; border-radius: 4px; display: none;"></div>
@@ -1383,9 +1413,9 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
             <div style="background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
                     <div>
-                        <h2 style="margin: 0 0 0.25rem 0; font-size: 1.3rem; color: #333;">Work Categories</h2>
+                        <h2 style="margin: 0 0 0.25rem 0; font-size: 1.3rem; color: #333;">${t('ct.extension.timetracker.admin.workCategories')}</h2>
                         <p style="margin: 0; color: #666; font-size: 0.95rem;">
-                            Manage categories for tracking different types of work
+                            ${t('ct.extension.timetracker.admin.workCategoriesHelp')}
                         </p>
                     </div>
                     <button
@@ -1396,7 +1426,7 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                             <line x1="12" y1="5" x2="12" y2="19"></line>
                             <line x1="5" y1="12" x2="19" y2="12"></line>
                         </svg>
-                        Add Category
+                        ${t('ct.extension.timetracker.admin.addCategory')}
                     </button>
                 </div>
 
@@ -1410,13 +1440,13 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                                     <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
                                     <path d="M18.5 2.5a2.121 2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
                                 </svg>
-                                Edit Category
+                                ${t('ct.extension.timetracker.admin.editCategory')}
                             ` : `
                                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                     <line x1="12" y1="5" x2="12" y2="19"></line>
                                     <line x1="5" y1="12" x2="19" y2="12"></line>
                                 </svg>
-                                New Category
+                                ${t('ct.extension.timetracker.admin.addCategory')}
                             `}
                         </h3>
 
@@ -1424,7 +1454,7 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                             ${editingCategory ? `
                             <div>
                                 <label style="display: block; margin-bottom: 0.5rem; color: #333; font-weight: 600;">
-                                    Category ID
+                                    ${t('ct.extension.timetracker.admin.categoryId')}
                                 </label>
                                 <input
                                     type="text"
@@ -1433,13 +1463,13 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                                     disabled
                                     style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 4px; background: #e9ecef; cursor: not-allowed; font-family: monospace;"
                                 />
-                                <small style="color: #666; font-size: 0.85rem;">ID cannot be changed</small>
+                                <small style="color: #666; font-size: 0.85rem;">${t('ct.extension.timetracker.admin.idCannotBeChanged')}</small>
                             </div>
                             ` : ''}
 
                             <div>
                                 <label style="display: block; margin-bottom: 0.5rem; color: #333; font-weight: 600;">
-                                    Category Name
+                                    ${t('ct.extension.timetracker.admin.categoryName')}
                                 </label>
                                 <input
                                     type="text"
@@ -1448,12 +1478,12 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                                     placeholder="e.g., Pastoral Care"
                                     style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 4px;"
                                 />
-                                <small style="color: #666; font-size: 0.85rem;">Display name for the category ${!editingCategory ? '(ID will be auto-generated)' : ''}</small>
+                                <small style="color: #666; font-size: 0.85rem;">${t('ct.extension.timetracker.admin.categoryNameHelp')}</small>
                             </div>
 
                             <div>
                                 <label style="display: block; margin-bottom: 0.5rem; color: #333; font-weight: 600;">
-                                    Color
+                                    ${t('ct.extension.timetracker.admin.categoryColor')}
                                 </label>
                                 <div style="display: flex; gap: 1rem; align-items: center;">
                                     <input
@@ -1483,7 +1513,7 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                                     <polyline points="17 21 17 13 7 13 7 21"></polyline>
                                     <polyline points="7 3 7 8 15 8"></polyline>
                                 </svg>
-                                ${editingCategory ? 'Update Category' : 'Save Category'}
+                                ${editingCategory ? t('ct.extension.timetracker.common.save') : t('ct.extension.timetracker.common.save')}
                             </button>
                             <button
                                 id="cancel-category-btn"
@@ -1585,7 +1615,7 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                                             <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
                                             <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
                                         </svg>
-                                        Edit
+                                        ${t('ct.extension.timetracker.common.edit')}
                                     </button>
                                     <button
                                         data-category-id="${category.id}"
@@ -1596,7 +1626,7 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                                             <polyline points="3 6 5 6 21 6"></polyline>
                                             <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
                                         </svg>
-                                        Delete
+                                        ${t('ct.extension.timetracker.common.delete')}
                                     </button>
                                 </div>
                             </div>

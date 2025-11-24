@@ -1523,7 +1523,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                                 <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"></path>
                             </svg>
                         </div>
-                        <p style="color: #666;">Loading Time Tracker...</p>
+                        <p style="color: #666;">${t('ct.extension.timetracker.common.loadingTitle')}</p>
                     </div>
                 </div>
             `;
@@ -1554,8 +1554,9 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                                 <h1 style="margin: 0 0 0.5rem 0; font-size: clamp(1.3rem, 4vw, 1.8rem); color: #333;">
                                     Time Tracker
                                 </h1>
-                                <p style="margin: 0; color: #666; font-size: clamp(0.85rem, 2vw, 1rem);">Welcome, ${user?.firstName || 'User'}! Track your working hours.</p>
-                            </div>
+                                <div style="font-size: 1.1rem; color: #555; margin-bottom: 2rem;">
+                    ${t('ct.extension.timetracker.dashboard.welcome').replace('{name}', user?.firstName || 'User')}
+                </div>            </div>
                             <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; flex: 0 1 auto;">
                                 <button id="refresh-data-btn" style="padding: 0.5rem; border: 1px solid #28a745; background: #fff; color: #28a745; border-radius: 4px; cursor: pointer; display: flex; align-items: center; justify-content: center;" title="Refresh data">
                                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -1565,10 +1566,10 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                                     </svg>
                                 </button>
                                 <div style="width: 1px; height: 30px; background: #ddd; display: none;" class="nav-divider"></div>
-                                <button id="view-dashboard" style="padding: 0.5rem 1rem; border: ${currentView === 'dashboard' ? '2px' : '1px'} solid ${currentView === 'dashboard' ? '#007bff' : '#ddd'}; background: ${currentView === 'dashboard' ? '#e7f3ff' : '#fff'}; color: ${currentView === 'dashboard' ? '#007bff' : '#666'}; border-radius: 4px; cursor: pointer; font-weight: ${currentView === 'dashboard' ? '600' : '400'}; white-space: nowrap;">${t('dashboard.title')}</button>
-                                <button id="view-entries" style="padding: 0.5rem 1rem; border: ${currentView === 'entries' ? '2px' : '1px'} solid ${currentView === 'entries' ? '#007bff' : '#ddd'}; background: ${currentView === 'entries' ? '#e7f3ff' : '#fff'}; color: ${currentView === 'entries' ? '#007bff' : '#666'}; border-radius: 4px; cursor: pointer; font-weight: ${currentView === 'entries' ? '600' : '400'}; white-space: nowrap;">${t('timeEntries.title')}</button>
-                                <button id="view-absences" style="padding: 0.5rem 1rem; border: ${currentView === 'absences' ? '2px' : '1px'} solid ${currentView === 'absences' ? '#007bff' : '#ddd'}; background: ${currentView === 'absences' ? '#e7f3ff' : '#fff'}; color: ${currentView === 'absences' ? '#007bff' : '#666'}; border-radius: 4px; cursor: pointer; font-weight: ${currentView === 'absences' ? '600' : '400'}; white-space: nowrap;">${t('absences.title')}</button>
-                                <button id="view-reports" style="padding: 0.5rem 1rem; border: ${currentView === 'reports' ? '2px' : '1px'} solid ${currentView === 'reports' ? '#007bff' : '#ddd'}; background: ${currentView === 'reports' ? '#e7f3ff' : '#fff'}; color: ${currentView === 'reports' ? '#007bff' : '#666'}; border-radius: 4px; cursor: pointer; font-weight: ${currentView === 'reports' ? '600' : '400'}; white-space: nowrap;">${t('reports.title')}</button>
+                                <button id="view-dashboard" style="padding: 0.5rem 1rem; border: ${currentView === 'dashboard' ? '2px' : '1px'} solid ${currentView === 'dashboard' ? '#007bff' : '#ddd'}; background: ${currentView === 'dashboard' ? '#e7f3ff' : '#fff'}; color: ${currentView === 'dashboard' ? '#007bff' : '#666'}; border-radius: 4px; cursor: pointer; font-weight: ${currentView === 'dashboard' ? '600' : '400'}; white-space: nowrap;">${t('ct.extension.timetracker.dashboard.title')}</button>
+                                <button id="view-entries" style="padding: 0.5rem 1rem; border: ${currentView === 'entries' ? '2px' : '1px'} solid ${currentView === 'entries' ? '#007bff' : '#ddd'}; background: ${currentView === 'entries' ? '#e7f3ff' : '#fff'}; color: ${currentView === 'entries' ? '#007bff' : '#666'}; border-radius: 4px; cursor: pointer; font-weight: ${currentView === 'entries' ? '600' : '400'}; white-space: nowrap;">${t('ct.extension.timetracker.timeEntries.title')}</button>
+                                <button id="view-absences" style="padding: 0.5rem 1rem; border: ${currentView === 'absences' ? '2px' : '1px'} solid ${currentView === 'absences' ? '#007bff' : '#ddd'}; background: ${currentView === 'absences' ? '#e7f3ff' : '#fff'}; color: ${currentView === 'absences' ? '#007bff' : '#666'}; border-radius: 4px; cursor: pointer; font-weight: ${currentView === 'absences' ? '600' : '400'}; white-space: nowrap;">${t('ct.extension.timetracker.absences.title')}</button>
+                                <button id="view-reports" style="padding: 0.5rem 1rem; border: ${currentView === 'reports' ? '2px' : '1px'} solid ${currentView === 'reports' ? '#007bff' : '#ddd'}; background: ${currentView === 'reports' ? '#e7f3ff' : '#fff'}; color: ${currentView === 'reports' ? '#007bff' : '#666'}; border-radius: 4px; cursor: pointer; font-weight: ${currentView === 'reports' ? '600' : '400'}; white-space: nowrap;">${t('ct.extension.timetracker.reports.title')}</button>
                             </div>
                         </div>
                         <style>
@@ -1611,8 +1612,8 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                 ${currentEntry
                 ? `
                     <div style="text-align: center;">
-                        <div style="font-size: 1.2rem; color: #155724; margin-bottom: 1rem; font-weight: 600;">
-                            🟢 Currently Working
+                        <div style="font-size: 1.2rem; color: #666; margin-bottom: 2rem; font-weight: 600;">
+                            ${t('ct.extension.timetracker.dashboard.whatAreYouWorkingOn')}
                         </div>
                         <div style="font-size: 3rem; font-weight: 700; color: #155724; margin-bottom: 0.5rem;" id="current-timer">
                             ${formatDuration(new Date().getTime() - new Date(currentEntry.startTime).getTime())}
@@ -1628,22 +1629,22 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
                                 <rect x="6" y="4" width="12" height="16" rx="2"></rect>
                             </svg>
-                            ${t('dashboard.clockOut')}
+                            ${t('ct.extension.timetracker.dashboard.clockOut')}
                         </button>
                     </div>
                 `
                 : `
                     <div style="text-align: center;">
                         <div style="font-size: 1.2rem; color: #666; margin-bottom: 2rem; font-weight: 600;">
-                            ${t('dashboard.currentlyWorking')}
+                            ${t('ct.extension.timetracker.dashboard.currentlyWorking')}
                         </div>
                         <div style="max-width: 500px; margin: 0 auto;">
-                            <label for="clock-in-category" style="display: block; margin-bottom: 0.5rem; color: #333; font-weight: 500; text-align: left;">${t('dashboard.category')}</label>
+                            <label for="clock-in-category" style="display: block; margin-bottom: 0.5rem; color: #333; font-weight: 500; text-align: left;">${t('ct.extension.timetracker.dashboard.category')}</label>
                             <select id="clock-in-category" name="category" style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 4px; margin-bottom: 1rem; font-size: 1rem;">
                                 ${workCategories.map((cat) => `<option value="${cat.id}">${cat.name}</option>`).join('')}
                             </select>
 
-                            <label for="clock-in-description" style="display: block; margin-bottom: 0.5rem; color: #333; font-weight: 500; text-align: left;">${t('dashboard.description')}</label>
+                            <label for="clock-in-description" style="display: block; margin-bottom: 0.5rem; color: #333; font-weight: 500; text-align: left;">${t('ct.extension.timetracker.dashboard.description')}</label>
                             <input
                                 type="text"
                                 id="clock-in-description"
@@ -1651,20 +1652,20 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                                 autocomplete="off"
                                 data-lpignore="true"
                                 data-1p-ignore="true"
-                                placeholder="What are you working on?"
+                                placeholder="${t('ct.extension.timetracker.dashboard.whatAreYouWorkingOnPlaceholder')}"
                                 style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 4px; margin-bottom: 1rem; font-size: 1rem;"
                             />
 
                             <label style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1.5rem; cursor: pointer; text-align: left;">
                                 <input type="checkbox" id="clock-in-is-break" style="width: 18px; height: 18px; cursor: pointer;" />
-                                <span style="color: #666; font-size: 0.95rem;">${t('dashboard.isBreak')}</span>
+                                <span style="color: #666; font-size: 0.95rem;">${t('ct.extension.timetracker.dashboard.isBreak')}</span>
                             </label>
 
                             <button id="clock-in-btn" style="flex: 1; padding: 1rem; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 1rem; display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
                                 <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
                                     <polygon points="5 3 19 12 5 21 5 3"></polygon>
                                 </svg>
-                                ${t('dashboard.clockIn')}
+                                ${t('ct.extension.timetracker.dashboard.clockIn')}
                             </button>
                         </div>
                     </div>
@@ -1679,7 +1680,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
                 <!-- Today -->
                 <div style="background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                    <div style="color: #666; font-size: 0.9rem; margin-bottom: 0.5rem; font-weight: 600;">${t('dashboard.stats.today')}</div>
+                    <div style="color: #666; font-size: 0.9rem; margin-bottom: 0.5rem; font-weight: 600;">${t('ct.extension.timetracker.dashboard.stats.today')}</div>
                     <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.5rem;">
                         <div>
                             <div style="color: #999; font-size: 0.75rem;">IST</div>
@@ -1701,7 +1702,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
 
                 <!-- This Week -->
                 <div style="background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                    <div style="color: #666; font-size: 0.9rem; margin-bottom: 0.5rem; font-weight: 600;">${t('dashboard.stats.thisWeek')} (KW ${dashStats.week.weekNumber})</div>
+                    <div style="color: #666; font-size: 0.9rem; margin-bottom: 0.5rem; font-weight: 600;">${t('ct.extension.timetracker.dashboard.stats.thisWeek')} (KW ${dashStats.week.weekNumber})</div>
                     <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.5rem;">
                         <div>
                             <div style="color: #999; font-size: 0.75rem;">IST</div>
@@ -1723,7 +1724,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
 
                 <!-- This Month -->
                 <div style="background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                    <div style="color: #666; font-size: 0.9rem; margin-bottom: 0.5rem; font-weight: 600;">${t('dashboard.stats.thisMonth')}</div>
+                    <div style="color: #666; font-size: 0.9rem; margin-bottom: 0.5rem; font-weight: 600;">${t('ct.extension.timetracker.dashboard.stats.thisMonth')}</div>
                     <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.5rem;">
                         <div>
                             <div style="color: #999; font-size: 0.75rem;">IST</div>
@@ -1745,7 +1746,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
 
                 <!-- Last Month -->
                 <div style="background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                    <div style="color: #666; font-size: 0.9rem; margin-bottom: 0.5rem; font-weight: 600;">${t('dashboard.stats.lastMonth')}</div>
+                    <div style="color: #666; font-size: 0.9rem; margin-bottom: 0.5rem; font-weight: 600;">${t('ct.extension.timetracker.dashboard.stats.lastMonth')}</div>
                     <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.5rem;">
                         <div>
                             <div style="color: #999; font-size: 0.75rem;">IST</div>
@@ -1770,11 +1771,11 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
 
             <!-- Recent Entries -->
             <div style="background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                <h2 style="margin: 0 0 1rem 0; font-size: 1.2rem; color: #333;">Recent Entries</h2>
+                <h2 style="margin: 0; font-size: 1.2rem; color: #333;">${t('ct.extension.timetracker.dashboard.recentEntries')}</h2>
                 ${renderEntriesList(getFilteredEntries().slice(0, 5))}
                 <div style="margin-top: 1rem; text-align: center;">
-                    <button id="view-all-entries" style="padding: 0.5rem 1rem; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">
-                        View All Entries
+                    <button id="view-all-entries-btn" style="background: none; border: none; color: #007bff; cursor: pointer; font-size: 0.9rem; font-weight: 500;">
+                        ${t('ct.extension.timetracker.dashboard.viewAllEntries')} &rarr;
                     </button>
                 </div>
             </div>
@@ -1788,10 +1789,13 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
             <!-- Bulk Entry Form -->
             <div style="background: #e7e3ff; border: 2px solid #6f42c1; border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-                    <h3 style="margin: 0; color: #333; display: flex; align-items: center; gap: 0.5rem;">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
-                            <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
+                    <h1 style="margin: 0; font-size: 1.5rem; color: #333; display: flex; align-items: center; gap: 0.75rem;">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <polyline points="12 6 12 12 16 14"></polyline>
+                </svg>
+                ${t('ct.extension.timetracker.common.timeTracker')}
+            </h1>rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
                             <line x1="12" y1="11" x2="12" y2="17"></line>
                             <line x1="9" y1="14" x2="15" y2="14"></line>
                         </svg>
@@ -1979,7 +1983,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
             <div style="background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1rem;">
                     <div>
-                        <label for="filter-date-from" style="display: block; margin-bottom: 0.5rem; color: #333; font-weight: 500;">From Date</label>
+                        <label for="filter-date-from" style="display: block; margin-bottom: 0.25rem; color: #666; font-size: 0.85rem;">${t('ct.extension.timetracker.reports.from')}</label>
                         <input
                             type="date"
                             id="filter-date-from"
@@ -1989,7 +1993,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                         />
                     </div>
                     <div>
-                        <label for="filter-date-to" style="display: block; margin-bottom: 0.5rem; color: #333; font-weight: 500;">To Date</label>
+                        <label for="filter-date-to" style="display: block; margin-bottom: 0.25rem; color: #666; font-size: 0.85rem;">${t('ct.extension.timetracker.reports.to')}</label>
                         <input
                             type="date"
                             id="filter-date-to"
@@ -1999,29 +2003,29 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                         />
                     </div>
                     <div>
-                        <label for="filter-category" style="display: block; margin-bottom: 0.5rem; color: #333; font-weight: 500;">Category</label>
+                        <label for="filter-category" style="display: block; margin-bottom: 0.25rem; color: #666; font-size: 0.85rem;">${t('ct.extension.timetracker.dashboard.category')}</label>
                         <select id="filter-category" name="filter-category" style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;">
-                            <option value="all">All Categories</option>
+                            <option value="all">${t('ct.extension.timetracker.common.allCategories')}</option>
                             ${workCategories.map((cat) => `<option value="${cat.id}" ${filterCategory === cat.id ? 'selected' : ''}>${cat.name}</option>`).join('')}
                         </select>
                     </div>
                 </div>
                 <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-                    <button id="apply-filters-btn" style="padding: 0.5rem 1rem; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">Apply Filters</button>
+                    <button id="apply-filters-btn" style="padding: 0.5rem 1rem; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.9rem;">${t('ct.extension.timetracker.common.applyFilter')}</button>
                     <button id="export-csv-btn" style="padding: 0.5rem 1rem; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; display: inline-flex; align-items: center; gap: 0.5rem;">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                             <polyline points="7 10 12 15 17 10"></polyline>
                             <line x1="12" y1="15" x2="12" y2="3"></line>
                         </svg>
-                        Export CSV
+                        ${t('ct.extension.timetracker.reports.exportCSV')}
                     </button>
                     <button id="add-manual-entry-btn" style="padding: 0.5rem 1rem; background: #ffc107; color: #333; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; display: inline-flex; align-items: center; gap: 0.5rem;">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <line x1="12" y1="5" x2="12" y2="19"></line>
                             <line x1="5" y1="12" x2="19" y2="12"></line>
                         </svg>
-                        Add Manual Entry
+                        ${t('ct.extension.timetracker.timeEntries.addManualEntryTitle')}
                     </button>
                     <button id="bulk-add-entries-btn" style="padding: 0.5rem 1rem; background: #6f42c1; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; display: inline-flex; align-items: center; gap: 0.5rem;">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -2030,7 +2034,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                             <line x1="12" y1="11" x2="12" y2="17"></line>
                             <line x1="9" y1="14" x2="15" y2="14"></line>
                         </svg>
-                        Bulk Add Entries
+                        ${t('ct.extension.timetracker.timeEntries.bulkAddEntries')}
                     </button>
                 </div>
             </div>
@@ -2042,20 +2046,20 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                 <!-- Add/Edit Manual Entry Form -->
                 <div style="background: ${editingEntry ? '#d1ecf1' : '#fff3cd'}; border: 1px solid ${editingEntry ? '#17a2b8' : '#ffc107'}; border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem;">
                     <h3 style="margin: 0 0 1rem 0; color: #333; display: flex; align-items: center; gap: 0.5rem;">
-                        ${editingEntry ? `
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-                            </svg>
-                            Edit Entry
-                        ` : `
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <line x1="12" y1="5" x2="12" y2="19"></line>
-                                <line x1="5" y1="12" x2="19" y2="12"></line>
-                            </svg>
-                            Add Manual Entry
-                        `}
-                    </h3>
+                    ${editingEntry ? `
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                        </svg>
+                        ${t('ct.extension.timetracker.common.edit')}
+                    ` : `
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <polyline points="12 6 12 12 16 14"></polyline>
+                        </svg>
+                        ${t('ct.extension.timetracker.timeEntries.addManualEntryTitle')}
+                    `}
+                </h3>
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
                         <div>
                             <label for="manual-start" style="display: block; margin-bottom: 0.5rem; color: #333; font-weight: 500;">Start Date & Time</label>
@@ -2149,7 +2153,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
 
     function renderEntriesList(entries: TimeEntry[]): string {
         if (entries.length === 0) {
-            return `<p style="color: #666; text-align: center; padding: 2rem;">${t('timeEntries.noEntries')}</p>`;
+            return `<p style="color: #666; text-align: center; padding: 2rem;">${t('ct.extension.timetracker.timeEntries.noEntries')}</p>`;
         }
 
         // Get user-specific hours
@@ -2251,23 +2255,23 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                             </h4>
                             <div style="display: flex; gap: 1rem; font-size: 0.85rem;">
                                 <span style="color: #666;">
-                                    <strong>Tag ${t('dashboard.stats.actual')}:</strong> <span style="color: ${dayIstMs >= userHours.hoursPerDay * 3600000 ? '#28a745' : (isWorkday ? '#dc3545' : '#6c757d')}; font-weight: 600;">${dayIst}</span>
+                                    <strong>Tag ${t('ct.extension.timetracker.dashboard.stats.actual')}:</strong> <span style="color: ${dayIstMs >= userHours.hoursPerDay * 3600000 ? '#28a745' : (isWorkday ? '#dc3545' : '#6c757d')}; font-weight: 600;">${dayIst}</span>
                                 </span>
                                 <span style="color: #666;">
-                                    <strong>Tag ${t('dashboard.stats.target')}:</strong> <span style="font-weight: 600;">${daySoll}</span>
+                                    <strong>Tag ${t('ct.extension.timetracker.dashboard.stats.target')}:</strong> <span style="font-weight: 600;">${daySoll}</span>
                                 </span>
                             </div>
                         </div>
                         <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
                             <thead>
                                 <tr style="background: #f8f9fa; border-bottom: 1px solid #dee2e6;">
-                                    <th style="padding: 0.5rem; text-align: left; font-weight: 600; color: #495057; font-size: 0.85rem;">${t('timeEntries.startTime')}</th>
-                                    <th style="padding: 0.5rem; text-align: left; font-weight: 600; color: #495057; font-size: 0.85rem;">${t('timeEntries.endTime')}</th>
-                                    <th style="padding: 0.5rem; text-align: left; font-weight: 600; color: #495057; font-size: 0.85rem;">${t('timeEntries.duration')}</th>
-                                    <th style="padding: 0.5rem; text-align: left; font-weight: 600; color: #495057; font-size: 0.85rem;">${t('dashboard.category')}</th>
-                                    <th style="padding: 0.5rem; text-align: left; font-weight: 600; color: #495057; font-size: 0.85rem;">${t('dashboard.description')}</th>
-                                    <th style="padding: 0.5rem; text-align: left; font-weight: 600; color: #495057; font-size: 0.85rem;">${t('timeEntries.type')}</th>
-                                    <th style="padding: 0.5rem; text-align: center; font-weight: 600; color: #495057; font-size: 0.85rem;">${t('timeEntries.actions')}</th>
+                                    <th style="padding: 0.5rem; text-align: left; font-weight: 600; color: #495057; font-size: 0.85rem;">${t('ct.extension.timetracker.timeEntries.startTime')}</th>
+                                    <th style="padding: 0.5rem; text-align: left; font-weight: 600; color: #495057; font-size: 0.85rem;">${t('ct.extension.timetracker.timeEntries.endTime')}</th>
+                                    <th style="padding: 0.5rem; text-align: left; font-weight: 600; color: #495057; font-size: 0.85rem;">${t('ct.extension.timetracker.timeEntries.duration')}</th>
+                                    <th style="padding: 0.5rem; text-align: left; font-weight: 600; color: #495057; font-size: 0.85rem;">${t('ct.extension.timetracker.dashboard.category')}</th>
+                                    <th style="padding: 0.5rem; text-align: left; font-weight: 600; color: #495057; font-size: 0.85rem;">${t('ct.extension.timetracker.dashboard.description')}</th>
+                                    <th style="padding: 0.5rem; text-align: left; font-weight: 600; color: #495057; font-size: 0.85rem;">${t('ct.extension.timetracker.timeEntries.type')}</th>
+                                    <th style="padding: 0.5rem; text-align: center; font-weight: 600; color: #495057; font-size: 0.85rem;">${t('ct.extension.timetracker.timeEntries.actions')}</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -2297,13 +2301,13 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                                                                     <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
                                                                     <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
                                                                 </svg>
-                                                                ${t('timeEntries.manual')}
+                                                                ${t('ct.extension.timetracker.timeEntries.manual')}
                                                             ` : `
                                                                 <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                                                     <circle cx="12" cy="12" r="10"></circle>
                                                                     <polyline points="12 6 12 12 16 14"></polyline>
                                                                 </svg>
-                                                                ${t('timeEntries.clockedIn')}
+                                                                ${t('ct.extension.timetracker.timeEntries.clockedIn')}
                                                             `}
                                                         </span>
                                                     </span>
@@ -2314,7 +2318,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                                                                     <rect x="6" y="4" width="4" height="16" rx="1"></rect>
                                                                     <rect x="14" y="4" width="4" height="16" rx="1"></rect>
                                                                 </svg>
-                                                                ${t('timeEntries.break')}
+                                                                ${t('ct.extension.timetracker.timeEntries.break')}
                                                             </span>
                                                         </span>
                                                     ` : ''}
@@ -2327,7 +2331,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                                                             class="edit-entry-btn"
                                                             data-entry-start="${entry.startTime}"
                                                             style="padding: 0.2rem 0.4rem; background: #ffc107; color: #333; border: none; border-radius: 3px; cursor: pointer; font-size: 0.75rem;"
-                                                            title="${t('common.edit')}"
+                                                            title="${t('ct.extension.timetracker.common.edit')}"
                                                         ><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                                             <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
                                                             <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
@@ -2336,7 +2340,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                                                             class="delete-entry-btn"
                                                             data-entry-start="${entry.startTime}"
                                                             style="padding: 0.2rem 0.4rem; background: #dc3545; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 0.75rem;"
-                                                            title="${t('common.delete')}"
+                                                            title="${t('ct.extension.timetracker.common.delete')}"
                                                         ><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                                             <polyline points="3 6 5 6 21 6"></polyline>
                                                             <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
@@ -2372,18 +2376,18 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                             <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
                             <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
                         </svg>
-                        ${t('absences.editAbsence')}
+                        ${t('ct.extension.timetracker.absences.editAbsence')}
                     ` : `
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <line x1="12" y1="5" x2="12" y2="19"></line>
                             <line x1="5" y1="12" x2="19" y2="12"></line>
                         </svg>
-                        ${t('absences.addAbsence')}
+                        ${t('ct.extension.timetracker.absences.addAbsence')}
                     `}
                 </h3>
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
                     <div>
-                        <label for="absence-start-date" style="display: block; margin-bottom: 0.5rem; color: #333; font-weight: 500;">${t('absences.startDate')}</label>
+                        <label for="absence-start-date" style="display: block; margin-bottom: 0.5rem; color: #333; font-weight: 500;">${t('ct.extension.timetracker.absences.startDate')}</label>
                         <input
                             type="date"
                             id="absence-start-date"
@@ -2392,7 +2396,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                         />
                     </div>
                     <div>
-                        <label for="absence-end-date" style="display: block; margin-bottom: 0.5rem; color: #333; font-weight: 500;">${t('absences.endDate')}</label>
+                        <label for="absence-end-date" style="display: block; margin-bottom: 0.5rem; color: #333; font-weight: 500;">${t('ct.extension.timetracker.absences.endDate')}</label>
                         <input
                             type="date"
                             id="absence-end-date"
@@ -2409,12 +2413,12 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                             ${!editingAbsence || !editingAbsence.startTime ? 'checked' : ''}
                             style="cursor: pointer;"
                         />
-                        <span style="color: #333; font-weight: 500;">${t('absences.allDay')}</span>
+                        <span style="color: #333; font-weight: 500;">${t('ct.extension.timetracker.absences.allDay')}</span>
                     </label>
                 </div>
                 <div id="absence-time-fields" style="display: ${!editingAbsence || !editingAbsence.startTime ? 'none' : 'grid'}; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
                     <div>
-                        <label for="absence-start-time" style="display: block; margin-bottom: 0.5rem; color: #333; font-weight: 500;">${t('absences.startTime')}</label>
+                        <label for="absence-start-time" style="display: block; margin-bottom: 0.5rem; color: #333; font-weight: 500;">${t('ct.extension.timetracker.absences.startTime')}</label>
                         <input
                             type="time"
                             id="absence-start-time"
@@ -2423,7 +2427,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                         />
                     </div>
                     <div>
-                        <label for="absence-end-time" style="display: block; margin-bottom: 0.5rem; color: #333; font-weight: 500;">${t('absences.endTime')}</label>
+                        <label for="absence-end-time" style="display: block; margin-bottom: 0.5rem; color: #333; font-weight: 500;">${t('ct.extension.timetracker.absences.endTime')}</label>
                         <input
                             type="time"
                             id="absence-end-time"
@@ -2433,7 +2437,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                     </div>
                 </div>
                 <div style="margin-bottom: 1rem;">
-                    <label for="absence-reason" style="display: block; margin-bottom: 0.5rem; color: #333; font-weight: 500;">${t('absences.reason')}</label>
+                    <label for="absence-reason" style="display: block; margin-bottom: 0.5rem; color: #333; font-weight: 500;">${t('ct.extension.timetracker.absences.reason')}</label>
                     <select
                         id="absence-reason"
                         style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;"
@@ -2441,7 +2445,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                     >
                         ${absenceReasons.length === 0 ?
                     '<option value="">No reasons available - check admin settings</option>' :
-                    (editingAbsence ? '' : `<option value="">-- ${t('absences.selectReason')} --</option>`) +
+                    (editingAbsence ? '' : `<option value="">-- ${t('ct.extension.timetracker.absences.selectReason')} --</option>`) +
                     absenceReasons.map(reason => `
                                 <option value="${reason.id}" ${editingAbsence && editingAbsence.absenceReason.id === reason.id ? 'selected' : ''}>${reason.nameTranslated || reason.name}</option>
                             `).join('')
@@ -2449,7 +2453,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                     </select>
                 </div>
                 <div style="margin-bottom: 1rem;">
-                    <label for="absence-comment" style="display: block; margin-bottom: 0.5rem; color: #333; font-weight: 500;">${t('absences.comment')}</label>
+                    <label for="absence-comment" style="display: block; margin-bottom: 0.5rem; color: #333; font-weight: 500;">${t('ct.extension.timetracker.absences.comment')}</label>
                     <textarea
                         id="absence-comment"
                         rows="3"
@@ -2464,9 +2468,9 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                             <polyline points="17 21 17 13 7 13 7 21"></polyline>
                             <polyline points="7 3 7 8 15 8"></polyline>
                         </svg>
-                        ${editingAbsence ? t('common.save') : t('common.add')}
+                        ${editingAbsence ? t('ct.extension.timetracker.common.save') : t('ct.extension.timetracker.common.add')}
                     </button>
-                    <button id="cancel-absence-btn" style="padding: 0.5rem 1rem; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer;">${t('common.cancel')}</button>
+                    <button id="cancel-absence-btn" style="padding: 0.5rem 1rem; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer;">${t('ct.extension.timetracker.common.cancel')}</button>
                 </div>
             </div>
             `
@@ -2476,26 +2480,26 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
             <!-- Absences List -->
             <div style="background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-                    <h2 style="margin: 0; font-size: 1.2rem; color: #333;">${t('absences.title')} (${absences.length})</h2>
+                    <h2 style="margin: 0; font-size: 1.2rem; color: #333;">${t('ct.extension.timetracker.absences.title')} (${absences.length})</h2>
                     <button id="add-absence-btn" style="padding: 0.5rem 1rem; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; display: inline-flex; align-items: center; gap: 0.5rem;">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <line x1="12" y1="5" x2="12" y2="19"></line>
                             <line x1="5" y1="12" x2="19" y2="12"></line>
                         </svg>
-                        ${t('absences.addAbsence')}
+                        ${t('ct.extension.timetracker.absences.addAbsence')}
                     </button>
                 </div>
-                ${absences.length === 0 ? `<p style="color: #666; text-align: center; padding: 2rem;">${t('absences.noAbsences')}</p>` : `
+                ${absences.length === 0 ? `<p style="color: #666; text-align: center; padding: 2rem;">${t('ct.extension.timetracker.absences.noAbsences')}</p>` : `
                 <div style="overflow-x: auto;">
                     <table style="width: 100%; border-collapse: collapse;">
                         <thead>
                             <tr style="background: #f8f9fa; border-bottom: 2px solid #dee2e6;">
-                                <th style="padding: 0.75rem; text-align: left; font-weight: 600; color: #495057;">${t('reports.from')}</th>
-                                <th style="padding: 0.75rem; text-align: left; font-weight: 600; color: #495057;">${t('reports.to')}</th>
-                                <th style="padding: 0.75rem; text-align: left; font-weight: 600; color: #495057;">${t('absences.reason')}</th>
-                                <th style="padding: 0.75rem; text-align: left; font-weight: 600; color: #495057;">${t('absences.comment')}</th>
-                                <th style="padding: 0.75rem; text-align: left; font-weight: 600; color: #495057;">${t('timeEntries.type')}</th>
-                                <th style="padding: 0.75rem; text-align: left; font-weight: 600; color: #495057;">${t('timeEntries.actions')}</th>
+                                <th style="padding: 0.75rem; text-align: left; font-weight: 600; color: #495057;">${t('ct.extension.timetracker.reports.from')}</th>
+                                <th style="padding: 0.75rem; text-align: left; font-weight: 600; color: #495057;">${t('ct.extension.timetracker.reports.to')}</th>
+                                <th style="padding: 0.75rem; text-align: left; font-weight: 600; color: #495057;">${t('ct.extension.timetracker.absences.reason')}</th>
+                                <th style="padding: 0.75rem; text-align: left; font-weight: 600; color: #495057;">${t('ct.extension.timetracker.absences.comment')}</th>
+                                <th style="padding: 0.75rem; text-align: left; font-weight: 600; color: #495057;">${t('ct.extension.timetracker.timeEntries.type')}</th>
+                                <th style="padding: 0.75rem; text-align: left; font-weight: 600; color: #495057;">${t('ct.extension.timetracker.timeEntries.actions')}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -2513,7 +2517,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                                         </span>
                                     </td>
                                     <td style="padding: 0.75rem;">${absence.comment || '-'}</td>
-                                    <td style="padding: 0.75rem;">${isAllDay ? 'All-day' : 'Timed'}</td>
+                                    <td style="padding: 0.75rem;">${isAllDay ? t('ct.extension.timetracker.absences.allDay') : 'Timed'}</td>
                                     <td style="padding: 0.75rem;">
                                         <div style="display: flex; gap: 0.25rem;">
                                             <button
@@ -2564,7 +2568,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
         return `
             <!-- Period Quick Select -->
             <div style="background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                <h2 style="margin: 0 0 1rem 0; font-size: 1.2rem; color: #333;">${t('reports.period')}</h2>
+                <h2 style="margin: 0 0 1rem 0; font-size: 1.2rem; color: #333;">${t('ct.extension.timetracker.reports.period')}</h2>
                 <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
                     <button id="report-period-week" style="padding: 0.75rem 1.5rem; border: ${reportPeriod === 'week' ? '2px' : '1px'} solid ${reportPeriod === 'week' ? '#007bff' : '#ddd'}; background: ${reportPeriod === 'week' ? '#e7f3ff' : '#fff'}; color: ${reportPeriod === 'week' ? '#007bff' : '#666'}; border-radius: 4px; cursor: pointer; font-weight: ${reportPeriod === 'week' ? '600' : '400'};">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle;">
@@ -2573,7 +2577,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                             <line x1="8" y1="2" x2="8" y2="6"></line>
                             <line x1="3" y1="10" x2="21" y2="10"></line>
                         </svg>
-                        ${t('reports.periodSelect.thisWeek')}
+                        ${t('ct.extension.timetracker.reports.periodSelect.thisWeek')}
                     </button>
                     <button id="report-period-month" style="padding: 0.75rem 1.5rem; border: ${reportPeriod === 'month' ? '2px' : '1px'} solid ${reportPeriod === 'month' ? '#007bff' : '#ddd'}; background: ${reportPeriod === 'month' ? '#e7f3ff' : '#fff'}; color: ${reportPeriod === 'month' ? '#007bff' : '#666'}; border-radius: 4px; cursor: pointer; font-weight: ${reportPeriod === 'month' ? '600' : '400'};">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle;">
@@ -2588,7 +2592,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                             <line x1="12" y1="18" x2="12" y2="18"></line>
                             <line x1="16" y1="18" x2="16" y2="18"></line>
                         </svg>
-                        ${t('reports.periodSelect.thisMonth')}
+                        ${t('ct.extension.timetracker.reports.periodSelect.thisMonth')}
                     </button>
                     <button id="report-period-year" style="padding: 0.75rem 1.5rem; border: ${reportPeriod === 'year' ? '2px' : '1px'} solid ${reportPeriod === 'year' ? '#007bff' : '#ddd'}; background: ${reportPeriod === 'year' ? '#e7f3ff' : '#fff'}; color: ${reportPeriod === 'year' ? '#007bff' : '#666'}; border-radius: 4px; cursor: pointer; font-weight: ${reportPeriod === 'year' ? '600' : '400'};">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle;">
@@ -2596,14 +2600,14 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                             <line x1="18" y1="20" x2="18" y2="4"></line>
                             <line x1="6" y1="20" x2="6" y2="16"></line>
                         </svg>
-                        ${t('reports.periodSelect.thisYear')}
+                        ${t('ct.extension.timetracker.reports.periodSelect.thisYear')}
                     </button>
                     <button id="report-period-custom" style="padding: 0.75rem 1.5rem; border: ${reportPeriod === 'custom' ? '2px' : '1px'} solid ${reportPeriod === 'custom' ? '#007bff' : '#ddd'}; background: ${reportPeriod === 'custom' ? '#e7f3ff' : '#fff'}; color: ${reportPeriod === 'custom' ? '#007bff' : '#666'}; border-radius: 4px; cursor: pointer; font-weight: ${reportPeriod === 'custom' ? '600' : '400'};">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle;">
                             <circle cx="12" cy="12" r="3"></circle>
                             <path d="M12 1v6m0 6v6m9-9h-6M8 12H2m15.36-6.36l-4.24 4.24m0 4.24l4.24 4.24M6.64 17.64l4.24-4.24m0-4.24L6.64 6.64"></path>
                         </svg>
-                        ${t('reports.periodSelect.custom')}
+                        ${t('ct.extension.timetracker.reports.periodSelect.custom')}
                     </button>
                 </div>
             </div>
@@ -2611,10 +2615,10 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
             <!-- Custom Period Selection -->
             ${reportPeriod === 'custom' ? `
             <div style="background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                <h2 style="margin: 0 0 1rem 0; font-size: 1.2rem; color: #333;">${t('reports.periodSelect.custom')}</h2>
+                <h2 style="margin: 0 0 1rem 0; font-size: 1.2rem; color: #333;">${t('ct.extension.timetracker.reports.periodSelect.custom')}</h2>
                 <div style="display: grid; grid-template-columns: 1fr 1fr auto; gap: 1rem; align-items: end;">
                     <div>
-                        <label for="report-date-from" style="display: block; margin-bottom: 0.5rem; color: #333; font-weight: 500;">${t('reports.from')}</label>
+                        <label for="report-date-from" style="display: block; margin-bottom: 0.5rem; color: #333; font-weight: 500;">${t('ct.extension.timetracker.reports.from')}</label>
                         <input
                             type="date"
                             id="report-date-from"
@@ -2624,7 +2628,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                         />
                     </div>
                     <div>
-                        <label for="report-date-to" style="display: block; margin-bottom: 0.5rem; color: #333; font-weight: 500;">${t('reports.to')}</label>
+                        <label for="report-date-to" style="display: block; margin-bottom: 0.5rem; color: #333; font-weight: 500;">${t('ct.extension.timetracker.reports.to')}</label>
                         <input
                             type="date"
                             id="report-date-to"
@@ -2633,7 +2637,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                             style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;"
                         />
                     </div>
-                    <button id="apply-report-filters-btn" style="padding: 0.5rem 1rem; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">${t('common.refresh')}</button>
+                    <button id="apply-report-filters-btn" style="padding: 0.5rem 1rem; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">${t('ct.extension.timetracker.common.refresh')}</button>
                 </div>
             </div>
             ` : ''}
@@ -2641,34 +2645,34 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
             <!-- Summary Stats -->
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
                 <div style="background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                    <div style="color: #666; font-size: 0.9rem; margin-bottom: 0.5rem;">${t('reports.totalWorked')}</div>
+                    <div style="color: #666; font-size: 0.9rem; margin-bottom: 0.5rem;">${t('ct.extension.timetracker.reports.totalWorked')}</div>
                     <div style="font-size: 2.5rem; font-weight: 700; color: #007bff;">${stats.totalHours}h</div>
-                    <div style="color: #999; font-size: 0.85rem; margin-top: 0.5rem;">${stats.entriesCount} entries</div>
+                    <div style="color: #999; font-size: 0.85rem; margin-top: 0.5rem;">${stats.entriesCount} ${t('ct.extension.timetracker.dashboard.stats.entries')}</div>
                 </div>
                 <div style="background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                    <div style="color: #666; font-size: 0.9rem; margin-bottom: 0.5rem;">${t('absences.title')}</div>
+                    <div style="color: #666; font-size: 0.9rem; margin-bottom: 0.5rem;">${t('ct.extension.timetracker.absences.title')}</div>
                     <div style="font-size: 2.5rem; font-weight: 700; color: #ffc107;">${stats.absenceHours}h</div>
-                    <div style="color: #999; font-size: 0.85rem; margin-top: 0.5rem;">${stats.absenceDays} days off</div>
+                    <div style="color: #999; font-size: 0.85rem; margin-top: 0.5rem;">${stats.absenceDays} ${t('ct.extension.timetracker.dashboard.stats.daysOff')}</div>
                 </div>
                 <div style="background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                    <div style="color: #666; font-size: 0.9rem; margin-bottom: 0.5rem;">${t('reports.targetHours')}</div>
+                    <div style="color: #666; font-size: 0.9rem; margin-bottom: 0.5rem;">${t('ct.extension.timetracker.reports.targetHours')}</div>
                     <div style="font-size: 2.5rem; font-weight: 700; color: #6c757d;">${stats.expectedHours}h</div>
-                    <div style="color: #999; font-size: 0.85rem; margin-top: 0.5rem;">Adjusted for absences</div>
+                    <div style="color: #999; font-size: 0.85rem; margin-top: 0.5rem;">${t('ct.extension.timetracker.reports.adjustedForAbsences')}</div>
                 </div>
                 <div style="background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                    <div style="color: #666; font-size: 0.9rem; margin-bottom: 0.5rem;">${t('reports.overtime')} / ${t('reports.undertime')}</div>
+                    <div style="color: #666; font-size: 0.9rem; margin-bottom: 0.5rem;">${t('ct.extension.timetracker.reports.overtime')} / ${t('ct.extension.timetracker.reports.undertime')}</div>
                     <div style="font-size: 2.5rem; font-weight: 700; color: ${parseFloat(stats.overtime) >= 0 ? '#28a745' : '#dc3545'};">
                         ${parseFloat(stats.overtime) >= 0 ? '+' : ''}${stats.overtime}h
                     </div>
                     <div style="color: #999; font-size: 0.85rem; margin-top: 0.5rem;">
-                        ${parseFloat(stats.overtime) >= 0 ? 'Extra hours worked' : 'Hours under target'}
+                        ${parseFloat(stats.overtime) >= 0 ? t('ct.extension.timetracker.reports.extraHours') : t('ct.extension.timetracker.reports.hoursUnderTarget')}
                     </div>
                 </div>
             </div>
 
             <!-- IST vs SOLL Comparison -->
             <div style="background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                <h2 style="margin: 0 0 1rem 0; font-size: 1.2rem; color: #333;">IST vs SOLL Comparison</h2>
+                <h2 style="margin: 0 0 1rem 0; font-size: 1.2rem; color: #333;">${t('ct.extension.timetracker.reports.istVsSoll')}</h2>
                 ${(() => {
                 const ist = parseFloat(stats.totalHours);
                 const soll = parseFloat(stats.expectedHours);
@@ -2680,20 +2684,20 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 1.5rem;">
                             <div>
                                 <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.5rem;">
-                                    <span style="font-weight: 600; color: #007bff; font-size: 1.1rem;">${t('dashboard.stats.actual')}:</span>
+                                    <span style="font-weight: 600; color: #007bff; font-size: 1.1rem;">${t('ct.extension.timetracker.dashboard.stats.actual')}:</span>
                                     <span style="font-size: 2rem; font-weight: 700; color: #007bff;">${stats.totalHours}h</span>
                                 </div>
                                 <div style="color: #666; font-size: 0.85rem;">
-                                    ${stats.entriesCount} time entries recorded
+                                    ${stats.entriesCount} ${t('ct.extension.timetracker.reports.entriesRecorded')}
                                 </div>
                             </div>
                             <div>
                                 <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.5rem;">
-                                    <span style="font-weight: 600; color: #6c757d; font-size: 1.1rem;">${t('dashboard.stats.target')}:</span>
+                                    <span style="font-weight: 600; color: #6c757d; font-size: 1.1rem;">${t('ct.extension.timetracker.dashboard.stats.target')}:</span>
                                     <span style="font-size: 2rem; font-weight: 700; color: #6c757d;">${stats.expectedHours}h</span>
                                 </div>
                                 <div style="color: #666; font-size: 0.85rem;">
-                                    Expected hours (minus ${stats.absenceHours}h absences)
+                                    ${t('ct.extension.timetracker.reports.expectedHoursHelp').replace('{hours}', stats.absenceHours)}
                                 </div>
                             </div>
                         </div>
@@ -2718,6 +2722,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                         </div>
 
                         <div style="padding: 1rem; background: ${isOverTarget ? '#d4edda' : (percentage >= 80 ? '#fff3cd' : '#f8d7da')}; border-radius: 6px; border-left: 4px solid ${progressColor};">
+
                             <div style="font-weight: 600; color: ${isOverTarget ? '#155724' : (percentage >= 80 ? '#856404' : '#721c24')}; margin-bottom: 0.25rem;">
                                 ${isOverTarget ? `
                                     <span style="display: inline-flex; align-items: center; gap: 0.25rem;">
@@ -2725,7 +2730,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                                             <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
                                             <polyline points="22 4 12 14.01 9 11.01"></polyline>
                                         </svg>
-                                        Target Achieved!
+                                        ${t('ct.extension.timetracker.reports.targetAchieved')}
                                     </span>
                                 ` : (percentage >= 80 ? `
                                     <span style="display: inline-flex; align-items: center; gap: 0.25rem;">
@@ -2749,7 +2754,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                             </div>
                             <div style="color: ${isOverTarget ? '#155724' : (percentage >= 80 ? '#856404' : '#721c24')}; font-size: 0.9rem;">
                                 ${isOverTarget
-                        ? `You have worked ${formatDecimalHours(parseFloat(stats.overtime))} more than required. Great job!`
+                        ? `${t('ct.extension.timetracker.reports.targetAchievedMessage').replace('{hours}', parseFloat(stats.overtime).toFixed(0) + 'h ' + Math.round((parseFloat(stats.overtime) % 1) * 60) + 'm')}`
                         : `You need to work ${formatDecimalHours(Math.abs(parseFloat(stats.overtime)))} more to reach your target.`
                     }
                             </div>
@@ -2760,7 +2765,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
 
             <!-- Breakdown by Category -->
             <div style="background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                <h2 style="margin: 0 0 1rem 0; font-size: 1.2rem; color: #333;">${t('reports.categoryBreakdown')}</h2>
+                <h2 style="margin: 0 0 1rem 0; font-size: 1.2rem; color: #333;">${t('ct.extension.timetracker.reports.categoryBreakdown')}</h2>
                 <div style="display: grid; gap: 1rem;">
                     ${Object.keys(entriesByCategory)
                 .map((catId) => {
@@ -2782,7 +2787,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                                 <div style="background: ${category?.color || '#6c757d'}; height: 100%; width: ${percentage}%; transition: width 0.3s;"></div>
                             </div>
                             <div style="margin-top: 0.5rem; color: #666; font-size: 0.85rem;">
-                                ${data.count} entries • ${percentage.toFixed(1)}% of total time
+                                ${t('ct.extension.timetracker.reports.categoryDetails').replace('{count}', data.count.toString()).replace('{percent}', percentage.toFixed(1))}
                             </div>
                         </div>
                     `;
@@ -2794,7 +2799,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
             <!-- Absences in Period -->
             ${absences.length > 0 ? `
             <div style="background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                <h2 style="margin: 0 0 1rem 0; font-size: 1.2rem; color: #333;">${t('absences.title')}</h2>
+                <h2 style="margin: 0 0 1rem 0; font-size: 1.2rem; color: #333;">${t('ct.extension.timetracker.absences.title')}</h2>
                 <div style="overflow-x: auto;">
                     <table style="width: 100%; border-collapse: collapse;">
                         <thead>
@@ -2848,7 +2853,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
 
             <!-- Export Options -->
             <div style="background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                <h2 style="margin: 0 0 1rem 0; font-size: 1.2rem; color: #333;">Export Report</h2>
+                <h2 style="margin: 0 0 1rem 0; font-size: 1.2rem; color: #333;">${t('ct.extension.timetracker.reports.exportReport')}</h2>
                 <button id="export-report-csv-btn" style="padding: 0.75rem 1.5rem; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; display: inline-flex; align-items: center; gap: 0.5rem;">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
@@ -3247,7 +3252,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
             btn.addEventListener('click', (e) => {
                 const target = e.target as HTMLElement;
                 const rowId = parseInt(target.dataset.rowId || '0');
-                if (rowId && confirm(t('timeEntries.deleteConfirm'))) {
+                if (rowId && confirm(t('ct.extension.timetracker.timeEntries.deleteConfirm'))) {
                     removeBulkEntryRow(rowId);
                 }
             });
@@ -3334,7 +3339,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                 if (
                     absence &&
                     confirm(
-                        `${t('absences.deleteConfirm')}\n\n${t('reports.from')}: ${new Date(absence.startDate).toLocaleDateString()}\n${t('reports.to')}: ${new Date(absence.endDate).toLocaleDateString()}\n${t('absences.reason')}: ${absence.absenceReason?.nameTranslated || absence.absenceReason?.name}`
+                        `${t('ct.extension.timetracker.absences.deleteConfirm')}\n\n${t('ct.extension.timetracker.reports.from')}: ${new Date(absence.startDate).toLocaleDateString()}\n${t('ct.extension.timetracker.reports.to')}: ${new Date(absence.endDate).toLocaleDateString()}\n${t('ct.extension.timetracker.absences.reason')}: ${absence.absenceReason?.nameTranslated || absence.absenceReason?.name}`
                     )
                 ) {
                     deleteAbsence(absenceId);
@@ -3348,7 +3353,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
         const target = e.target as HTMLElement;
 
         // Check if clicked element is an edit button
-        const editBtn = target.closest('.edit-entry-btn') as HTMLElement;
+        const editBtn = target.closest('ct.extension.timetracker..edit-entry-btn') as HTMLElement;
         if (editBtn) {
             const startTime = editBtn.dataset.entryStart;
             const entry = timeEntries.find((e) => e.startTime === startTime);
@@ -3362,7 +3367,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
         }
 
         // Check if clicked element is a delete button
-        const deleteBtn = target.closest('.delete-entry-btn') as HTMLElement;
+        const deleteBtn = target.closest('ct.extension.timetracker..delete-entry-btn') as HTMLElement;
         if (deleteBtn) {
             const startTime = deleteBtn.dataset.entryStart;
             const entry = timeEntries.find((e) => e.startTime === startTime);
@@ -3370,7 +3375,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
             if (
                 entry &&
                 confirm(
-                    `${t('timeEntries.deleteConfirm')}\n\n${t('timeEntries.startTime')}: ${new Date(entry.startTime).toLocaleString()}\n${t('timeEntries.endTime')}: ${entry.endTime ? new Date(entry.endTime).toLocaleString() : 'N/A'}\n${t('dashboard.category')}: ${entry.categoryName}${entry.isBreak ? ` (${t('timeEntries.break')})` : ''}`
+                    `${t('ct.extension.timetracker.timeEntries.deleteConfirm')}\n\n${t('ct.extension.timetracker.timeEntries.startTime')}: ${new Date(entry.startTime).toLocaleString()}\n${t('ct.extension.timetracker.timeEntries.endTime')}: ${entry.endTime ? new Date(entry.endTime).toLocaleString() : 'N/A'}\n${t('ct.extension.timetracker.dashboard.category')}: ${entry.categoryName}${entry.isBreak ? ` (${t('ct.extension.timetracker.timeEntries.break')})` : ''}`
                 )
             ) {
                 deleteTimeEntry(startTime!);

@@ -7,14 +7,7 @@
 
 export type Language = 'de' | 'en';
 
-export interface Translations {
-    common: Record<string, any>;
-    dashboard: Record<string, any>;
-    timeEntries: Record<string, any>;
-    absences: Record<string, any>;
-    reports: Record<string, any>;
-    admin: Record<string, any>;
-}
+export type Translations = Record<string, string>;
 
 let currentLanguage: Language = 'en';
 let translations: Translations | null = null;
@@ -59,7 +52,7 @@ export function detectBrowserLanguage(): Language {
 
 /**
  * Translate a key to the current language
- * @param key - Translation key in format "namespace.key" or "namespace.nested.key"
+ * @param key - Translation key in format "ct.extension.timetracker.namespace.key"
  * @returns Translated string or key if translation not found
  */
 export function t(key: string): string {
@@ -68,31 +61,14 @@ export function t(key: string): string {
         return key;
     }
 
-    const parts = key.split('.');
-    const namespace = parts[0];
+    const translation = translations[key];
 
-    if (!namespace || !translations[namespace as keyof Translations]) {
-        console.warn('[i18n] Namespace not found:', namespace);
+    if (translation === undefined) {
+        console.warn('[i18n] Translation key not found:', key);
         return key;
     }
 
-    let current: any = translations[namespace as keyof Translations];
-
-    // Traverse the object path
-    for (let i = 1; i < parts.length; i++) {
-        if (current[parts[i]] === undefined) {
-            console.warn('[i18n] Translation key not found:', key);
-            return key;
-        }
-        current = current[parts[i]];
-    }
-
-    if (typeof current !== 'string') {
-        console.warn('[i18n] Key does not resolve to a string:', key);
-        return key;
-    }
-
-    return current;
+    return translation;
 }
 
 /**
