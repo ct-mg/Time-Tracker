@@ -2149,7 +2149,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
 
     function renderEntriesList(entries: TimeEntry[]): string {
         if (entries.length === 0) {
-            return '<p style="color: #666; text-align: center; padding: 2rem;">No entries found.</p>';
+            return `<p style="color: #666; text-align: center; padding: 2rem;">${t('timeEntries.noEntries')}</p>`;
         }
 
         // Get user-specific hours
@@ -2251,23 +2251,23 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                             </h4>
                             <div style="display: flex; gap: 1rem; font-size: 0.85rem;">
                                 <span style="color: #666;">
-                                    <strong>Tag IST:</strong> <span style="color: ${dayIstMs >= userHours.hoursPerDay * 3600000 ? '#28a745' : (isWorkday ? '#dc3545' : '#6c757d')}; font-weight: 600;">${dayIst}</span>
+                                    <strong>Tag ${t('dashboard.stats.actual')}:</strong> <span style="color: ${dayIstMs >= userHours.hoursPerDay * 3600000 ? '#28a745' : (isWorkday ? '#dc3545' : '#6c757d')}; font-weight: 600;">${dayIst}</span>
                                 </span>
                                 <span style="color: #666;">
-                                    <strong>Tag SOLL:</strong> <span style="font-weight: 600;">${daySoll}</span>
+                                    <strong>Tag ${t('dashboard.stats.target')}:</strong> <span style="font-weight: 600;">${daySoll}</span>
                                 </span>
                             </div>
                         </div>
                         <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
                             <thead>
                                 <tr style="background: #f8f9fa; border-bottom: 1px solid #dee2e6;">
-                                    <th style="padding: 0.5rem; text-align: left; font-weight: 600; color: #495057; font-size: 0.85rem;">Start</th>
-                                    <th style="padding: 0.5rem; text-align: left; font-weight: 600; color: #495057; font-size: 0.85rem;">End</th>
-                                    <th style="padding: 0.5rem; text-align: left; font-weight: 600; color: #495057; font-size: 0.85rem;">Duration</th>
-                                    <th style="padding: 0.5rem; text-align: left; font-weight: 600; color: #495057; font-size: 0.85rem;">Category</th>
-                                    <th style="padding: 0.5rem; text-align: left; font-weight: 600; color: #495057; font-size: 0.85rem;">Description</th>
-                                    <th style="padding: 0.5rem; text-align: left; font-weight: 600; color: #495057; font-size: 0.85rem;">Type</th>
-                                    <th style="padding: 0.5rem; text-align: center; font-weight: 600; color: #495057; font-size: 0.85rem;">Actions</th>
+                                    <th style="padding: 0.5rem; text-align: left; font-weight: 600; color: #495057; font-size: 0.85rem;">${t('timeEntries.startTime')}</th>
+                                    <th style="padding: 0.5rem; text-align: left; font-weight: 600; color: #495057; font-size: 0.85rem;">${t('timeEntries.endTime')}</th>
+                                    <th style="padding: 0.5rem; text-align: left; font-weight: 600; color: #495057; font-size: 0.85rem;">${t('timeEntries.duration')}</th>
+                                    <th style="padding: 0.5rem; text-align: left; font-weight: 600; color: #495057; font-size: 0.85rem;">${t('dashboard.category')}</th>
+                                    <th style="padding: 0.5rem; text-align: left; font-weight: 600; color: #495057; font-size: 0.85rem;">${t('dashboard.description')}</th>
+                                    <th style="padding: 0.5rem; text-align: left; font-weight: 600; color: #495057; font-size: 0.85rem;">${t('timeEntries.type')}</th>
+                                    <th style="padding: 0.5rem; text-align: center; font-weight: 600; color: #495057; font-size: 0.85rem;">${t('timeEntries.actions')}</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -2297,13 +2297,13 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                                                                     <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
                                                                     <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
                                                                 </svg>
-                                                                Manual
+                                                                ${t('timeEntries.manual')}
                                                             ` : `
                                                                 <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                                                     <circle cx="12" cy="12" r="10"></circle>
                                                                     <polyline points="12 6 12 12 16 14"></polyline>
                                                                 </svg>
-                                                                Tracked
+                                                                ${t('timeEntries.clockedIn')}
                                                             `}
                                                         </span>
                                                     </span>
@@ -2314,7 +2314,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                                                                     <rect x="6" y="4" width="4" height="16" rx="1"></rect>
                                                                     <rect x="14" y="4" width="4" height="16" rx="1"></rect>
                                                                 </svg>
-                                                                Break
+                                                                ${t('timeEntries.break')}
                                                             </span>
                                                         </span>
                                                     ` : ''}
@@ -2327,7 +2327,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                                                             class="edit-entry-btn"
                                                             data-entry-start="${entry.startTime}"
                                                             style="padding: 0.2rem 0.4rem; background: #ffc107; color: #333; border: none; border-radius: 3px; cursor: pointer; font-size: 0.75rem;"
-                                                            title="Edit"
+                                                            title="${t('common.edit')}"
                                                         ><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                                             <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
                                                             <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
@@ -2336,7 +2336,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                                                             class="delete-entry-btn"
                                                             data-entry-start="${entry.startTime}"
                                                             style="padding: 0.2rem 0.4rem; background: #dc3545; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 0.75rem;"
-                                                            title="Delete"
+                                                            title="${t('common.delete')}"
                                                         ><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                                             <polyline points="3 6 5 6 21 6"></polyline>
                                                             <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
@@ -2372,18 +2372,18 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                             <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
                             <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
                         </svg>
-                        Edit Absence
+                        ${t('absences.editAbsence')}
                     ` : `
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <line x1="12" y1="5" x2="12" y2="19"></line>
                             <line x1="5" y1="12" x2="19" y2="12"></line>
                         </svg>
-                        Add Absence
+                        ${t('absences.addAbsence')}
                     `}
                 </h3>
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
                     <div>
-                        <label for="absence-start-date" style="display: block; margin-bottom: 0.5rem; color: #333; font-weight: 500;">Start Date</label>
+                        <label for="absence-start-date" style="display: block; margin-bottom: 0.5rem; color: #333; font-weight: 500;">${t('absences.startDate')}</label>
                         <input
                             type="date"
                             id="absence-start-date"
@@ -2392,7 +2392,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                         />
                     </div>
                     <div>
-                        <label for="absence-end-date" style="display: block; margin-bottom: 0.5rem; color: #333; font-weight: 500;">End Date</label>
+                        <label for="absence-end-date" style="display: block; margin-bottom: 0.5rem; color: #333; font-weight: 500;">${t('absences.endDate')}</label>
                         <input
                             type="date"
                             id="absence-end-date"
@@ -2409,12 +2409,12 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                             ${!editingAbsence || !editingAbsence.startTime ? 'checked' : ''}
                             style="cursor: pointer;"
                         />
-                        <span style="color: #333; font-weight: 500;">All-day absence</span>
+                        <span style="color: #333; font-weight: 500;">${t('absences.allDay')}</span>
                     </label>
                 </div>
                 <div id="absence-time-fields" style="display: ${!editingAbsence || !editingAbsence.startTime ? 'none' : 'grid'}; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
                     <div>
-                        <label for="absence-start-time" style="display: block; margin-bottom: 0.5rem; color: #333; font-weight: 500;">Start Time</label>
+                        <label for="absence-start-time" style="display: block; margin-bottom: 0.5rem; color: #333; font-weight: 500;">${t('absences.startTime')}</label>
                         <input
                             type="time"
                             id="absence-start-time"
@@ -2423,7 +2423,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                         />
                     </div>
                     <div>
-                        <label for="absence-end-time" style="display: block; margin-bottom: 0.5rem; color: #333; font-weight: 500;">End Time</label>
+                        <label for="absence-end-time" style="display: block; margin-bottom: 0.5rem; color: #333; font-weight: 500;">${t('absences.endTime')}</label>
                         <input
                             type="time"
                             id="absence-end-time"
@@ -2433,7 +2433,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                     </div>
                 </div>
                 <div style="margin-bottom: 1rem;">
-                    <label for="absence-reason" style="display: block; margin-bottom: 0.5rem; color: #333; font-weight: 500;">Reason</label>
+                    <label for="absence-reason" style="display: block; margin-bottom: 0.5rem; color: #333; font-weight: 500;">${t('absences.reason')}</label>
                     <select
                         id="absence-reason"
                         style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;"
@@ -2441,7 +2441,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                     >
                         ${absenceReasons.length === 0 ?
                     '<option value="">No reasons available - check admin settings</option>' :
-                    (editingAbsence ? '' : '<option value="">-- Select a reason --</option>') +
+                    (editingAbsence ? '' : `<option value="">-- ${t('absences.selectReason')} --</option>`) +
                     absenceReasons.map(reason => `
                                 <option value="${reason.id}" ${editingAbsence && editingAbsence.absenceReason.id === reason.id ? 'selected' : ''}>${reason.nameTranslated || reason.name}</option>
                             `).join('')
@@ -2449,7 +2449,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                     </select>
                 </div>
                 <div style="margin-bottom: 1rem;">
-                    <label for="absence-comment" style="display: block; margin-bottom: 0.5rem; color: #333; font-weight: 500;">Comment (optional)</label>
+                    <label for="absence-comment" style="display: block; margin-bottom: 0.5rem; color: #333; font-weight: 500;">${t('absences.comment')}</label>
                     <textarea
                         id="absence-comment"
                         rows="3"
@@ -2464,9 +2464,9 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                             <polyline points="17 21 17 13 7 13 7 21"></polyline>
                             <polyline points="7 3 7 8 15 8"></polyline>
                         </svg>
-                        ${editingAbsence ? 'Update Absence' : 'Save Absence'}
+                        ${editingAbsence ? t('common.save') : t('common.add')}
                     </button>
-                    <button id="cancel-absence-btn" style="padding: 0.5rem 1rem; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer;">Cancel</button>
+                    <button id="cancel-absence-btn" style="padding: 0.5rem 1rem; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer;">${t('common.cancel')}</button>
                 </div>
             </div>
             `
@@ -2476,26 +2476,26 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
             <!-- Absences List -->
             <div style="background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-                    <h2 style="margin: 0; font-size: 1.2rem; color: #333;">My Absences (${absences.length})</h2>
+                    <h2 style="margin: 0; font-size: 1.2rem; color: #333;">${t('absences.title')} (${absences.length})</h2>
                     <button id="add-absence-btn" style="padding: 0.5rem 1rem; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; display: inline-flex; align-items: center; gap: 0.5rem;">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <line x1="12" y1="5" x2="12" y2="19"></line>
                             <line x1="5" y1="12" x2="19" y2="12"></line>
                         </svg>
-                        Add Absence
+                        ${t('absences.addAbsence')}
                     </button>
                 </div>
-                ${absences.length === 0 ? '<p style="color: #666; text-align: center; padding: 2rem;">No absences found.</p>' : `
+                ${absences.length === 0 ? `<p style="color: #666; text-align: center; padding: 2rem;">${t('absences.noAbsences')}</p>` : `
                 <div style="overflow-x: auto;">
                     <table style="width: 100%; border-collapse: collapse;">
                         <thead>
                             <tr style="background: #f8f9fa; border-bottom: 2px solid #dee2e6;">
-                                <th style="padding: 0.75rem; text-align: left; font-weight: 600; color: #495057;">From</th>
-                                <th style="padding: 0.75rem; text-align: left; font-weight: 600; color: #495057;">To</th>
-                                <th style="padding: 0.75rem; text-align: left; font-weight: 600; color: #495057;">Reason</th>
-                                <th style="padding: 0.75rem; text-align: left; font-weight: 600; color: #495057;">Note</th>
-                                <th style="padding: 0.75rem; text-align: left; font-weight: 600; color: #495057;">Type</th>
-                                <th style="padding: 0.75rem; text-align: left; font-weight: 600; color: #495057;">Actions</th>
+                                <th style="padding: 0.75rem; text-align: left; font-weight: 600; color: #495057;">${t('reports.from')}</th>
+                                <th style="padding: 0.75rem; text-align: left; font-weight: 600; color: #495057;">${t('reports.to')}</th>
+                                <th style="padding: 0.75rem; text-align: left; font-weight: 600; color: #495057;">${t('absences.reason')}</th>
+                                <th style="padding: 0.75rem; text-align: left; font-weight: 600; color: #495057;">${t('absences.comment')}</th>
+                                <th style="padding: 0.75rem; text-align: left; font-weight: 600; color: #495057;">${t('timeEntries.type')}</th>
+                                <th style="padding: 0.75rem; text-align: left; font-weight: 600; color: #495057;">${t('timeEntries.actions')}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -2564,7 +2564,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
         return `
             <!-- Period Quick Select -->
             <div style="background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                <h2 style="margin: 0 0 1rem 0; font-size: 1.2rem; color: #333;">Quick Period Selection</h2>
+                <h2 style="margin: 0 0 1rem 0; font-size: 1.2rem; color: #333;">${t('reports.period')}</h2>
                 <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
                     <button id="report-period-week" style="padding: 0.75rem 1.5rem; border: ${reportPeriod === 'week' ? '2px' : '1px'} solid ${reportPeriod === 'week' ? '#007bff' : '#ddd'}; background: ${reportPeriod === 'week' ? '#e7f3ff' : '#fff'}; color: ${reportPeriod === 'week' ? '#007bff' : '#666'}; border-radius: 4px; cursor: pointer; font-weight: ${reportPeriod === 'week' ? '600' : '400'};">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle;">
@@ -2573,7 +2573,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                             <line x1="8" y1="2" x2="8" y2="6"></line>
                             <line x1="3" y1="10" x2="21" y2="10"></line>
                         </svg>
-                        This Week
+                        ${t('reports.periodSelect.thisWeek')}
                     </button>
                     <button id="report-period-month" style="padding: 0.75rem 1.5rem; border: ${reportPeriod === 'month' ? '2px' : '1px'} solid ${reportPeriod === 'month' ? '#007bff' : '#ddd'}; background: ${reportPeriod === 'month' ? '#e7f3ff' : '#fff'}; color: ${reportPeriod === 'month' ? '#007bff' : '#666'}; border-radius: 4px; cursor: pointer; font-weight: ${reportPeriod === 'month' ? '600' : '400'};">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle;">
@@ -2588,7 +2588,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                             <line x1="12" y1="18" x2="12" y2="18"></line>
                             <line x1="16" y1="18" x2="16" y2="18"></line>
                         </svg>
-                        This Month
+                        ${t('reports.periodSelect.thisMonth')}
                     </button>
                     <button id="report-period-year" style="padding: 0.75rem 1.5rem; border: ${reportPeriod === 'year' ? '2px' : '1px'} solid ${reportPeriod === 'year' ? '#007bff' : '#ddd'}; background: ${reportPeriod === 'year' ? '#e7f3ff' : '#fff'}; color: ${reportPeriod === 'year' ? '#007bff' : '#666'}; border-radius: 4px; cursor: pointer; font-weight: ${reportPeriod === 'year' ? '600' : '400'};">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle;">
@@ -2596,14 +2596,14 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                             <line x1="18" y1="20" x2="18" y2="4"></line>
                             <line x1="6" y1="20" x2="6" y2="16"></line>
                         </svg>
-                        This Year
+                        ${t('reports.periodSelect.thisYear')}
                     </button>
                     <button id="report-period-custom" style="padding: 0.75rem 1.5rem; border: ${reportPeriod === 'custom' ? '2px' : '1px'} solid ${reportPeriod === 'custom' ? '#007bff' : '#ddd'}; background: ${reportPeriod === 'custom' ? '#e7f3ff' : '#fff'}; color: ${reportPeriod === 'custom' ? '#007bff' : '#666'}; border-radius: 4px; cursor: pointer; font-weight: ${reportPeriod === 'custom' ? '600' : '400'};">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle;">
                             <circle cx="12" cy="12" r="3"></circle>
                             <path d="M12 1v6m0 6v6m9-9h-6M8 12H2m15.36-6.36l-4.24 4.24m0 4.24l4.24 4.24M6.64 17.64l4.24-4.24m0-4.24L6.64 6.64"></path>
                         </svg>
-                        Custom Period
+                        ${t('reports.periodSelect.custom')}
                     </button>
                 </div>
             </div>
@@ -2611,10 +2611,10 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
             <!-- Custom Period Selection -->
             ${reportPeriod === 'custom' ? `
             <div style="background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                <h2 style="margin: 0 0 1rem 0; font-size: 1.2rem; color: #333;">Custom Date Range</h2>
+                <h2 style="margin: 0 0 1rem 0; font-size: 1.2rem; color: #333;">${t('reports.periodSelect.custom')}</h2>
                 <div style="display: grid; grid-template-columns: 1fr 1fr auto; gap: 1rem; align-items: end;">
                     <div>
-                        <label for="report-date-from" style="display: block; margin-bottom: 0.5rem; color: #333; font-weight: 500;">From Date</label>
+                        <label for="report-date-from" style="display: block; margin-bottom: 0.5rem; color: #333; font-weight: 500;">${t('reports.from')}</label>
                         <input
                             type="date"
                             id="report-date-from"
@@ -2624,7 +2624,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                         />
                     </div>
                     <div>
-                        <label for="report-date-to" style="display: block; margin-bottom: 0.5rem; color: #333; font-weight: 500;">To Date</label>
+                        <label for="report-date-to" style="display: block; margin-bottom: 0.5rem; color: #333; font-weight: 500;">${t('reports.to')}</label>
                         <input
                             type="date"
                             id="report-date-to"
@@ -2633,7 +2633,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                             style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;"
                         />
                     </div>
-                    <button id="apply-report-filters-btn" style="padding: 0.5rem 1rem; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">Update Report</button>
+                    <button id="apply-report-filters-btn" style="padding: 0.5rem 1rem; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">${t('common.refresh')}</button>
                 </div>
             </div>
             ` : ''}
@@ -2641,22 +2641,22 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
             <!-- Summary Stats -->
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
                 <div style="background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                    <div style="color: #666; font-size: 0.9rem; margin-bottom: 0.5rem;">Total Worked Hours</div>
+                    <div style="color: #666; font-size: 0.9rem; margin-bottom: 0.5rem;">${t('reports.totalWorked')}</div>
                     <div style="font-size: 2.5rem; font-weight: 700; color: #007bff;">${stats.totalHours}h</div>
                     <div style="color: #999; font-size: 0.85rem; margin-top: 0.5rem;">${stats.entriesCount} entries</div>
                 </div>
                 <div style="background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                    <div style="color: #666; font-size: 0.9rem; margin-bottom: 0.5rem;">Absence Hours</div>
+                    <div style="color: #666; font-size: 0.9rem; margin-bottom: 0.5rem;">${t('absences.title')}</div>
                     <div style="font-size: 2.5rem; font-weight: 700; color: #ffc107;">${stats.absenceHours}h</div>
                     <div style="color: #999; font-size: 0.85rem; margin-top: 0.5rem;">${stats.absenceDays} days off</div>
                 </div>
                 <div style="background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                    <div style="color: #666; font-size: 0.9rem; margin-bottom: 0.5rem;">Expected Hours</div>
+                    <div style="color: #666; font-size: 0.9rem; margin-bottom: 0.5rem;">${t('reports.targetHours')}</div>
                     <div style="font-size: 2.5rem; font-weight: 700; color: #6c757d;">${stats.expectedHours}h</div>
                     <div style="color: #999; font-size: 0.85rem; margin-top: 0.5rem;">Adjusted for absences</div>
                 </div>
                 <div style="background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                    <div style="color: #666; font-size: 0.9rem; margin-bottom: 0.5rem;">Overtime / Undertime</div>
+                    <div style="color: #666; font-size: 0.9rem; margin-bottom: 0.5rem;">${t('reports.overtime')} / ${t('reports.undertime')}</div>
                     <div style="font-size: 2.5rem; font-weight: 700; color: ${parseFloat(stats.overtime) >= 0 ? '#28a745' : '#dc3545'};">
                         ${parseFloat(stats.overtime) >= 0 ? '+' : ''}${stats.overtime}h
                     </div>
@@ -2680,7 +2680,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 1.5rem;">
                             <div>
                                 <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.5rem;">
-                                    <span style="font-weight: 600; color: #007bff; font-size: 1.1rem;">IST (Actual):</span>
+                                    <span style="font-weight: 600; color: #007bff; font-size: 1.1rem;">${t('dashboard.stats.actual')}:</span>
                                     <span style="font-size: 2rem; font-weight: 700; color: #007bff;">${stats.totalHours}h</span>
                                 </div>
                                 <div style="color: #666; font-size: 0.85rem;">
@@ -2689,7 +2689,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                             </div>
                             <div>
                                 <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.5rem;">
-                                    <span style="font-weight: 600; color: #6c757d; font-size: 1.1rem;">SOLL (Target):</span>
+                                    <span style="font-weight: 600; color: #6c757d; font-size: 1.1rem;">${t('dashboard.stats.target')}:</span>
                                     <span style="font-size: 2rem; font-weight: 700; color: #6c757d;">${stats.expectedHours}h</span>
                                 </div>
                                 <div style="color: #666; font-size: 0.85rem;">
@@ -2760,7 +2760,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
 
             <!-- Breakdown by Category -->
             <div style="background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                <h2 style="margin: 0 0 1rem 0; font-size: 1.2rem; color: #333;">Time by Category</h2>
+                <h2 style="margin: 0 0 1rem 0; font-size: 1.2rem; color: #333;">${t('reports.categoryBreakdown')}</h2>
                 <div style="display: grid; gap: 1rem;">
                     ${Object.keys(entriesByCategory)
                 .map((catId) => {
@@ -2794,7 +2794,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
             <!-- Absences in Period -->
             ${absences.length > 0 ? `
             <div style="background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                <h2 style="margin: 0 0 1rem 0; font-size: 1.2rem; color: #333;">Absences in Period</h2>
+                <h2 style="margin: 0 0 1rem 0; font-size: 1.2rem; color: #333;">${t('absences.title')}</h2>
                 <div style="overflow-x: auto;">
                     <table style="width: 100%; border-collapse: collapse;">
                         <thead>
@@ -3247,7 +3247,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
             btn.addEventListener('click', (e) => {
                 const target = e.target as HTMLElement;
                 const rowId = parseInt(target.dataset.rowId || '0');
-                if (rowId && confirm('Remove this row?')) {
+                if (rowId && confirm(t('timeEntries.deleteConfirm'))) {
                     removeBulkEntryRow(rowId);
                 }
             });
@@ -3334,7 +3334,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                 if (
                     absence &&
                     confirm(
-                        `Are you sure you want to delete this absence?\n\nFrom: ${new Date(absence.startDate).toLocaleDateString()}\nTo: ${new Date(absence.endDate).toLocaleDateString()}\nReason: ${absence.absenceReason?.nameTranslated || absence.absenceReason?.name}`
+                        `${t('absences.deleteConfirm')}\n\n${t('reports.from')}: ${new Date(absence.startDate).toLocaleDateString()}\n${t('reports.to')}: ${new Date(absence.endDate).toLocaleDateString()}\n${t('absences.reason')}: ${absence.absenceReason?.nameTranslated || absence.absenceReason?.name}`
                     )
                 ) {
                     deleteAbsence(absenceId);
@@ -3370,7 +3370,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
             if (
                 entry &&
                 confirm(
-                    `Are you sure you want to delete this time entry?\n\nStart: ${new Date(entry.startTime).toLocaleString()}\nEnd: ${entry.endTime ? new Date(entry.endTime).toLocaleString() : 'N/A'}\nCategory: ${entry.categoryName}${entry.isBreak ? ' (Pause)' : ''}`
+                    `${t('timeEntries.deleteConfirm')}\n\n${t('timeEntries.startTime')}: ${new Date(entry.startTime).toLocaleString()}\n${t('timeEntries.endTime')}: ${entry.endTime ? new Date(entry.endTime).toLocaleString() : 'N/A'}\n${t('dashboard.category')}: ${entry.categoryName}${entry.isBreak ? ` (${t('timeEntries.break')})` : ''}`
                 )
             ) {
                 deleteTimeEntry(startTime!);

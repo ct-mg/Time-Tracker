@@ -94,6 +94,7 @@
             "thisWeek": "This Week",
             "thisMonth": "This Month",
             "lastMonth": "Last Month",
+            "thisYear": "This Year",
             "custom": "Custom"
         },
         "from": "From",
