@@ -114,6 +114,8 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
     let currentView: 'dashboard' | 'entries' | 'absences' | 'reports' = 'dashboard';
     let showAddManualEntry = false;
     let editingEntry: TimeEntry | null = null;
+    let selectedEntryIds: Set<string> = new Set(); // Track selected entry IDs (using startTime)
+    let bulkEditMode = false; // Toggle bulk edit UI
     let showBulkEntry = false;
     let reportPeriod: 'week' | 'month' | 'year' | 'custom' = 'week';
     let showAddAbsence = false;
@@ -718,6 +720,67 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
         } catch (error) {
             console.error('[TimeTracker] Delete entry failed:', error);
             showNotification('Failed to delete entry. Please try again.', 'error');
+        }
+    }
+
+    // Bulk update category for selected entries
+    async function bulkUpdateCategory(entryIds: string[], newCategoryId: string): Promise<void> {
+        try {
+            const category = workCategories.find(c => c.id === newCategoryId);
+            if (!category) {
+                showNotification('Category not found', 'error');
+                return;
+            }
+
+            const cat = await getCustomDataCategory<object>('timeentries');
+            if (!cat) throw new Error('Time entries category not found');
+
+            // Update each entry
+            let successCount = 0;
+            for (const startTime of entryIds) {
+                const entry = timeEntries.find(e => e.startTime === startTime);
+                if (!entry) continue;
+
+                const updatedEntry: TimeEntry = {
+                    ...entry,
+                    categoryId: newCategoryId,
+                    categoryName: category.name,
+                };
+
+                // Find in KV store and update
+                const allValues = await getCustomDataValues<TimeEntry>(cat.id, moduleId!);
+                const existingValue = allValues.find(v => v.startTime === entry.startTime);
+
+                if (existingValue) {
+                    const kvStoreId = (existingValue as any).id;
+                    await updateCustomDataValue(
+                        cat.id,
+                        kvStoreId,
+                        { value: JSON.stringify(updatedEntry) },
+                        moduleId!
+                    );
+
+                    // Update local array
+                    const index = timeEntries.findIndex(e => e.startTime === entry.startTime);
+                    if (index !== -1) {
+                        timeEntries[index] = updatedEntry;
+                    }
+                    successCount++;
+                }
+            }
+
+            showNotification(
+                t('ct.extension.timetracker.bulkEdit.success').replace('{count}', successCount.toString()),
+                'success'
+            );
+
+            // Reset bulk edit state
+            selectedEntryIds.clear();
+            bulkEditMode = false;
+            render();
+        } catch (error) {
+            console.error('[TimeTracker] Bulk update failed:', error);
+            showNotification('Bulk update failed', 'error');
         }
     }
 
@@ -2024,7 +2087,10 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                         />
                     </div>
                 </div>
-                <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center;">
+                    <button id="bulk-edit-toggle" style="padding: 0.5rem 1rem; background: ${bulkEditMode ? '#dc3545' : '#6c757d'}; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.9rem;">
+                        ${bulkEditMode ? t('ct.extension.timetracker.bulkEdit.deselectAll') : t('ct.extension.timetracker.bulkEdit.selectMode')}
+                    </button>
                     <button id="apply-filters-btn" style="padding: 0.5rem 1rem; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.9rem;">${t('ct.extension.timetracker.common.applyFilter')}</button>
                     <button id="export-csv-btn" style="padding: 0.5rem 1rem; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; display: inline-flex; align-items: center; gap: 0.5rem;">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -2279,6 +2345,9 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                         <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
                             <thead>
                                 <tr style="background: #f8f9fa; border-bottom: 1px solid #dee2e6;">
+                                    ${bulkEditMode ? `<th style="padding: 0.5rem; text-align: center; font-weight: 600; color: #495057; font-size: 0.85rem; width: 40px;">
+                                        <input type="checkbox" id="select-all-day-${dayKey}" class="select-all-checkbox" data-day="${dayKey}" style="cursor: pointer;" />
+                                    </th>` : ''}
                                     <th style="padding: 0.5rem; text-align: left; font-weight: 600; color: #495057; font-size: 0.85rem;">${t('ct.extension.timetracker.timeEntries.startTime')}</th>
                                     <th style="padding: 0.5rem; text-align: left; font-weight: 600; color: #495057; font-size: 0.85rem;">${t('ct.extension.timetracker.timeEntries.endTime')}</th>
                                     <th style="padding: 0.5rem; text-align: left; font-weight: 600; color: #495057; font-size: 0.85rem;">${t('ct.extension.timetracker.timeEntries.duration')}</th>
@@ -2297,6 +2366,9 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
 
                     return `
                                         <tr style="border-bottom: 1px solid #e9ecef;">
+                                            ${bulkEditMode ? `<td style="padding: 0.5rem; text-align: center;">
+                                                <input type="checkbox" class="entry-checkbox" data-entry-id="${entry.startTime}" ${selectedEntryIds.has(entry.startTime) ? 'checked' : ''} style="cursor: pointer;" />
+                                            </td>` : ''}
                                             <td style="padding: 0.5rem;">${start.toLocaleTimeString()}</td>
                                             <td style="padding: 0.5rem;">${entry.endTime ? end.toLocaleTimeString() : '<span style="color: #28a745; font-weight: 600;">Active</span>'}</td>
                                             <td style="padding: 0.5rem; font-weight: 600;">${duration}</td>
@@ -2372,6 +2444,32 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
             }
 
             html += `</div>`; // Close week group
+        }
+
+        // Add Bulk Action Bar if in bulk edit mode and entries selected
+        if (bulkEditMode && selectedEntryIds.size > 0) {
+            html += `
+                <div id="bulk-action-bar" style="position: sticky; bottom: 0; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 1rem 1.5rem; display: flex; justify-content: space-between; align-items: center; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); margin-top: 1rem;">
+                    <div style="display: flex; align-items: center; gap: 1rem;">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="9 11 12 14 22 4"></polyline>
+                            <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
+                        </svg>
+                        <span style="font-weight: 600; font-size: 1rem;">${t('ct.extension.timetracker.bulkEdit.selected').replace('{count}', selectedEntryIds.size.toString())}</span>
+                    </div>
+                    <div style="display: flex; gap: 0.75rem; align-items: center;">
+                        <select id="bulk-category-select" style="padding: 0.5rem 1rem; border: none; border-radius: 4px; font-size: 0.9rem; cursor: pointer;">
+                            ${workCategories.map(cat => `<option value="${cat.id}">${cat.name}</option>`).join('')}
+                        </select>
+                        <button id="bulk-apply-category" style="padding: 0.5rem 1rem; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 0.9rem; display: inline-flex; align-items: center; gap: 0.5rem;">
+                            ${t('ct.extension.timetracker.bulkEdit.changeCategory')}
+                        </button>
+                        <button id="bulk-cancel" style="padding: 0.5rem 1rem; background: rgba(255,255,255,0.2); color: white; border: 1px solid rgba(255,255,255,0.3); border-radius: 4px; cursor: pointer; font-size: 0.9rem;">
+                            ${t('ct.extension.timetracker.bulkEdit.cancel')}
+                        </button>
+                    </div>
+                </div>
+            `;
         }
 
         html += '</div>'; // Close main container
@@ -3397,6 +3495,41 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                 deleteTimeEntry(startTime!);
             }
             return;
+        }
+    });
+
+    // Event delegation for bulk edit checkboxes
+    element.addEventListener('change', (e) => {
+        const target = e.target as HTMLInputElement;
+
+        // Individual entry checkboxes
+        if (target.classList.contains('entry-checkbox')) {
+            const entryId = target.dataset.entryId;
+            if (target.checked) {
+                selectedEntryIds.add(entryId!);
+            } else {
+                selectedEntryIds.delete(entryId!);
+            }
+            render();
+        }
+
+        // Select all checkboxes per day
+        if (target.classList.contains('select-all-checkbox')) {
+            const checked = target.checked;
+            const dayKey = target.dataset.day;
+
+            // Find all entries for this day and toggle selection
+            timeEntries.forEach(entry => {
+                const entryDate = new Date(entry.startTime).toISOString().split('T')[0];
+                if (entryDate === dayKey) {
+                    if (checked) {
+                        selectedEntryIds.add(entry.startTime);
+                    } else {
+                        selectedEntryIds.delete(entry.startTime);
+                    }
+                }
+            });
+            render();
         }
     });
 

@@ -263,16 +263,16 @@
 
 ---
 
-#### Time Entry Edit nicht persistent nach Reload
-**Problem:** Bearbeitete Einträge werden nicht korrekt gespeichert
-**Ursache:** Noch nicht diagnostiziert
-**Status:** Offen
-**Priorität:** Kritisch (wenn Bug bestätigt)
+---
 
-**Diagnose-Schritte:**
-1. Edit Entry testen und Reload
-2. Check ob Update API Call erfolgt
-3. Check ob kvStoreId korrekt verwendet wird
+#### ✅ Time Entry Edit/Delete Buttons Fix (COMPLETED 2025-11-24)
+**Problem:** Edit und Delete Buttons funktionierten nicht
+**Ursache:** Falsche CSS Selektoren in Event Delegation (`ct.extension.timetracker..edit-entry-btn` statt `.edit-entry-btn`)
+**Lösung:** Selektoren in `main.ts` korrigiert
+**Status:** ✅ Behoben
+**Git Commit:** fix: Edit and Delete buttons not working due to wrong CSS selectors
+
+**Original Issue (Edit Persistenz):** Noch nicht getestet, da Bug die Tests blockierte. Kann jetzt getestet werden.
 
 ---
 
