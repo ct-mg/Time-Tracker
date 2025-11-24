@@ -46,6 +46,7 @@ interface Settings {
     volunteerGroupId?: number; // ChurchTools group ID for volunteers (no SOLL requirements)
     userHoursConfig?: UserHoursConfig[]; // Individual SOLL hours for employees
     workWeekDays?: number[]; // Days of week that count as work days (0=Sunday, 1=Monday, ..., 6=Saturday)
+    language?: 'auto' | 'de' | 'en'; // UI language (auto = browser detection)
     schemaVersion: number; // Schema version for migration handling
     lastModified: number; // Timestamp of last modification
     modifiedBy?: string; // Optional: User who made the change
@@ -798,7 +799,7 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
         const hoursPerDayInput = element.querySelector('#hours-per-day') as HTMLInputElement;
         const hoursPerWeekInput = element.querySelector('#hours-per-week') as HTMLInputElement;
         const excelImportToggle = element.querySelector('#excel-import-toggle') as HTMLInputElement;
-        
+
         if (!hoursPerDayInput || !hoursPerWeekInput || !excelImportToggle) return false;
 
         // Check simple values
@@ -813,7 +814,7 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                 currentWorkWeekDays.push(index);
             }
         });
-        
+
         if (currentWorkWeekDays.length !== originalGeneralSettings.workWeekDays.length) return true;
         if (!currentWorkWeekDays.every((day, idx) => day === originalGeneralSettings.workWeekDays[idx])) return true;
 
@@ -823,13 +824,13 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
     function checkGroupChanges(): boolean {
         const employeeGroupIdInput = element.querySelector('#employee-group-id') as HTMLInputElement;
         const volunteerGroupIdInput = element.querySelector('#volunteer-group-id') as HTMLInputElement;
-        
+
         if (!employeeGroupIdInput || !volunteerGroupIdInput) return false;
 
         // Check group IDs
         const currentEmployeeGroupId = employeeGroupIdInput.value ? parseInt(employeeGroupIdInput.value) : undefined;
         const currentVolunteerGroupId = volunteerGroupIdInput.value ? parseInt(volunteerGroupIdInput.value) : undefined;
-        
+
         if (currentEmployeeGroupId !== originalGroupSettings.employeeGroupId) return true;
         if (currentVolunteerGroupId !== originalGroupSettings.volunteerGroupId) return true;
 
@@ -838,11 +839,11 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
         employeesList.forEach((emp) => {
             const dayInput = element.querySelector(`.employee-hours-day[data-user-id="${emp.userId}"]`) as HTMLInputElement;
             const weekInput = element.querySelector(`.employee-hours-week[data-user-id="${emp.userId}"]`) as HTMLInputElement;
-            
+
             if (dayInput && weekInput) {
                 const hoursPerDay = parseFloat(dayInput.value) || originalGeneralSettings.defaultHoursPerDay;
                 const hoursPerWeek = parseFloat(weekInput.value) || originalGeneralSettings.defaultHoursPerWeek;
-                
+
                 // Check work week days for this user
                 const workWeekDays: number[] = [];
                 element.querySelectorAll(`.user-work-week-checkbox[data-user-id="${emp.userId}"]`).forEach((checkbox) => {
@@ -851,7 +852,7 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                         workWeekDays.push(day);
                     }
                 });
-                
+
                 currentUserConfigs.push({
                     userId: emp.userId,
                     userName: emp.userName,
@@ -865,13 +866,13 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
         // Compare with original
         const originalConfigs = originalGroupSettings.userHoursConfig || [];
         if (currentUserConfigs.length !== originalConfigs.length) return true;
-        
+
         for (const current of currentUserConfigs) {
             const original = originalConfigs.find(c => c.userId === current.userId);
             if (!original) return true;
             if (current.hoursPerDay !== original.hoursPerDay) return true;
             if (current.hoursPerWeek !== original.hoursPerWeek) return true;
-            
+
             // Compare work week days
             const currentDays = current.workWeekDays || [];
             const originalDays = original.workWeekDays || [];
@@ -893,7 +894,7 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
 
         const updateButton = (btn: HTMLButtonElement, label: string, isDirty: boolean) => {
             if (!btn) return;
-            
+
             if (isDirty) {
                 btn.style.cssText = 'width: 100%; display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 0.75rem 1.5rem; background: #dc3545 !important; color: white !important; border: none !important; border-radius: 4px !important; cursor: pointer !important; font-size: 1rem !important; font-weight: 600 !important; transition: background 0.2s !important; animation: pulse 2s ease-in-out infinite;';
                 btn.innerHTML = `
@@ -1056,6 +1057,24 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                         />
                         <small style="color: #666; font-size: 0.85rem;">Used for new employees and when no individual config exists</small>
                     </div>
+                </div>
+
+                <!-- Language Selection -->
+                <div style="margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid #e0e0e0;">
+                    <label style="display: block; margin-bottom: 0.5rem; color: #333; font-weight: 600;">
+                        Language / Sprache
+                    </label>
+                    <select
+                        id="language-select"
+                        style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 4px; font-size: 1rem; cursor: pointer;"
+                    >
+                        <option value="auto" ${(settings.language || 'auto') === 'auto' ? 'selected' : ''}>🌐 Automatic (Browser)</option>
+                        <option value="de" ${settings.language === 'de' ? 'selected' : ''}>🇩🇪 Deutsch</option>
+                        <option value="en" ${settings.language === 'en' ? 'selected' : ''}>🇬🇧 English</option>
+                    </select>
+                    <small style="color: #666; font-size: 0.85rem; display: block; margin-top: 0.5rem;">
+                        Changes take effect after saving and reloading the page
+                    </small>
                 </div>
 
                 <!-- Work Week Days Configuration -->
@@ -1647,6 +1666,12 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
             });
         });
 
+        // Language select - use smart change detection
+        const languageSelect = element.querySelector('#language-select');
+        languageSelect?.addEventListener('change', () => {
+            updateSaveButtonState(); // Smart detection checks actual changes
+        });
+
         // Excel import toggle - use smart change detection
         const excelImportToggle = element.querySelector('#excel-import-toggle');
         excelImportToggle?.addEventListener('change', () => {
@@ -1798,10 +1823,11 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
         const hoursPerDayInput = element.querySelector('#hours-per-day') as HTMLInputElement;
         const hoursPerWeekInput = element.querySelector('#hours-per-week') as HTMLInputElement;
         const excelImportToggle = element.querySelector('#excel-import-toggle') as HTMLInputElement;
+        const languageSelect = element.querySelector('#language-select') as HTMLSelectElement;
         const statusMessage = element.querySelector('#settings-status') as HTMLElement;
         const saveBtn = element.querySelector('#save-settings-btn') as HTMLButtonElement;
 
-        if (!hoursPerDayInput || !hoursPerWeekInput || !excelImportToggle || !statusMessage || !saveBtn) return;
+        if (!hoursPerDayInput || !hoursPerWeekInput || !excelImportToggle || !languageSelect || !statusMessage || !saveBtn) return;
 
         const saveIconHTML = `
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -1833,6 +1859,7 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                 defaultHoursPerWeek: parseFloat(hoursPerWeekInput.value),
                 excelImportEnabled: excelImportToggle.checked,
                 workWeekDays: workWeekDays,
+                language: languageSelect.value as 'auto' | 'de' | 'en',
             };
 
             await saveSettings(newSettings);
