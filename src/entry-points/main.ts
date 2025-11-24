@@ -726,53 +726,80 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
     // Bulk update category for selected entries
     async function bulkUpdateCategory(entryIds: string[], newCategoryId: string): Promise<void> {
         try {
+            console.log('[TimeTracker] Bulk update starting for', entryIds.length, 'entries');
+
             const category = workCategories.find(c => c.id === newCategoryId);
             if (!category) {
+                console.error('[TimeTracker] Category not found:', newCategoryId);
                 showNotification('Category not found', 'error');
                 return;
             }
 
             const cat = await getCustomDataCategory<object>('timeentries');
-            if (!cat) throw new Error('Time entries category not found');
+            if (!cat) {
+                console.error('[TimeTracker] Time entries category not found');
+                throw new Error('Time entries category not found');
+            }
+
+            // Fetch all values once (optimization)
+            const allValues = await getCustomDataValues<TimeEntry>(cat.id, moduleId!);
+            console.log('[TimeTracker] Fetched', allValues.length, 'total entries from KV store');
 
             // Update each entry
             let successCount = 0;
             for (const startTime of entryIds) {
-                const entry = timeEntries.find(e => e.startTime === startTime);
-                if (!entry) continue;
-
-                const updatedEntry: TimeEntry = {
-                    ...entry,
-                    categoryId: newCategoryId,
-                    categoryName: category.name,
-                };
-
-                // Find in KV store and update
-                const allValues = await getCustomDataValues<TimeEntry>(cat.id, moduleId!);
-                const existingValue = allValues.find(v => v.startTime === entry.startTime);
-
-                if (existingValue) {
-                    const kvStoreId = (existingValue as any).id;
-                    await updateCustomDataValue(
-                        cat.id,
-                        kvStoreId,
-                        { value: JSON.stringify(updatedEntry) },
-                        moduleId!
-                    );
-
-                    // Update local array
-                    const index = timeEntries.findIndex(e => e.startTime === entry.startTime);
-                    if (index !== -1) {
-                        timeEntries[index] = updatedEntry;
+                try {
+                    const entry = timeEntries.find(e => e.startTime === startTime);
+                    if (!entry) {
+                        console.warn('[TimeTracker] Entry not found in local array:', startTime);
+                        continue;
                     }
-                    successCount++;
+
+                    const updatedEntry: TimeEntry = {
+                        ...entry,
+                        categoryId: newCategoryId,
+                        categoryName: category.name,
+                    };
+
+                    // Find in KV store
+                    const existingValue = allValues.find(v => v.startTime === entry.startTime);
+
+                    if (existingValue) {
+                        const kvStoreId = (existingValue as any).id;
+                        console.log('[TimeTracker] Updating entry', startTime, 'with kvStoreId', kvStoreId);
+
+                        await updateCustomDataValue(
+                            cat.id,
+                            kvStoreId,
+                            { value: JSON.stringify(updatedEntry) },
+                            moduleId!
+                        );
+
+                        // Update local array
+                        const index = timeEntries.findIndex(e => e.startTime === entry.startTime);
+                        if (index !== -1) {
+                            timeEntries[index] = updatedEntry;
+                        }
+                        successCount++;
+                        console.log('[TimeTracker] Successfully updated entry', startTime);
+                    } else {
+                        console.warn('[TimeTracker] Entry not found in KV store:', startTime);
+                    }
+                } catch (entryError) {
+                    console.error('[TimeTracker] Failed to update individual entry:', startTime, entryError);
                 }
             }
 
-            showNotification(
-                t('ct.extension.timetracker.bulkEdit.success').replace('{count}', successCount.toString()),
-                'success'
-            );
+            console.log('[TimeTracker] Bulk update completed:', successCount, 'of', entryIds.length);
+
+            if (successCount > 0) {
+                showNotification(
+                    t('ct.extension.timetracker.bulkEdit.success').replace('{count}', successCount.toString()),
+                    'success'
+                );
+            } else {
+                showNotification('No entries were updated', 'warning');
+            }
 
             // Reset bulk edit state
             selectedEntryIds.clear();
@@ -780,7 +807,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
             render();
         } catch (error) {
             console.error('[TimeTracker] Bulk update failed:', error);
-            showNotification('Bulk update failed', 'error');
+            showNotification('Bulk update failed: ' + (error as Error).message, 'error');
         }
     }
 
