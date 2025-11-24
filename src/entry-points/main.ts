@@ -11,6 +11,7 @@ import {
     updateCustomDataValue,
     deleteCustomDataValue,
 } from '../utils/kv-store';
+import { initI18n, detectBrowserLanguage, t } from '../utils/i18n';
 
 /**
  * Time Tracker Main Module
