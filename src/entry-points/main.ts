@@ -1657,14 +1657,14 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
 
                             <label style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1.5rem; cursor: pointer; text-align: left;">
                                 <input type="checkbox" id="clock-in-is-break" style="width: 18px; height: 18px; cursor: pointer;" />
-                                <span style="color: #666; font-size: 0.95rem;">This is a break/pause (won't count towards work hours)</span>
+                                <span style="color: #666; font-size: 0.95rem;">${t('dashboard.isBreak')}</span>
                             </label>
 
                             <button id="clock-in-btn" style="flex: 1; padding: 1rem; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 1rem; display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
                                 <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
                                     <polygon points="5 3 19 12 5 21 5 3"></polygon>
                                 </svg>
-                                Clock In
+                                ${t('dashboard.clockIn')}
                             </button>
                         </div>
                     </div>
