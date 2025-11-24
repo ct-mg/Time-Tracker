@@ -108,6 +108,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
     let filterDateFrom = monday.toISOString().split('T')[0];
     let filterDateTo = sunday.toISOString().split('T')[0];
     let filterCategory = 'all';
+    let filterSearch = ''; // Description search term
 
     // UI state
     let currentView: 'dashboard' | 'entries' | 'absences' | 'reports' = 'dashboard';
@@ -1403,7 +1404,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
 
     // Get current filter state for cache invalidation
     function getFilterState(): string {
-        return `${filterDateFrom}|${filterDateTo}|${filterCategory}|${timeEntries.length}`;
+        return `${filterDateFrom}|${filterDateTo}|${filterCategory}|${filterSearch}|${timeEntries.length}`;
     }
 
     // Get filtered entries (with caching)
@@ -1426,6 +1427,9 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
 
             // Filter by category
             if (filterCategory !== 'all' && entry.categoryId !== filterCategory) return false;
+
+            // Filter by description search
+            if (filterSearch && !entry.description?.toLowerCase().includes(filterSearch.toLowerCase())) return false;
 
             return true;
         });
@@ -2008,6 +2012,16 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                             <option value="all">${t('ct.extension.timetracker.common.allCategories')}</option>
                             ${workCategories.map((cat) => `<option value="${cat.id}" ${filterCategory === cat.id ? 'selected' : ''}>${cat.name}</option>`).join('')}
                         </select>
+                    </div>
+                    <div style="flex: 1;">
+                        <label for="filter-search" style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #555;">${t('ct.extension.timetracker.timeEntries.searchDescription')}</label>
+                        <input 
+                            type="text" 
+                            id="filter-search" 
+                            placeholder="${t('ct.extension.timetracker.timeEntries.searchPlaceholder')}" 
+                            value="${filterSearch}"
+                            style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;"
+                        />
                     </div>
                 </div>
                 <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
@@ -2954,10 +2968,12 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
             const categorySelect = element.querySelector(
                 '#filter-category'
             ) as HTMLSelectElement;
+            const searchInput = element.querySelector('#filter-search') as HTMLInputElement;
 
             filterDateFrom = dateFromInput.value;
             filterDateTo = dateToInput.value;
             filterCategory = categorySelect.value;
+            filterSearch = searchInput?.value || '';
             entriesPage = 1; // Reset to first page when filters change
 
             render();

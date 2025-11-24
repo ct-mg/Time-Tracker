@@ -234,10 +234,17 @@
 - Absence Reasons kommen von ChurchTools Event Masterdata (bereits übersetzt?)
 - Category Names bleiben user-defined (keine Übersetzung)
 - Nur UI-Elemente übersetzen (Buttons, Labels, Notifications)
-
 **Priority:** Mittel (nach kritischen Bugs)
 
 ---
+
+## Known Issues
+
+### Admin Page Language Switching
+- Admin page doesn't properly switch language when changed in settings
+- Success messages show in wrong language
+- Requires page reload to see language changes
+- **Priority:** Medium (i18n works on main page)
 
 ### 🔴 Priorität: Hoch
 
