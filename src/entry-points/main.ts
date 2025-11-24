@@ -1702,7 +1702,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
 
                 <!-- This Week -->
                 <div style="background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                    <div style="color: #666; font-size: 0.9rem; margin-bottom: 0.5rem; font-weight: 600;">${t('ct.extension.timetracker.dashboard.stats.thisWeek')} (KW ${dashStats.week.weekNumber})</div>
+                    <div style="color: #666; font-size: 0.9rem; margin-bottom: 0.5rem; font-weight: 600;">${t('ct.extension.timetracker.dashboard.stats.thisWeek')} (${t('ct.extension.timetracker.dashboard.calendarWeek')} ${dashStats.week.weekNumber})</div>
                     <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.5rem;">
                         <div>
                             <div style="color: #999; font-size: 0.75rem;">IST</div>
@@ -2213,14 +2213,14 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                 <div style="background: #f8f9fa; border: 2px solid #dee2e6; border-radius: 8px; padding: 1rem;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
                         <h3 style="margin: 0; color: #333; font-size: 1.1rem;">
-                            KW ${week.weekNumber} (${week.year})
+                            ${t('ct.extension.timetracker.dashboard.calendarWeek')} ${week.weekNumber} (${week.year})
                         </h3>
                         <div style="display: flex; gap: 1rem; font-size: 0.9rem;">
                             <span style="color: #666;">
-                                <strong>Woche IST:</strong> <span style="color: ${weekIstMs >= userHours.hoursPerWeek * 3600000 ? '#28a745' : '#dc3545'}; font-weight: 600;">${weekIst}</span>
+                                <strong>${t('ct.extension.timetracker.dashboard.weekActual')}:</strong> <span style="color: ${weekIstMs >= userHours.hoursPerWeek * 3600000 ? '#28a745' : '#dc3545'}; font-weight: 600;">${weekIst}</span>
                             </span>
                             <span style="color: #666;">
-                                <strong>Woche SOLL:</strong> <span style="font-weight: 600;">${weekSoll}</span>
+                                <strong>${t('ct.extension.timetracker.dashboard.weekTarget')}:</strong> <span style="font-weight: 600;">${weekSoll}</span>
                             </span>
                         </div>
                     </div>`;
@@ -2255,10 +2255,10 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                             </h4>
                             <div style="display: flex; gap: 1rem; font-size: 0.85rem;">
                                 <span style="color: #666;">
-                                    <strong>Tag ${t('ct.extension.timetracker.dashboard.stats.actual')}:</strong> <span style="color: ${dayIstMs >= userHours.hoursPerDay * 3600000 ? '#28a745' : (isWorkday ? '#dc3545' : '#6c757d')}; font-weight: 600;">${dayIst}</span>
+                                    <strong>${t('ct.extension.timetracker.dashboard.dayActual')}:</strong> <span style="color: ${dayIstMs >= userHours.hoursPerDay * 3600000 ? '#28a745' : (isWorkday ? '#dc3545' : '#6c757d')}; font-weight: 600;">${dayIst}</span>
                                 </span>
                                 <span style="color: #666;">
-                                    <strong>Tag ${t('ct.extension.timetracker.dashboard.stats.target')}:</strong> <span style="font-weight: 600;">${daySoll}</span>
+                                    <strong>${t('ct.extension.timetracker.dashboard.dayTarget')}:</strong> <span style="font-weight: 600;">${daySoll}</span>
                                 </span>
                             </div>
                         </div>

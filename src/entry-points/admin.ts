@@ -444,7 +444,10 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
     }
 
     // Save settings with validation and backup
-    async function saveSettings(newSettings: Settings, changeSummary: string = t('ct.extension.timetracker.admin.settingsUpdated').replace('{version}', (newSettings.schemaVersion || 1).toString())): Promise<void> {
+    async function saveSettings(newSettings: Settings, changeSummary?: string): Promise<void> {
+        // Use default summary if not provided
+        const summary = changeSummary || t('ct.extension.timetracker.admin.settingsUpdated').replace('{version}', (newSettings.schemaVersion || 1).toString());
+
         // 1. Validate
         const validation = validateSettings(newSettings);
         if (!validation.isValid) {
@@ -454,7 +457,7 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
         try {
             // 2. Create Backup of OLD settings (if they exist and are valid)
             if (settings && settings.defaultHoursPerDay) {
-                await createBackup(settings, changeSummary);
+                await createBackup(settings, summary);
             }
 
             // 3. Update Metadata
