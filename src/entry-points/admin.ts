@@ -11,7 +11,7 @@ import {
     deleteCustomDataValue,
 } from '../utils/kv-store';
 import { churchtoolsClient } from '@churchtools/churchtools-client';
-import { initI18n, detectBrowserLanguage, t } from '../utils/i18n';
+import { initI18n, t, detectBrowserLanguage, type Language } from '../utils/i18n';
 
 /**
  * Time Tracker Admin Configuration
@@ -76,6 +76,7 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
         defaultHoursPerWeek: 40,
         excelImportEnabled: false, // Disabled by default (Alpha)
         workWeekDays: [1, 2, 3, 4, 5], // Default: Monday to Friday
+        language: 'auto', // Default: auto-detect from browser
         schemaVersion: CURRENT_SCHEMA_VERSION,
         lastModified: Date.now()
     };
@@ -148,7 +149,12 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
             // Initialize i18n with user's language preference
             const language = settings.language || 'auto';
             const languageToUse = language === 'auto' ? detectBrowserLanguage() : language;
-            await initI18n(languageToUse);
+            console.log('[Admin] Language settings:', {
+                savedLanguage: settings.language,
+                autoDetected: detectBrowserLanguage(),
+                finalLanguage: languageToUse
+            });
+            await initI18n(languageToUse as Language);
 
             // Get or create categories
             workCategoriesCategory = await getOrCreateCategory(
@@ -1900,7 +1906,7 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
             // Check if language changed - if so, re-initialize i18n and re-render
             if (newSettings.language !== settings.language) {
                 const languageToUse = (newSettings.language || 'auto') === 'auto' ? detectBrowserLanguage() : (newSettings.language || 'de');
-                await initI18n(languageToUse);
+                await initI18n(languageToUse as Language);
                 settings = newSettings; // Update settings before re-render
                 render(); // Re-render entire page with new language
                 return; // Early return to avoid showing success message (render() will show it)

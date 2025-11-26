@@ -90,6 +90,8 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
     let currentEntry: TimeEntry | null = null;
     let absences: Absence[] = [];
     let absenceReasons: AbsenceReason[] = [];
+    let userList: Array<{ id: number, name: string }> = []; // All users for dropdown (managers only)
+    let isManager = false; // Does current user have manager/admin permissions?
     let isLoading = true;
     let errorMessage = '';
     let moduleId: number | null = null;
@@ -109,6 +111,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
     let filterDateTo = sunday.toISOString().split('T')[0];
     let filterCategory = 'all';
     let filterSearch = ''; // Description search term
+    let filterUser: string | 'all' = user?.id?.toString() || 'all'; // User filter (manager only)
 
     // UI state
     let currentView: 'dashboard' | 'entries' | 'absences' | 'reports' = 'dashboard';
@@ -198,12 +201,21 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
             await initI18n(languageToUse);
 
             // Load remaining data
-            await Promise.all([
-                loadWorkCategories(),
-                loadTimeEntries(),
-                loadAbsences(),
-                loadAbsenceReasons(),
-            ]);
+            await loadWorkCategories();
+            await loadTimeEntries();
+            await loadAbsences();
+            await loadAbsenceReasons();
+
+            // Check if user has manager permissions
+            isManager = await checkManagerRole();
+
+            // Load user list if manager
+            if (isManager) {
+                await loadUserList();
+            }
+
+            // Check access
+            const hasAccess = await checkUserAccess();
 
             // Check if there's a currently active entry
             currentEntry =
@@ -279,6 +291,56 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
         } catch (error) {
             console.error('[TimeTracker] Failed to check user access:', error);
             return true; // Allow access if check fails
+        }
+    }
+
+    // Check if current user has manager/admin permissions
+    async function checkManagerRole(): Promise<boolean> {
+        if (!user?.id) return false;
+
+        try {
+            // Get current user's permissions from ChurchTools
+            const permissions = await churchtoolsClient.get<string[]>('/permissions') as string[];
+
+            // Check for admin or churchdb permissions (managers have these)
+            const isAdmin = permissions.includes('churchdb#view') ||
+                permissions.includes('churchcore#admin') ||
+                permissions.includes('adm in');
+
+            return isAdmin;
+        } catch (error) {
+            console.error('[TimeTracker] Failed to check manager role:', error);
+            return false; // Deny manager status if check fails
+        }
+    }
+
+    // Load list of all users (for manager dropdown)
+    async function loadUserList(): Promise<void> {
+        if (!isManager) {
+            userList = [];
+            return;
+        }
+
+        try {
+            // Fetch all persons from ChurchTools
+            const response = await churchtoolsClient.get<Array<{
+                id: number;
+                domainAttributes: {
+                    firstName?: string;
+                    lastName?: string;
+                };
+            }>>('/persons');
+
+            // Map to simplified format
+            userList = (response || []).map(person => ({
+                id: person.id,
+                name: `${person.domainAttributes?.firstName || ''} ${person.domainAttributes?.lastName || ''}`.trim() || `User ${person.id}`
+            })).filter(u => u.id); // Remove invalid entries
+
+            console.log('[TimeTracker] Loaded', userList.length, 'users for filter');
+        } catch (error) {
+            console.error('[TimeTracker] Failed to load user list:', error);
+            userList = [];
         }
     }
 
@@ -1494,7 +1556,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
 
     // Get current filter state for cache invalidation
     function getFilterState(): string {
-        return `${filterDateFrom}|${filterDateTo}|${filterCategory}|${filterSearch}|${timeEntries.length}`;
+        return `${filterDateFrom}|${filterDateTo}|${filterCategory}|${filterSearch}|${filterUser}|${timeEntries.length}`;
     }
 
     // Get filtered entries (with caching)
@@ -1508,8 +1570,13 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
 
         // Calculate filtered entries
         cachedFilteredEntries = timeEntries.filter((entry) => {
-            // Filter by user
-            if (entry.userId !== user?.id) return false;
+            // Filter by user (managers can filter by any user, normal users only see their own)
+            if (filterUser !== 'all') {
+                if (entry.userId !== parseInt(filterUser)) return false;
+            } else if (!isManager) {
+                // Non-managers can only see their own entries
+                if (entry.userId !== user?.id) return false;
+            }
 
             // Filter by date
             const entryDate = new Date(entry.startTime).toISOString().split('T')[0];
@@ -2105,14 +2172,26 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                     </div>
                     <div style="flex: 1;">
                         <label for="filter-search" style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #555;">${t('ct.extension.timetracker.timeEntries.searchDescription')}</label>
-                        <input 
-                            type="text" 
-                            id="filter-search" 
-                            placeholder="${t('ct.extension.timetracker.timeEntries.searchPlaceholder')}" 
+                        <input
+                            type="text"
+                            id="filter-search"
+                            placeholder="${t('ct.extension.timetracker.timeEntries.searchPlaceholder')}"
                             value="${filterSearch}"
                             style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;"
                         />
                     </div>
+                    ${isManager ? `
+                    <div>
+                        <label for="filter-user" style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #555;">${t('ct.extension.timetracker.entries.filterUser')}</label>
+                        <select
+                            id="filter-user"
+                            style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;"
+                        >
+                            <option value="all">${t('ct.extension.timetracker.entries.allUsers')}</option>
+                            ${userList.map(u => `<option value="${u.id}" ${filterUser === u.id.toString() ? 'selected' : ''}>${u.name}</option>`).join('')}
+                        </select>
+                    </div>
+                    ` : ''}
                 </div>
                 <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center;">
                     <button id="bulk-edit-toggle" style="padding: 0.5rem 1rem; background: ${bulkEditMode ? '#dc3545' : '#6c757d'}; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.9rem;">
@@ -2597,7 +2676,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                         id="absence-comment"
                         rows="3"
                         placeholder="Add additional details..."
-                        style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px; resize: vertical;"
+                        style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;"
                     >${editingAbsence ? editingAbsence.comment || '' : ''}</textarea>
                 </div>
                 <div style="display: flex; gap: 0.5rem;">
@@ -3094,12 +3173,18 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                 '#filter-category'
             ) as HTMLSelectElement;
             const searchInput = element.querySelector('#filter-search') as HTMLInputElement;
+            const userSelect = element.querySelector('#filter-user') as HTMLSelectElement;
 
             filterDateFrom = dateFromInput.value;
             filterDateTo = dateToInput.value;
             filterCategory = categorySelect.value;
             filterSearch = searchInput?.value || '';
-            entriesPage = 1; // Reset to first page when filters change
+            if (userSelect) {
+                filterUser = userSelect.value;
+            }
+
+            // Clear cache to force recalculation
+            cachedFilteredEntries = null;
 
             render();
         });
