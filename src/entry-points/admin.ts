@@ -154,20 +154,7 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
             );
             moduleId = extensionModule.id;
 
-            // Load settings first (needed for language detection)
-            await loadSettings();
-
-            // Initialize i18n with user's language preference
-            const language = settings.language || 'auto';
-            const languageToUse = language === 'auto' ? detectBrowserLanguage() : language;
-            console.log('[Admin] Language settings:', {
-                savedLanguage: settings.language,
-                autoDetected: detectBrowserLanguage(),
-                finalLanguage: languageToUse
-            });
-            await initI18n(languageToUse as Language);
-
-            // Get or create categories
+            // Get or create categories FIRST (before loadSettings needs them)
             workCategoriesCategory = await getOrCreateCategory(
                 'workcategories',
                 'Work Categories',
@@ -187,10 +174,22 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
             // One-time cleanup: Remove old default categories
             await removeOldDefaultCategories();
 
-            // Load data
+            // Load settings (now that settingsCategory exists)
+            await loadSettings();
+
+            // Initialize i18n with user's language preference
+            const language = settings.language || 'auto';
+            const languageToUse = language === 'auto' ? detectBrowserLanguage() : language;
+            console.log('[Admin] Language settings:', {
+                savedLanguage: settings.language,
+                autoDetected: detectBrowserLanguage(),
+                finalLanguage: languageToUse
+            });
+            await initI18n(languageToUse as Language);
+
+            // Load work categories and backups
             await Promise.all([
                 loadWorkCategories(),
-                loadSettings(),
                 (async () => { backupsList = await getBackups(); })()
             ]);
 
