@@ -105,6 +105,8 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
     // Group Management state
     let loadingEmployees = false;
     let employeesList: Array<{ userId: number; userName: string }> = [];
+    let loadingManagers = false;
+    let managersList: Array<{ userId: number; userName: string }> = [];
 
     // Dirty state tracking for unsaved changes warning
     let hasUnsavedGeneralChanges = false;
@@ -603,6 +605,68 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
 
             emit('notification:show', {
                 message: t('ct.extension.timetracker.admin.employeeLoadFailed'),
+                type: 'error',
+                duration: 5000,
+            });
+
+            render();
+        }
+    }
+
+    // Load managers from a ChurchTools group
+    async function loadManagersFromGroup(groupId: number): Promise<void> {
+        try {
+            loadingManagers = true;
+            render();
+
+            // Get members of the group from ChurchTools API
+            const groupMembers = await churchtoolsClient.get(`/groups/${groupId}/members`) as any[];
+
+            // Build manager list from group members
+            managersList = groupMembers.map((member: {
+                personId?: number;
+                id?: number;
+                person?: { domainAttributes?: { firstName?: string; lastName?: string } };
+                firstName?: string;
+                lastName?: string;
+                vorname?: string;
+                nachname?: string;
+                name?: string;
+            }) => {
+                let firstName = '';
+                let lastName = '';
+
+                // Names are in person.domainAttributes (ChurchTools API structure)
+                if (member.person?.domainAttributes) {
+                    firstName = member.person.domainAttributes.firstName || '';
+                    lastName = member.person.domainAttributes.lastName || '';
+                }
+
+                // Fallback to member properties directly (if API structure changes)
+                if (!firstName && !lastName) {
+                    firstName = member.firstName || member.vorname || '';
+                    lastName = member.lastName || member.nachname || member.name || '';
+                }
+
+                const userName = (firstName && lastName)
+                    ? `${firstName} ${lastName}`
+                    : (firstName || lastName || `User ${member.personId || member.id}`);
+
+                return {
+                    userId: member.personId || member.id || 0,
+                    userName
+                };
+            }).sort((a: { userName: string }, b: { userName: string }) => a.userName.localeCompare(b.userName));
+
+            loadingManagers = false;
+            render();
+        } catch (error) {
+            console.error('[TimeTracker Admin] Failed to load managers:', error);
+            loadingManagers = false;
+            managersList = [];
+
+            emit('notification:show', {
+                message: 'Failed to load managers from group',
                 type: 'error',
                 duration: 5000,
             });
