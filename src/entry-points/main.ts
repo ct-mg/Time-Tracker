@@ -79,6 +79,12 @@ interface Settings {
     language?: 'auto' | 'de' | 'en'; // UI language (auto = browser detection)
 }
 
+interface UserPermissions {
+    canSeeAllEntries: boolean;     // HR role
+    canSeeOwnEntries: boolean;     // Everyone
+    managedEmployeeIds: number[];  // Empty for non-managers
+}
+
 
 const mainEntryPoint: EntryPoint<MainModuleData> = ({
     element,
@@ -487,6 +493,34 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
         } catch (error) {
             console.error('[TimeTracker] Failed to save settings:', error);
         }
+    }
+
+    // Check if user is in a specific ChurchTools group
+    async function userIsInGroup(userId: number, groupId: number): Promise<boolean> {
+        try {
+            const groupMembers = await churchtoolsClient.get(`/groups/${groupId}/members`) as any[];
+            return groupMembers.some((member: { personId?: number; id?: number }) =>
+                (member.personId || member.id) === userId
+            );
+        } catch (error) {
+            console.error(`[TimeTracker] Failed to check group membership for user ${userId} in group ${groupId}:`, error);
+            return false;
+        }
+    }
+
+    // Get user's permissions based on group memberships and manager assignments
+    function getUserPermissions(userId: number): UserPermissions {
+        // Check if user is in HR group
+        const isHR = settings.hrGroupId !== undefined; // Will check async later
+
+        // Check if user is manager and get assigned employees
+        const managerAssignment = settings.managerAssignments?.find(m => m.managerId === userId);
+
+        return {
+            canSeeAllEntries: false, // Will be set async after group check
+            canSeeOwnEntries: true,
+            managedEmployeeIds: managerAssignment?.employeeIds || []
+        };
     }
 
     // Load time entries from KV store
