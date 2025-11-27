@@ -1492,9 +1492,9 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
 
     //  Render Manager Assignments UI
     function renderManagerAssignments(): string {
-        // Only show if both employee and manager groups are configured
-        if (!settings.employeeGroupId || !settings.managerGroupId) {
-            return ''; // Don't show this section if not configured
+        // Only show if employee group is configured (manager group can be set here)
+        if (!settings.employeeGroupId) {
+            return ''; // Don't show this section if employees aren't configured yet
         }
 
         // Initialize manager assignments if not present
