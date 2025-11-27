@@ -554,6 +554,32 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                     (a, b) =>
                         new Date(b.startTime).getTime() - new Date(a.startTime).getTime()
                 );
+
+                // Apply permission-based filtering
+                const permissions = getUserPermissions(user.id);
+
+                // Check if user is in HR group (async)
+                if (settings.hrGroupId) {
+                    const isHR = await userIsInGroup(user.id, settings.hrGroupId);
+                    if (isHR) {
+                        // HR sees everything - no filtering needed
+                        console.log('[TimeTracker] User is HR - showing all entries');
+                        return;
+                    }
+                }
+
+                // Filter based on permissions (non-HR users)
+                if (permissions.managedEmployeeIds.length > 0) {
+                    // Manager: see own entries + managed employees' entries
+                    timeEntries = timeEntries.filter(entry =>
+                        entry.userId === user.id || permissions.managedEmployeeIds.includes(entry.userId)
+                    );
+                    console.log(`[TimeTracker] Manager viewing own + ${permissions.managedEmployeeIds.length} managed employees' entries`);
+                } else {
+                    // Regular employee: see only own entries
+                    timeEntries = timeEntries.filter(entry => entry.userId === user.id);
+                    console.log('[TimeTracker] Employee viewing only own entries');
+                }
             } else {
                 // Create category if it doesn't exist
                 await createCustomDataCategory(
