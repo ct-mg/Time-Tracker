@@ -1525,7 +1525,6 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                         <button
                             id="load-managers-btn"
                             style="padding: 0.75rem 1.5rem; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; white-space: nowrap;"
-                            ${!settings.managerGroupId ? 'disabled' : ''}
                         >
                             Load Managers
                         </button>
