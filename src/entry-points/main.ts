@@ -137,6 +137,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
     let reportPeriod: 'week' | 'month' | 'year' | 'custom' = 'week';
     let showAddAbsence = false;
     let editingAbsence: Absence | null = null;
+    let selectedViewUserId: number | 'all' = 'all'; // Which user's entries to view (managers/HR only)
 
     // Bulk entry rows
     interface BulkEntryRow {
