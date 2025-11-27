@@ -314,15 +314,23 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
         if (!user?.id) return false;
 
         try {
-            // Get current user's permissions from ChurchTools
-            const permissions = await churchtoolsClient.get<string[]>('/permissions') as string[];
+            // Check if user is in HR group (has manager-level access)
+            if (settings.hrGroupId) {
+                const isHR = await userIsInGroup(user.id, settings.hrGroupId);
+                if (isHR) return true;
+            }
 
-            // Check for admin or churchdb permissions (managers have these)
-            const isAdmin = permissions.includes('churchdb#view') ||
-                permissions.includes('churchcore#admin') ||
-                permissions.includes('adm in');
+            // Check if user is in manager group
+            if (settings.managerGroupId) {
+                const isManagerInGroup = await userIsInGroup(user.id, settings.managerGroupId);
+                if (isManagerInGroup) return true;
+            }
 
-            return isAdmin;
+            // Check if user has any manager assignments
+            const hasAssignments = settings.managerAssignments?.some(a => a.managerId === user.id);
+            if (hasAssignments) return true;
+
+            return false;
         } catch (error) {
             console.error('[TimeTracker] Failed to check manager role:', error);
             return false; // Deny manager status if check fails
