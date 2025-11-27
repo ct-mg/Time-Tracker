@@ -1092,6 +1092,7 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                     : `
                     ${renderGeneralSettings()}
                     ${renderGroupManagement()}
+                    ${renderManagerAssignments()}
                     ${renderWorkCategories()}
                     ${renderBackupsSection()}
                 `
@@ -1489,6 +1490,113 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
         `;
     }
 
+    //  Render Manager Assignments UI
+    function renderManagerAssignments(): string {
+        // Only show if both employee and manager groups are configured
+        if (!settings.employeeGroupId || !settings.managerGroupId) {
+            return ''; // Don't show this section if not configured
+        }
+
+        // Initialize manager assignments if not present
+        if (!settings.managerAssignments) {
+            settings.managerAssignments = [];
+        }
+
+        return `
+            <!-- Manager Assignments -->
+            <div style="background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                <h2 style="margin: 0 0 1rem 0; font-size: 1.3rem; color: #333;">👔 Manager-to-Employee Assignments</h2>
+                <p style="margin: 0 0 1.5rem 0; color: #666; font-size: 0.95rem;">
+                    Assign employees to managers. Managers can view and export time entries for their assigned employees.
+                </p>
+
+                <!-- Manager Group ID Input -->
+                <div style="margin-bottom: 1.5rem;">
+                    <label style="display: block; margin-bottom: 0.5rem; color: #333; font-weight: 600;">
+                        Manager Group ID
+                    </label>
+                    <div style="display: flex; gap: 0.5rem; align-items: center;">
+                        <input
+                            type="number"
+                            id="manager-group-id"
+                            value="${settings.managerGroupId || ''}"
+                            placeholder="Enter ChurchTools Manager Group ID"
+                            style="flex: 1; padding: 0.75rem; border: 1px solid #ddd; border-radius: 4px; font-size: 1rem;"
+                        />
+                        <button
+                            id="load-managers-btn"
+                            style="padding: 0.75rem 1.5rem; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; white-space: nowrap;"
+                            ${!settings.managerGroupId ? 'disabled' : ''}
+                        >
+                            Load Managers
+                        </button>
+                    </div>
+                    <small style="color: #666; font-size: 0.85rem;">Enter the ChurchTools group ID for managers, then click "Load Managers"</small>
+                </div>
+
+                ${loadingManagers ? `
+                    <div style="text-align: center; padding: 2rem; color: #666;">
+                        <div style="display: inline-block;">
+                            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#007bff" stroke-width="2" style="animation: spin 1s linear infinite;">
+                                <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"></path>
+                            </svg>
+                        </div>
+                        <p style="margin-top: 1rem;">Loading managers...</p>
+                    </div>
+                ` : (managersList.length > 0 ? `
+                    <div style="background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 6px; padding: 1rem; margin-bottom: 1rem;">
+                        <h3 style="margin: 0 0 1rem 0; font-size: 1.1rem; color: #333;">Manager Assignments (${managersList.length} managers)</h3>
+                        
+                        ${managersList.map(manager => {
+            const assignment = settings.managerAssignments?.find(a => a.managerId === manager.userId);
+            const assignedIds = assignment?.employeeIds || [];
+
+            return `
+                                <div style="background: white; border: 1px solid #dee2e6; border-radius: 4px; padding: 1rem; margin-bottom: 0.75rem;">
+                                    <h4 style="margin: 0 0 0.75rem 0; font-size: 1rem; color: #495057;">${manager.userName}</h4>
+                                    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 0.5rem;">
+                                        ${employeesList.map(emp => {
+                const isChecked = assignedIds.includes(emp.userId);
+                return `
+                                                <label style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem; border-radius: 3px; cursor: pointer; hover: background: #f8f9fa;">
+                                                    <input
+                                                        type="checkbox"
+                                                        class="manager-employee-checkbox"
+                                                        data-manager-id="${manager.userId}"
+                                                        data-employee-id="${emp.userId}"
+                                                        ${isChecked ? 'checked' : ''}
+                                                        style="width: 16px; height: 16px; cursor: pointer; accent-color: #007bff;"
+                                                    />
+                                                    <span style="font-size: 0.9rem;">${emp.userName}</span>
+                                                </label>
+                                            `;
+            }).join('')}
+                                    </div>
+                                </div>
+                            `;
+        }).join('')}
+                    </div>
+
+                    <button
+                        id="save-manager-assignments-btn"
+                        style="padding: 0.75rem 1.5rem; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; display: inline-flex; align-items: center; gap: 0.5rem;"
+                    >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                            <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                            <polyline points="7 3 7 8 15 8"></polyline>
+                        </svg>
+                        Save Manager Assignments
+                    </button>
+                ` : (settings.managerGroupId ? `
+                    <div style="text-align: center; padding: 2rem; color: #666; background: #f8f9fa; border-radius: 4px;">
+                        <p>Click "Load Managers" to load managers from group ${settings.managerGroupId}</p>
+                    </div>
+                ` : ''))}
+            </div>
+        `;
+    }
+
     function renderWorkCategories(): string {
         return `
             <!-- Work Categories -->
@@ -1784,6 +1892,25 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
             updateSaveButtonState(); // Smart detection checks actual changes
         });
 
+        //  Manager Assignments Handlers
+        const loadManagersBtn = element.querySelector('#load-managers-btn') as HTMLButtonElement;
+        const saveManagerAssignmentsBtn = element.querySelector('#save-manager-assignments-btn') as HTMLButtonElement;
+
+        loadManagersBtn?.addEventListener('click', async () => {
+            const managerGroupIdInput = element.querySelector('#manager-group-id') as HTMLInputElement;
+            const groupId = parseInt(managerGroupIdInput.value);
+
+            if (groupId && groupId > 0) {
+                // Update settings first
+                settings.managerGroupId = groupId;
+                await loadManagersFromGroup(groupId);
+            }
+        });
+
+        saveManagerAssignmentsBtn?.addEventListener('click', async () => {
+            await handleSaveManagerAssignments();
+        });
+
         // Excel import toggle - use smart change detection
         const excelImportToggle = element.querySelector('#excel-import-toggle');
         excelImportToggle?.addEventListener('change', () => {
@@ -1928,6 +2055,61 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                 }
             });
         });
+    }
+
+    // Handle save manager assignments
+    async function handleSaveManagerAssignments() {
+        try {
+            // Collect all manager assignments from checkboxes
+            const checkboxes = element.querySelectorAll('.manager-employee-checkbox') as NodeListOf<HTMLInputElement>;
+
+            // Build manager assignments map
+            const assignmentsMap = new Map<number, Set<number>>();
+
+            checkboxes.forEach(checkbox => {
+                const managerId = parseInt(checkbox.dataset.managerId || '0');
+                const employeeId = parseInt(checkbox.dataset.employeeId || '0');
+
+                if (checkbox.checked) {
+                    if (!assignmentsMap.has(managerId)) {
+                        assignmentsMap.set(managerId, new Set());
+                    }
+                    assignmentsMap.get(managerId)!.add(employeeId);
+                }
+            });
+
+            // Convert map to ManagerAssignment array
+            const managerAssignments: ManagerAssignment[] = [];
+            assignmentsMap.forEach((employeeIds, managerId) => {
+                const manager = managersList.find(m => m.userId === managerId);
+                if (manager) {
+                    managerAssignments.push({
+                        managerId,
+                        managerName: manager.userName,
+                        employeeIds: Array.from(employeeIds)
+                    });
+                }
+            });
+
+            // Update settings
+            settings.managerAssignments = managerAssignments;
+            await saveSettings(settings, 'Manager assignments updated');
+
+            emit('notification', {
+                message: `✓ Manager assignments saved! ${managerAssignments.length} managers configured.`,
+                type: 'success',
+                duration: 3000,
+            });
+
+            console.log('[TimeTracker Admin] Manager assignments saved:', managerAssignments);
+        } catch (error) {
+            console.error('[TimeTracker Admin] Failed to save manager assignments:', error);
+            emit('notification', {
+                message: 'Failed to save manager assignments',
+                type: 'error',
+                duration: 5000,
+            });
+        }
     }
 
     // Handle save general settings
