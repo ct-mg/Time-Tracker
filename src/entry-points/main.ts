@@ -58,6 +58,11 @@ interface UserHoursConfig {
     workWeekDays?: number[]; // Individual work week (0=Sun, 1=Mon, ..., 6=Sat). Falls back to global setting if undefined.
 }
 
+interface ManagerAssignment {
+    managerId: number;
+    managerName: string;
+    employeeIds: number[];
+}
 
 interface Settings {
     defaultHoursPerDay: number;
@@ -66,7 +71,10 @@ interface Settings {
     reportPeriod?: 'week' | 'month' | 'year' | 'custom'; // User's preferred report period
     employeeGroupId?: number; // ChurchTools group ID for employees (with individual SOLL)
     volunteerGroupId?: number; // ChurchTools group ID for volunteers (no SOLL requirements)
+    hrGroupId?: number; // ChurchTools group ID for HR (can see all time entries)
+    managerGroupId?: number; // ChurchTools group ID for managers (can see assigned employees)
     userHoursConfig?: UserHoursConfig[]; // Individual SOLL hours for employees
+    managerAssignments?: ManagerAssignment[]; // Manager -> Employee assignments
     workWeekDays?: number[]; // Days of week that count as work days (0=Sunday, 1=Monday, ..., 6=Saturday). Default: [1,2,3,4,5] (Mon-Fri)
     language?: 'auto' | 'de' | 'en'; // UI language (auto = browser detection)
 }

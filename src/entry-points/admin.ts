@@ -38,6 +38,12 @@ interface UserHoursConfig {
     workWeekDays?: number[]; // Individual work week (0=Sun, 1=Mon, ..., 6=Sat). Falls back to global setting if undefined.
 }
 
+interface ManagerAssignment {
+    managerId: number;
+    managerName: string;
+    employeeIds: number[];
+}
+
 interface Settings {
     defaultHoursPerDay: number;
     defaultHoursPerWeek: number;
@@ -45,7 +51,10 @@ interface Settings {
     reportPeriod?: 'week' | 'month' | 'year' | 'custom';
     employeeGroupId?: number; // ChurchTools group ID for employees (with individual SOLL)
     volunteerGroupId?: number; // ChurchTools group ID for volunteers (no SOLL requirements)
+    hrGroupId?: number; // ChurchTools group ID for HR (can see all time entries)
+    managerGroupId?: number; // ChurchTools group ID for managers (can see assigned employees)
     userHoursConfig?: UserHoursConfig[]; // Individual SOLL hours for employees
+    managerAssignments?: ManagerAssignment[]; // Manager -> Employee assignments
     workWeekDays?: number[]; // Days of week that count as work days (0=Sunday, 1=Monday, ..., 6=Saturday)
     language?: 'auto' | 'de' | 'en'; // UI language (auto = browser detection)
     schemaVersion: number; // Schema version for migration handling
@@ -62,7 +71,7 @@ interface SettingsBackup {
 
 
 const MAX_BACKUPS = 5;
-const CURRENT_SCHEMA_VERSION = 1;
+const CURRENT_SCHEMA_VERSION = 2; // Bumped from 1 to 2 for HR/Manager Dashboard feature
 
 const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) => {
     let moduleId: number | null = null;
