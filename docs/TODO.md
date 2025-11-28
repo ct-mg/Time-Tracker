@@ -446,7 +446,7 @@
 - ✅ User Requirements Document
 - ✅ Maintenance Guidelines
 - ✅ TODO Roadmap
-- ⏳ User Manual (für Endnutzer, nicht Entwickler)
+- ✅ User Manual (für Endnutzer, nicht Entwickler) - docs/USER-MANUAL.md
 - ⏳ API Documentation (wenn public API)
 
 ### Testing
