@@ -8,9 +8,20 @@
 
 ## Aktueller Status
 
-**Letztes Update:** 2025-11-24
-**Aktuelle Phase:** Phase 3 - Performance & UX Improvements ✅ ABGESCHLOSSEN
-**Nächste Phase:** Phase 4 - Advanced Features ⏳ BEREIT
+**Letztes Update:** 2025-11-28
+**Aktuelle Phase:** Phase 4 - Advanced Features (HR/Manager Dashboard) ⏳ IN PROGRESS
+**Nächste Phase:** Phase 5 - Polish & Testing
+
+---
+
+## 🔜 Refactoring Backlog (Separate Branch)
+
+### Notification System Centralization
+- [ ] Create centralized notification utility (`src/utils/notifications.ts`)
+- [ ] Expose `showSuccess()`, `showError()`, `showWarning()` helpers
+- [ ] Replace all `emit('notification:show')` calls across codebase
+- [ ] Benefits: DRY, single source of truth, clean API
+- [ ] **Branch:** `refactor/centralize-notifications`
 
 ---
 
