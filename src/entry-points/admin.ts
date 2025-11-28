@@ -2231,7 +2231,7 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
             statusMessage.textContent = `✓ Manager assignments saved! ${managerAssignments.length} managers configured.`;
 
             // Show ChurchTools toast notification (top-right)
-            emit('notification', {
+            emit('notification:show', {
                 message: `✓ Manager assignments saved! ${managerAssignments.length} managers configured.`,
                 type: 'success',
                 duration: 3000,
@@ -2261,7 +2261,7 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
             statusMessage.textContent = '✗ Failed to save manager assignments: ' + (error instanceof Error ? error.message : 'Unknown error');
 
             // Show ChurchTools toast notification (top-right)
-            emit('notification', {
+            emit('notification:show', {
                 message: '✗ Failed to save manager assignments',
                 type: 'error',
                 duration: 5000,
