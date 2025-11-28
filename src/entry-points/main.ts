@@ -230,8 +230,8 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                 await loadUserList();
             }
 
-            // Check access
-            const hasAccess = await checkUserAccess();
+            // Check access (for future use)
+            // const hasAccess = await checkUserAccess();
 
             // Check if there's a currently active entry
             currentEntry =
@@ -520,8 +520,8 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
 
     // Get user's permissions based on group memberships and manager assignments
     function getUserPermissions(userId: number): UserPermissions {
-        // Check if user is in HR group
-        const isHR = settings.hrGroupId !== undefined; // Will check async later
+        // Check if user is in HR group (for future async permission check)
+        // const isHR = settings.hrGroupId !== undefined; // Will check async later
 
         // Check if user is manager and get assigned employees
         const managerAssignment = settings.managerAssignments?.find(m => m.managerId === userId);
