@@ -137,7 +137,8 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
     let reportPeriod: 'week' | 'month' | 'year' | 'custom' = 'week';
     let showAddAbsence = false;
     let editingAbsence: Absence | null = null;
-    let selectedViewUserId: number | 'all' = 'all'; // Which user's entries to view (managers/HR only)
+    // TODO: Implement User Filter Dropdown (Phase 4 from implementation plan)
+    // let selectedViewUserId: number | 'all' = 'all'; // Which user's entries to view (managers/HR only)
 
     // Bulk entry rows
     interface BulkEntryRow {
@@ -566,6 +567,16 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
 
                 // Apply permission-based filtering
                 const permissions = getUserPermissions(user.id);
+
+                // Determine user role (for future use)
+                // const isHR = permissions.canSeeAllEntries;
+                // const isManager = permissions.managedEmployeeIds.length > 0;
+                // const isEmployee = !permissions.canSeeAllEntries && !isManager;
+
+                // Check if user has access to view entries (for future use)
+                // const hasAccess = permissions.canSeeAllEntries ||
+                //                  permissions.managedEmployeeIds.length > 0 ||
+                //                  userId === user.id;
 
                 // Check if user is in HR group (async)
                 if (settings.hrGroupId) {
