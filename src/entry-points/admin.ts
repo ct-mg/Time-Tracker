@@ -111,6 +111,7 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
     // Dirty state tracking for unsaved changes warning
     let hasUnsavedGeneralChanges = false;
     let hasUnsavedGroupChanges = false;
+    let hasUnsavedManagerChanges = false;
 
     // Original state snapshots for smart change detection
     let originalGeneralSettings: {
@@ -129,7 +130,19 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
         employeeGroupId?: number;
         volunteerGroupId?: number;
         userHoursConfig?: UserHoursConfig[];
-    } = {};
+    } = {
+        employeeGroupId: undefined,
+        volunteerGroupId: undefined,
+        userHoursConfig: undefined
+    };
+
+    let originalManagerSettings: {
+        managerGroupId?: number;
+        managerAssignments?: ManagerAssignment[];
+    } = {
+        managerGroupId: undefined,
+        managerAssignments: undefined
+    };
 
     // Browser warning for unsaved changes
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
@@ -196,6 +209,11 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
             // Auto-load employees if employee group ID is configured
             if (settings.employeeGroupId) {
                 await loadEmployeesFromGroup(settings.employeeGroupId);
+            }
+
+            // Auto-load managers if manager group ID is configured
+            if (settings.managerGroupId) {
+                await loadManagersFromGroup(settings.managerGroupId);
             }
 
             isLoading = false;
@@ -343,6 +361,11 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                 employeeGroupId: settings.employeeGroupId,
                 volunteerGroupId: settings.volunteerGroupId,
                 userHoursConfig: settings.userHoursConfig ? JSON.parse(JSON.stringify(settings.userHoursConfig)) : undefined
+            };
+
+            originalManagerSettings = {
+                managerGroupId: settings.managerGroupId,
+                managerAssignments: settings.managerAssignments ? JSON.parse(JSON.stringify(settings.managerAssignments)) : undefined
             };
         } catch (error) {
             console.error('[TimeTracker Admin] Failed to load settings:', error);
@@ -973,14 +996,87 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
         return false;
     }
 
+    // Smart change detection for manager settings
+    function checkManagerChanges(): boolean {
+        // Check if manager group ID changed
+        const managerGroupIdInput = element.querySelector('#manager-group-id') as HTMLInputElement;
+        if (managerGroupIdInput) {
+            const currentManagerGroupId = managerGroupIdInput.value ? parseInt(managerGroupIdInput.value) : undefined;
+            if (currentManagerGroupId !== originalManagerSettings.managerGroupId) {
+                return true;
+            }
+        }
+
+        // Read current checkbox states (live from DOM)
+        const checkboxes = element.querySelectorAll('.manager-employee-checkbox') as NodeListOf<HTMLInputElement>;
+        if (checkboxes.length === 0) {
+            // No checkboxes yet, compare with original
+            return (originalManagerSettings.managerAssignments || []).length > 0;
+        }
+
+        // Build current assignments from checkbox states
+        const currentAssignmentsMap = new Map<number, Set<number>>();
+        checkboxes.forEach(checkbox => {
+            const managerId = parseInt(checkbox.dataset.managerId || '0');
+            const employeeId = parseInt(checkbox.dataset.employeeId || '0');
+
+            if (checkbox.checked) {
+                if (!currentAssignmentsMap.has(managerId)) {
+                    currentAssignmentsMap.set(managerId, new Set());
+                }
+                currentAssignmentsMap.get(managerId)!.add(employeeId);
+            }
+        });
+
+        // Convert to array for comparison
+        const currentAssignments: ManagerAssignment[] = [];
+        currentAssignmentsMap.forEach((employeeIds, managerId) => {
+            currentAssignments.push({
+                managerId,
+                managerName: '', // Name not important for comparison
+                employeeIds: Array.from(employeeIds).sort()
+            });
+        });
+
+        const originalAssignments = originalManagerSettings.managerAssignments || [];
+
+        // Different number of assignments
+        if (currentAssignments.length !== originalAssignments.length) {
+            return true;
+        }
+
+        // Check each assignment for changes
+        for (const current of currentAssignments) {
+            const original = originalAssignments.find(a => a.managerId === current.managerId);
+            if (!original) return true;
+
+            // Check if employee lists are different
+            const currentIds = current.employeeIds;
+            const originalIds = [...original.employeeIds].sort();
+
+            if (currentIds.length !== originalIds.length) return true;
+            if (currentIds.some((id, i) => id !== originalIds[i])) return true;
+        }
+
+        // Check if any original assignments are missing in current
+        for (const original of originalAssignments) {
+            const current = currentAssignments.find(a => a.managerId === original.managerId);
+            if (!current) return true;
+        }
+
+        return false;
+    }
+
     // Update save button visual state based on dirty flag
     function updateSaveButtonState() {
         // Check if there are actual changes
         hasUnsavedGeneralChanges = checkGeneralChanges();
         hasUnsavedGroupChanges = checkGroupChanges();
+        hasUnsavedManagerChanges = checkManagerChanges();
 
         const saveGroupBtn = element.querySelector('#save-group-settings-btn') as HTMLButtonElement;
         const saveGeneralBtn = element.querySelector('#save-settings-btn') as HTMLButtonElement;
+        const saveManagerBtn = element.querySelector('#save-manager-assignments-btn') as HTMLButtonElement;
 
         const updateButton = (btn: HTMLButtonElement, label: string, isDirty: boolean) => {
             if (!btn) return;
@@ -1008,6 +1104,7 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
 
         if (saveGroupBtn) updateButton(saveGroupBtn, 'Group Settings', hasUnsavedGroupChanges);
         if (saveGeneralBtn) updateButton(saveGeneralBtn, 'General Settings', hasUnsavedGeneralChanges);
+        if (saveManagerBtn) updateButton(saveManagerBtn, 'Manager Assignments', hasUnsavedManagerChanges);
     }
 
     function renderBackupsSection(): string {
@@ -1176,25 +1273,26 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
 
                     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 0.75rem;">
                         ${[
-                t('ct.extension.timetracker.common.weekDaysFull.sun'),
-                t('ct.extension.timetracker.common.weekDaysFull.mon'),
-                t('ct.extension.timetracker.common.weekDaysFull.tue'),
-                t('ct.extension.timetracker.common.weekDaysFull.wed'),
-                t('ct.extension.timetracker.common.weekDaysFull.thu'),
-                t('ct.extension.timetracker.common.weekDaysFull.fri'),
-                t('ct.extension.timetracker.common.weekDaysFull.sat')
-            ].map((day, index) => {
-                const isChecked = (settings.workWeekDays || [1, 2, 3, 4, 5]).includes(index);
+                // Array indices: 0=Sun, 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri, 6=Sat
+                { day: 0, label: t('ct.extension.timetracker.common.weekDaysFull.sun') },
+                { day: 1, label: t('ct.extension.timetracker.common.weekDaysFull.mon') },
+                { day: 2, label: t('ct.extension.timetracker.common.weekDaysFull.tue') },
+                { day: 3, label: t('ct.extension.timetracker.common.weekDaysFull.wed') },
+                { day: 4, label: t('ct.extension.timetracker.common.weekDaysFull.thu') },
+                { day: 5, label: t('ct.extension.timetracker.common.weekDaysFull.fri') },
+                { day: 6, label: t('ct.extension.timetracker.common.weekDaysFull.sat') }
+            ].map(({ day, label }) => {
+                const isChecked = (settings.workWeekDays || [1, 2, 3, 4, 5]).includes(day);
                 return `
                                 <label style="display: flex; align-items: center; gap: 0.5rem; padding: 0.75rem; background: ${isChecked ? '#e7f3ff' : '#f8f9fa'}; border: 1px solid ${isChecked ? '#007bff' : '#dee2e6'}; border-radius: 4px; cursor: pointer; transition: all 0.2s;">
                                     <input
                                         type="checkbox"
                                         class="work-week-day-checkbox"
-                                        data-day="${index}"
+                                        data-day="${day}"
                                         ${isChecked ? 'checked' : ''}
                                         style="width: 18px; height: 18px; cursor: pointer;"
                                     />
-                                    <span style="font-weight: ${isChecked ? '600' : '400'}; color: ${isChecked ? '#007bff' : '#333'}; font-size: 0.9rem;">${day}</span>
+                                    <span style="font-weight: ${isChecked ? '600' : '400'}; color: ${isChecked ? '#007bff' : '#333'}; font-size: 0.9rem;">${label}</span>
                                 </label>
                             `;
             }).join('')}
@@ -1575,11 +1673,14 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
         }).join('')}
                     </div>
 
+                    <!-- Status Message -->
+                    <div id="manager-assignments-status" style="display: none; padding: 1rem; margin-top: 1rem; border-radius: 4px; font-size: 0.95rem; font-weight: 600;"></div>
+
                     <button
                         id="save-manager-assignments-btn"
-                        style="padding: 0.75rem 1.5rem; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; display: inline-flex; align-items: center; gap: 0.5rem;"
+                        style="width: 100%; margin-top: 1.5rem; display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 0.75rem 1.5rem; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 1rem; font-weight: 600;"
                     >
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
                             <polyline points="17 21 17 13 7 13 7 21"></polyline>
                             <polyline points="7 3 7 8 15 8"></polyline>
@@ -1909,6 +2010,13 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
             await handleSaveManagerAssignments();
         });
 
+        // Manager assignment checkboxes - use smart change detection
+        element.querySelectorAll('.manager-employee-checkbox').forEach(checkbox => {
+            checkbox.addEventListener('change', () => {
+                updateSaveButtonState(); // Smart detection checks actual changes
+            });
+        });
+
         // Excel import toggle - use smart change detection
         const excelImportToggle = element.querySelector('#excel-import-toggle');
         excelImportToggle?.addEventListener('change', () => {
@@ -2057,7 +2165,23 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
 
     // Handle save manager assignments
     async function handleSaveManagerAssignments() {
+        const saveBtn = element.querySelector('#save-manager-assignments-btn') as HTMLButtonElement;
+        const statusMessage = element.querySelector('#manager-assignments-status') as HTMLElement;
+
+        if (!saveBtn || !statusMessage) return;
+
+        const saveIconHTML = `
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                <polyline points="7 3 7 8 15 8"></polyline>
+            </svg>
+        `;
+
         try {
+            saveBtn.disabled = true;
+            saveBtn.innerHTML = saveIconHTML + 'Saving...';
+
             // Collect all manager assignments from checkboxes
             const checkboxes = element.querySelectorAll('.manager-employee-checkbox') as NodeListOf<HTMLInputElement>;
 
@@ -2093,6 +2217,20 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
             settings.managerAssignments = managerAssignments;
             await saveSettings(settings, 'Manager assignments updated');
 
+            // Update original snapshots after successful save
+            originalManagerSettings = {
+                managerGroupId: settings.managerGroupId,
+                managerAssignments: JSON.parse(JSON.stringify(managerAssignments))
+            };
+
+            // Show success message
+            statusMessage.style.display = 'block';
+            statusMessage.style.background = '#d4edda';
+            statusMessage.style.border = '1px solid #c3e6cb';
+            statusMessage.style.color = '#155724';
+            statusMessage.textContent = `✓ Manager assignments saved! ${managerAssignments.length} managers configured.`;
+
+            // Show ChurchTools toast notification (top-right)
             emit('notification', {
                 message: `✓ Manager assignments saved! ${managerAssignments.length} managers configured.`,
                 type: 'success',
@@ -2100,10 +2238,31 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
             });
 
             console.log('[TimeTracker Admin] Manager assignments saved:', managerAssignments);
+
+            // Update button state (will show green checkmark since hasUnsavedManagerChanges will be false)
+            updateSaveButtonState();
+
+            // Hide status message after 3 seconds
+            setTimeout(() => {
+                statusMessage.style.display = 'none';
+            }, 3000);
+
+            saveBtn.disabled = false;
         } catch (error) {
             console.error('[TimeTracker Admin] Failed to save manager assignments:', error);
+
+            saveBtn.disabled = false;
+
+            // Show error message
+            statusMessage.style.display = 'block';
+            statusMessage.style.background = '#f8d7da';
+            statusMessage.style.border = '1px solid #f5c6cb';
+            statusMessage.style.color = '#721c24';
+            statusMessage.textContent = '✗ Failed to save manager assignments: ' + (error instanceof Error ? error.message : 'Unknown error');
+
+            // Show ChurchTools toast notification (top-right)
             emit('notification', {
-                message: 'Failed to save manager assignments',
+                message: '✗ Failed to save manager assignments',
                 type: 'error',
                 duration: 5000,
             });
