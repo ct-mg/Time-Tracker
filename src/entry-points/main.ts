@@ -3741,14 +3741,16 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
         });
 
         bulkAddEntriesBtn?.addEventListener('click', () => {
-            showBulkEntry = true;
-            showAddManualEntry = false;
-            editingEntry = null;
-            // Start with 3 empty rows
-            if (bulkEntryRows.length === 0) {
-                addBulkEntryRow();
-                addBulkEntryRow();
-                addBulkEntryRow();
+            showBulkEntry = !showBulkEntry; // Toggle instead of always opening
+            if (showBulkEntry) {
+                showAddManualEntry = false;
+                editingEntry = null;
+                // Start with 3 empty rows only when opening
+                if (bulkEntryRows.length === 0) {
+                    addBulkEntryRow();
+                    addBulkEntryRow();
+                    addBulkEntryRow();
+                }
             }
             render();
         });
