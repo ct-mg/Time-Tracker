@@ -3403,9 +3403,10 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
         const viewEntries = element.querySelector('#view-entries') as HTMLButtonElement;
         const viewAbsences = element.querySelector('#view-absences') as HTMLButtonElement;
         const viewReports = element.querySelector('#view-reports') as HTMLButtonElement;
-        const toggleBulkEntryBtn = element.querySelector('#toggle-bulk-entry') as HTMLButtonElement;
-        toggleBulkEntryBtn?.addEventListener('click', () => {
-            showBulkEntry = !showBulkEntry; // Toggle instead of always true
+        const viewAllEntries = element.querySelector('#view-all-entries') as HTMLButtonElement;
+
+        viewDashboard?.addEventListener('click', () => {
+            currentView = 'dashboard';
             render();
         });
 
@@ -3724,14 +3725,22 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
         // Bulk entry
         const bulkAddEntriesBtn = element.querySelector(
             '#bulk-add-entries-btn'
-        ) as HTMLButtonElement;
         const closeBulkEntryBtn = element.querySelector(
-            '#close-bulk-entry-btn'
-        ) as HTMLButtonElement;
+                '#close-bulk-entry-btn'
+            ) as HTMLButtonElement;
         const addBulkRowBtn = element.querySelector('#add-bulk-row-btn') as HTMLButtonElement;
+        const bulkAddEntriesBtn = element.querySelector(
+            '#bulk-add-entries-btn'
+        ) as HTMLButtonElement;
+        const toggleBulkEntryBtn = element.querySelector('#toggle-bulk-entry') as HTMLButtonElement;
         const saveBulkEntriesBtn = element.querySelector(
             '#save-bulk-entries-btn'
         ) as HTMLButtonElement;
+
+        toggleBulkEntryBtn?.addEventListener('click', () => {
+            showBulkEntry = !showBulkEntry;
+            render();
+        });
 
         bulkAddEntriesBtn?.addEventListener('click', () => {
             showBulkEntry = true;
