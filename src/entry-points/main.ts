@@ -1204,6 +1204,16 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
             `TimeTracker_Template_${new Date().toISOString().split('T')[0]}.xlsx`
         );
 
+        // Show success toast
+        window.dispatchEvent(
+            new CustomEvent('notification:show', {
+                detail: {
+                    message: t('ct.extension.timetracker.export.success') || 'Excel exported successfully!',
+                    type: 'success',
+                    duration: 3000,
+                },
+            })
+        );
         showNotification(
             'Excel template downloaded! Check the "Available Categories" sheet for valid category IDs.',
             'success',
@@ -1952,9 +1962,8 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
         return `
             <!-- Current Status -->
             <div style="background: ${currentEntry ? '#d4edda' : '#fff'}; border: 1px solid ${currentEntry ? '#c3e6cb' : '#ddd'}; border-radius: 8px; padding: 2rem; margin-bottom: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                ${
-                    currentEntry
-                        ? `
+                ${currentEntry
+                ? `
                     <div style="text-align: center;">
                         <div style="font-size: 1.2rem; color: #666; margin-bottom: 2rem; font-weight: 600;">
                             ${t('ct.extension.timetracker.dashboard.whatAreYouWorkingOn')}
@@ -1977,7 +1986,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
                         </button>
                     </div>
                 `
-                        : `
+                : `
                     <div style="text-align: center;">
                         <div style="font-size: 1.2rem; color: #666; margin-bottom: 2rem; font-weight: 600;">
                             ${t('ct.extension.timetracker.dashboard.currentlyWorking')}
@@ -2014,7 +2023,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
                         </div>
                     </div>
                 `
-                }
+            }
             </div>
 
             <!-- Dashboard Statistics -->
@@ -2163,18 +2172,17 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
                             </tr>
                         </thead>
                         <tbody>
-                            ${
-                                bulkEntryRows.length === 0
-                                    ? `
+                            ${bulkEntryRows.length === 0
+                ? `
                                 <tr>
                                     <td colspan="8" style="padding: 2rem; text-align: center; color: #666;">
                                         No entries yet. Click "Add Row" to start.
                                     </td>
                                 </tr>
                             `
-                                    : bulkEntryRows
-                                          .map(
-                                              (row) => `
+                : bulkEntryRows
+                    .map(
+                        (row) => `
                                 <tr style="border-bottom: 1px solid #dee2e6;" data-row-id="${row.id}">
                                     <td style="padding: 0.5rem;">
                                         <input
@@ -2224,12 +2232,12 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
                                             style="width: 100%; padding: 0.375rem; border: 1px solid #ddd; border-radius: 3px;"
                                         >
                                             ${workCategories
-                                                .map(
-                                                    (cat) => `
+                                .map(
+                                    (cat) => `
                                                 <option value="${cat.id}" ${row.categoryId === cat.id ? 'selected' : ''}>${cat.name}</option>
                                             `
-                                                )
-                                                .join('')}
+                                )
+                                .join('')}
                                         </select>
                                     </td>
                                     <td style="padding: 0.5rem;">
@@ -2266,17 +2274,16 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
                                     </td>
                                 </tr>
                             `
-                                          )
-                                          .join('')
-                            }
+                    )
+                    .join('')
+            }
                         </tbody>
                     </table>
                 </div>
 
                 <!-- Excel Import/Export (Alpha Feature) -->
-                ${
-                    settings.excelImportEnabled
-                        ? `
+                ${settings.excelImportEnabled
+                ? `
                 <div style="background: #fff3cd; border: 1px solid #ffc107; border-radius: 6px; padding: 1rem; margin-bottom: 1rem;">
                     <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#856404" stroke-width="2">
@@ -2311,8 +2318,8 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
                     </div>
                 </div>
                 `
-                        : ''
-                }
+                : ''
+            }
 
                 <div style="display: flex; gap: 0.5rem; justify-content: space-between; flex-wrap: wrap;">
                     <button id="add-bulk-row-btn" style="padding: 0.5rem 1rem; background: #6f42c1; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; display: inline-flex; align-items: center; gap: 0.5rem;">
@@ -2379,9 +2386,8 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
                             style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;"
                         />
                     </div>
-                    ${
-                        isManager
-                            ? `
+                    ${isManager
+                ? `
                     <div>
                         <label for="filter-user" style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #555;">${t('ct.extension.timetracker.entries.filterUser')}</label>
                         <select
@@ -2393,8 +2399,8 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
                         </select>
                     </div>
                     `
-                            : ''
-                    }
+                : ''
+            }
                 </div>
                 <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center;">
                     <button id="bulk-edit-toggle" style="padding: 0.5rem 1rem; background: ${bulkEditMode ? '#dc3545' : '#6c757d'}; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.9rem;">
@@ -2430,29 +2436,27 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
 
             ${renderBulkEntryForm()}
 
-            ${
-                showAddManualEntry || editingEntry
-                    ? `
+            ${showAddManualEntry || editingEntry
+                ? `
                 <!-- Add/Edit Manual Entry Form -->
                 <div style="background: ${editingEntry ? '#d1ecf1' : '#fff3cd'}; border: 1px solid ${editingEntry ? '#17a2b8' : '#ffc107'}; border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem;">
                     <h3 style="margin: 0 0 1rem 0; color: #333; display: flex; align-items: center; gap: 0.5rem;">
-                    ${
-                        editingEntry
-                            ? `
+                    ${editingEntry
+                    ? `
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
                             <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
                         </svg>
                         ${t('ct.extension.timetracker.common.edit')}
                     `
-                            : `
+                    : `
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <circle cx="12" cy="12" r="10"></circle>
                             <polyline points="12 6 12 12 16 14"></polyline>
                         </svg>
                         ${t('ct.extension.timetracker.timeEntries.addManualEntryTitle')}
                     `
-                    }
+                }
                 </h3>
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
                         <div>
@@ -2525,24 +2529,23 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
                     </div>
                 </div>
             `
-                    : ''
+                : ''
             }
 
             <!-- Entries List -->
             <div style="background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
                     <h2 style="margin: 0; font-size: 1.2rem; color: #333;">Time Entries (${getFilteredEntries().length})</h2>
-                    ${
-                        getFilteredEntries().length > ENTRIES_PER_PAGE
-                            ? `
+                    ${getFilteredEntries().length > ENTRIES_PER_PAGE
+                ? `
                         <div style="display: flex; gap: 0.5rem; align-items: center;">
                             <span style="color: #666; font-size: 0.9rem;">Page ${entriesPage} of ${Math.ceil(getFilteredEntries().length / ENTRIES_PER_PAGE)}</span>
                             <button id="entries-prev-page" ${entriesPage === 1 ? 'disabled' : ''} style="padding: 0.25rem 0.5rem; background: ${entriesPage === 1 ? '#e9ecef' : '#007bff'}; color: ${entriesPage === 1 ? '#6c757d' : 'white'}; border: none; border-radius: 3px; cursor: ${entriesPage === 1 ? 'not-allowed' : 'pointer'};">‹ Prev</button>
                             <button id="entries-next-page" ${entriesPage >= Math.ceil(getFilteredEntries().length / ENTRIES_PER_PAGE) ? 'disabled' : ''} style="padding: 0.25rem 0.5rem; background: ${entriesPage >= Math.ceil(getFilteredEntries().length / ENTRIES_PER_PAGE) ? '#e9ecef' : '#007bff'}; color: ${entriesPage >= Math.ceil(getFilteredEntries().length / ENTRIES_PER_PAGE) ? '#6c757d' : 'white'}; border: none; border-radius: 3px; cursor: ${entriesPage >= Math.ceil(getFilteredEntries().length / ENTRIES_PER_PAGE) ? 'not-allowed' : 'pointer'};">Next ›</button>
                         </div>
                     `
-                            : ''
-                    }
+                : ''
+            }
                 </div>
                 ${renderEntriesList(getFilteredEntries())}
             </div>
@@ -2670,13 +2673,12 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
                         <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
                             <thead>
                                 <tr style="background: #f8f9fa; border-bottom: 1px solid #dee2e6;">
-                                    ${
-                                        bulkEditMode
-                                            ? `<th style="padding: 0.5rem; text-align: center; font-weight: 600; color: #495057; font-size: 0.85rem; width: 40px;">
+                                    ${bulkEditMode
+                        ? `<th style="padding: 0.5rem; text-align: center; font-weight: 600; color: #495057; font-size: 0.85rem; width: 40px;">
                                         <input type="checkbox" id="select-all-day-${dayKey}" class="select-all-checkbox" data-day="${dayKey}" style="cursor: pointer;" />
                                     </th>`
-                                            : ''
-                                    }
+                        : ''
+                    }
                                     <th style="padding: 0.5rem; text-align: left; font-weight: 600; color: #495057; font-size: 0.85rem;">${t('ct.extension.timetracker.timeEntries.startTime')}</th>
                                     <th style="padding: 0.5rem; text-align: left; font-weight: 600; color: #495057; font-size: 0.85rem;">${t('ct.extension.timetracker.timeEntries.endTime')}</th>
                                     <th style="padding: 0.5rem; text-align: left; font-weight: 600; color: #495057; font-size: 0.85rem;">${t('ct.extension.timetracker.timeEntries.duration')}</th>
@@ -2688,27 +2690,26 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
                             </thead>
                             <tbody>
                                 ${dayEntries
-                                    .map((entry) => {
-                                        const start = new Date(entry.startTime);
-                                        const end = entry.endTime
-                                            ? new Date(entry.endTime)
-                                            : new Date();
-                                        const duration = formatDuration(
-                                            end.getTime() - start.getTime()
-                                        );
-                                        const category = workCategories.find(
-                                            (c) => c.id === entry.categoryId
-                                        );
+                        .map((entry) => {
+                            const start = new Date(entry.startTime);
+                            const end = entry.endTime
+                                ? new Date(entry.endTime)
+                                : new Date();
+                            const duration = formatDuration(
+                                end.getTime() - start.getTime()
+                            );
+                            const category = workCategories.find(
+                                (c) => c.id === entry.categoryId
+                            );
 
-                                        return `
+                            return `
                                         <tr style="border-bottom: 1px solid #e9ecef;">
-                                            ${
-                                                bulkEditMode
-                                                    ? `<td style="padding: 0.5rem; text-align: center;">
+                                            ${bulkEditMode
+                                    ? `<td style="padding: 0.5rem; text-align: center;">
                                                 <input type="checkbox" class="entry-checkbox" data-entry-id="${entry.startTime}" ${selectedEntryIds.has(entry.startTime) ? 'checked' : ''} style="cursor: pointer;" />
                                             </td>`
-                                                    : ''
-                                            }
+                                    : ''
+                                }
                                             <td style="padding: 0.5rem;">${start.toLocaleTimeString()}</td>
                                             <td style="padding: 0.5rem;">${entry.endTime ? end.toLocaleTimeString() : '<span style="color: #28a745; font-weight: 600;">Active</span>'}</td>
                                             <td style="padding: 0.5rem; font-weight: 600;">${duration}</td>
@@ -2722,28 +2723,26 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
                                                 <div style="display: flex; flex-direction: column; gap: 0.15rem;">
                                                     <span style="color: ${entry.isManual ? '#ffc107' : '#6c757d'}; font-size: 0.75rem;">
                                                         <span style="display: inline-flex; align-items: center; gap: 0.2rem;">
-                                                            ${
-                                                                entry.isManual
-                                                                    ? `
+                                                            ${entry.isManual
+                                    ? `
                                                                 <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                                                     <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
                                                                     <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
                                                                 </svg>
                                                                 ${t('ct.extension.timetracker.timeEntries.manual')}
                                                             `
-                                                                    : `
+                                    : `
                                                                 <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                                                     <circle cx="12" cy="12" r="10"></circle>
                                                                     <polyline points="12 6 12 12 16 14"></polyline>
                                                                 </svg>
                                                                 ${t('ct.extension.timetracker.timeEntries.clockedIn')}
                                                             `
-                                                            }
+                                }
                                                         </span>
                                                     </span>
-                                                    ${
-                                                        entry.isBreak
-                                                            ? `
+                                                    ${entry.isBreak
+                                    ? `
                                                         <span style="background: #e7f5f7; color: #17a2b8; padding: 0.15rem 0.4rem; border-radius: 3px; font-size: 0.75rem; font-weight: 600; border: 1px solid #b8dfe4;">
                                                             <span style="display: inline-flex; align-items: center; gap: 0.25rem;">
                                                                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
@@ -2754,14 +2753,13 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
                                                             </span>
                                                         </span>
                                                     `
-                                                            : ''
-                                                    }
+                                    : ''
+                                }
                                                 </div>
                                             </td>
                                             <td style="padding: 0.5rem; text-align: center;">
-                                                ${
-                                                    entry.endTime
-                                                        ? `
+                                                ${entry.endTime
+                                    ? `
                                                     <div style="display: flex; gap: 0.2rem; justify-content: center;">
                                                         <button
                                                             class="edit-entry-btn"
@@ -2783,13 +2781,13 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
                                                         </svg></button>
                                                     </div>
                                                 `
-                                                        : '<span style="color: #999; font-size: 0.75rem;">-</span>'
-                                                }
+                                    : '<span style="color: #999; font-size: 0.75rem;">-</span>'
+                                }
                                             </td>
                                         </tr>
                                     `;
-                                    })
-                                    .join('')}
+                        })
+                        .join('')}
                             </tbody>
                         </table>
                     </div>
@@ -2831,29 +2829,27 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
 
     function renderAbsences(): string {
         return `
-            ${
-                showAddAbsence || editingAbsence
-                    ? `
+            ${showAddAbsence || editingAbsence
+                ? `
             <!-- Add/Edit Absence Form -->
             <div style="background: ${editingAbsence ? '#d1ecf1' : '#d4edda'}; border: 1px solid ${editingAbsence ? '#17a2b8' : '#28a745'}; border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem;">
                 <h3 style="margin: 0 0 1rem 0; color: #333; display: flex; align-items: center; gap: 0.5rem;">
-                    ${
-                        editingAbsence
-                            ? `
+                    ${editingAbsence
+                    ? `
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
                             <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
                         </svg>
                         ${t('ct.extension.timetracker.absences.editAbsence')}
                     `
-                            : `
+                    : `
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <line x1="12" y1="5" x2="12" y2="19"></line>
                             <line x1="5" y1="12" x2="19" y2="12"></line>
                         </svg>
                         ${t('ct.extension.timetracker.absences.addAbsence')}
                     `
-                    }
+                }
                 </h3>
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
                     <div>
@@ -2913,20 +2909,19 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
                         style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;"
                         ${absenceReasons.length === 0 ? 'disabled' : ''}
                     >
-                        ${
-                            absenceReasons.length === 0
-                                ? '<option value="">No reasons available - check admin settings</option>'
-                                : (editingAbsence
-                                      ? ''
-                                      : `<option value="">-- ${t('ct.extension.timetracker.absences.selectReason')} --</option>`) +
-                                  absenceReasons
-                                      .map(
-                                          (reason) => `
+                        ${absenceReasons.length === 0
+                    ? '<option value="">No reasons available - check admin settings</option>'
+                    : (editingAbsence
+                        ? ''
+                        : `<option value="">-- ${t('ct.extension.timetracker.absences.selectReason')} --</option>`) +
+                    absenceReasons
+                        .map(
+                            (reason) => `
                                 <option value="${reason.id}" ${editingAbsence && editingAbsence.absenceReason.id === reason.id ? 'selected' : ''}>${reason.nameTranslated || reason.name}</option>
                             `
-                                      )
-                                      .join('')
-                        }
+                        )
+                        .join('')
+                }
                     </select>
                 </div>
                 <div style="margin-bottom: 1rem;">
@@ -2951,7 +2946,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
                 </div>
             </div>
             `
-                    : ''
+                : ''
             }
 
             <!-- Absences List -->
@@ -2966,10 +2961,9 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
                         ${t('ct.extension.timetracker.absences.addAbsence')}
                     </button>
                 </div>
-                ${
-                    absences.length === 0
-                        ? `<p style="color: #666; text-align: center; padding: 2rem;">${t('ct.extension.timetracker.absences.noAbsences')}</p>`
-                        : `
+                ${absences.length === 0
+                ? `<p style="color: #666; text-align: center; padding: 2rem;">${t('ct.extension.timetracker.absences.noAbsences')}</p>`
+                : `
                 <div style="overflow-x: auto;">
                     <table style="width: 100%; border-collapse: collapse;">
                         <thead>
@@ -2984,12 +2978,12 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
                         </thead>
                         <tbody>
                             ${absences
-                                .map((absence) => {
-                                    const isAllDay =
-                                        absence.startTime === null || absence.endTime === null;
-                                    const start = new Date(absence.startDate);
-                                    const end = new Date(absence.endDate);
-                                    return `
+                    .map((absence) => {
+                        const isAllDay =
+                            absence.startTime === null || absence.endTime === null;
+                        const start = new Date(absence.startDate);
+                        const end = new Date(absence.endDate);
+                        return `
                                 <tr style="border-bottom: 1px solid #dee2e6;">
                                     <td style="padding: 0.75rem;">${start.toLocaleDateString()}${!isAllDay ? ' ' + new Date(absence.startTime!).toLocaleTimeString() : ''}</td>
                                     <td style="padding: 0.75rem;">${end.toLocaleDateString()}${!isAllDay ? ' ' + new Date(absence.endTime!).toLocaleTimeString() : ''}</td>
@@ -3024,13 +3018,13 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
                                     </td>
                                 </tr>
                             `;
-                                })
-                                .join('')}
+                    })
+                    .join('')}
                         </tbody>
                     </table>
                 </div>
                 `
-                }
+            }
             </div>
         `;
     }
@@ -3098,9 +3092,8 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
             </div>
 
             <!-- Custom Period Selection -->
-            ${
-                reportPeriod === 'custom'
-                    ? `
+            ${reportPeriod === 'custom'
+                ? `
             <div style="background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
                 <h2 style="margin: 0 0 1rem 0; font-size: 1.2rem; color: #333;">${t('ct.extension.timetracker.reports.periodSelect.custom')}</h2>
                 <div style="display: grid; grid-template-columns: 1fr 1fr auto; gap: 1rem; align-items: end;">
@@ -3128,7 +3121,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
                 </div>
             </div>
             `
-                    : ''
+                : ''
             }
 
             <!-- Summary Stats -->
@@ -3163,17 +3156,17 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
             <div style="background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
                 <h2 style="margin: 0 0 1rem 0; font-size: 1.2rem; color: #333;">${t('ct.extension.timetracker.reports.istVsSoll')}</h2>
                 ${(() => {
-                    const ist = parseFloat(stats.totalHours);
-                    const soll = parseFloat(stats.expectedHours);
-                    const percentage = soll > 0 ? (ist / soll) * 100 : 0;
-                    const isOverTarget = ist >= soll;
-                    const progressColor = isOverTarget
-                        ? '#28a745'
-                        : percentage >= 80
-                          ? '#ffc107'
-                          : '#dc3545';
+                const ist = parseFloat(stats.totalHours);
+                const soll = parseFloat(stats.expectedHours);
+                const percentage = soll > 0 ? (ist / soll) * 100 : 0;
+                const isOverTarget = ist >= soll;
+                const progressColor = isOverTarget
+                    ? '#28a745'
+                    : percentage >= 80
+                        ? '#ffc107'
+                        : '#dc3545';
 
-                    return `
+                return `
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 1.5rem;">
                             <div>
                                 <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.5rem;">
@@ -3206,24 +3199,22 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
                                 <div style="background: ${progressColor}; height: 100%; width: ${Math.min(percentage, 100)}%; transition: width 0.3s; display: flex; align-items: center; justify-content: center;">
                                     ${percentage > 100 ? '' : percentage >= 10 ? `<span style="color: white; font-weight: 600; font-size: 0.85rem;">${percentage.toFixed(1)}%</span>` : ''}
                                 </div>
-                                ${
-                                    percentage > 100
-                                        ? `
+                                ${percentage > 100
+                        ? `
                                     <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;">
                                         <span style="color: white; font-weight: 700; font-size: 0.85rem;">Target Exceeded! 🎉</span>
                                     </div>
                                 `
-                                        : ''
-                                }
+                        : ''
+                    }
                             </div>
                         </div>
 
                         <div style="padding: 1rem; background: ${isOverTarget ? '#d4edda' : percentage >= 80 ? '#fff3cd' : '#f8d7da'}; border-radius: 6px; border-left: 4px solid ${progressColor};">
 
                             <div style="font-weight: 600; color: ${isOverTarget ? '#155724' : percentage >= 80 ? '#856404' : '#721c24'}; margin-bottom: 0.25rem;">
-                                ${
-                                    isOverTarget
-                                        ? `
+                                ${isOverTarget
+                        ? `
                                     <span style="display: inline-flex; align-items: center; gap: 0.25rem;">
                                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                             <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
@@ -3232,8 +3223,8 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
                                         ${t('ct.extension.timetracker.reports.targetAchieved')}
                                     </span>
                                 `
-                                        : percentage >= 80
-                                          ? `
+                        : percentage >= 80
+                            ? `
                                     <span style="display: inline-flex; align-items: center; gap: 0.25rem;">
                                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                             <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
@@ -3243,7 +3234,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
                                         Close to Target
                                     </span>
                                 `
-                                          : `
+                            : `
                                     <span style="display: inline-flex; align-items: center; gap: 0.25rem;">
                                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                             <circle cx="12" cy="12" r="10"></circle>
@@ -3253,18 +3244,17 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
                                         Below Target
                                     </span>
                                 `
-                                }
+                    }
                             </div>
                             <div style="color: ${isOverTarget ? '#155724' : percentage >= 80 ? '#856404' : '#721c24'}; font-size: 0.9rem;">
-                                ${
-                                    isOverTarget
-                                        ? `${t('ct.extension.timetracker.reports.targetAchievedMessage').replace('{hours}', parseFloat(stats.overtime).toFixed(0) + 'h ' + Math.round((parseFloat(stats.overtime) % 1) * 60) + 'm')}`
-                                        : `You need to work ${formatDecimalHours(Math.abs(parseFloat(stats.overtime)))} more to reach your target.`
-                                }
+                                ${isOverTarget
+                        ? `${t('ct.extension.timetracker.reports.targetAchievedMessage').replace('{hours}', parseFloat(stats.overtime).toFixed(0) + 'h ' + Math.round((parseFloat(stats.overtime) % 1) * 60) + 'm')}`
+                        : `You need to work ${formatDecimalHours(Math.abs(parseFloat(stats.overtime)))} more to reach your target.`
+                    }
                             </div>
                         </div>
                     `;
-                })()}
+            })()}
             </div>
 
             <!-- Breakdown by Category -->
@@ -3272,11 +3262,11 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
                 <h2 style="margin: 0 0 1rem 0; font-size: 1.2rem; color: #333;">${t('ct.extension.timetracker.reports.categoryBreakdown')}</h2>
                 <div style="display: grid; gap: 1rem;">
                     ${Object.keys(entriesByCategory)
-                        .map((catId) => {
-                            const category = workCategories.find((c) => c.id === catId);
-                            const data = entriesByCategory[catId];
-                            const percentage = (data.hours / parseFloat(stats.totalHours)) * 100;
-                            return `
+                .map((catId) => {
+                    const category = workCategories.find((c) => c.id === catId);
+                    const data = entriesByCategory[catId];
+                    const percentage = (data.hours / parseFloat(stats.totalHours)) * 100;
+                    return `
                         <div style="padding: 1rem; border: 1px solid #dee2e6; border-radius: 6px;">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
                                 <span style="background: ${category?.color || '#6c757d'}; color: white; padding: 0.25rem 0.75rem; border-radius: 4px; font-weight: 600;">
@@ -3294,15 +3284,14 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
                             </div>
                         </div>
                     `;
-                        })
-                        .join('')}
+                })
+                .join('')}
                 </div>
             </div>
 
             <!-- Absences in Period -->
-            ${
-                absences.length > 0
-                    ? `
+            ${absences.length > 0
+                ? `
             <div style="background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
                 <h2 style="margin: 0 0 1rem 0; font-size: 1.2rem; color: #333;">${t('ct.extension.timetracker.absences.title')}</h2>
                 <div style="overflow-x: auto;">
@@ -3317,37 +3306,37 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
                         </thead>
                         <tbody>
                             ${absences
-                                .filter((absence) => {
-                                    const absenceStart = new Date(absence.startDate);
-                                    const absenceEnd = new Date(absence.endDate);
-                                    const fromDate = new Date(filterDateFrom);
-                                    const toDate = new Date(filterDateTo);
-                                    return !(absenceEnd < fromDate || absenceStart > toDate);
-                                })
-                                .map((absence) => {
-                                    const isAllDay =
-                                        absence.startTime === null || absence.endTime === null;
-                                    const start = new Date(absence.startDate);
-                                    const end = new Date(absence.endDate);
+                    .filter((absence) => {
+                        const absenceStart = new Date(absence.startDate);
+                        const absenceEnd = new Date(absence.endDate);
+                        const fromDate = new Date(filterDateFrom);
+                        const toDate = new Date(filterDateTo);
+                        return !(absenceEnd < fromDate || absenceStart > toDate);
+                    })
+                    .map((absence) => {
+                        const isAllDay =
+                            absence.startTime === null || absence.endTime === null;
+                        const start = new Date(absence.startDate);
+                        const end = new Date(absence.endDate);
 
-                                    let hours = 0;
-                                    if (isAllDay) {
-                                        const days =
-                                            Math.ceil(
-                                                (end.getTime() - start.getTime()) /
-                                                    (1000 * 60 * 60 * 24)
-                                            ) + 1;
-                                        const userConfig = getUserHours();
-                                        hours = days * userConfig.hoursPerDay;
-                                    } else {
-                                        const startTime = new Date(absence.startTime!);
-                                        const endTime = new Date(absence.endTime!);
-                                        hours =
-                                            (endTime.getTime() - startTime.getTime()) /
-                                            (1000 * 60 * 60);
-                                    }
+                        let hours = 0;
+                        if (isAllDay) {
+                            const days =
+                                Math.ceil(
+                                    (end.getTime() - start.getTime()) /
+                                    (1000 * 60 * 60 * 24)
+                                ) + 1;
+                            const userConfig = getUserHours();
+                            hours = days * userConfig.hoursPerDay;
+                        } else {
+                            const startTime = new Date(absence.startTime!);
+                            const endTime = new Date(absence.endTime!);
+                            hours =
+                                (endTime.getTime() - startTime.getTime()) /
+                                (1000 * 60 * 60);
+                        }
 
-                                    return `
+                        return `
                                 <tr style="border-bottom: 1px solid #dee2e6;">
                                     <td style="padding: 0.75rem;">${start.toLocaleDateString()}${!isAllDay ? ' ' + new Date(absence.startTime!).toLocaleTimeString() : ''}</td>
                                     <td style="padding: 0.75rem;">${end.toLocaleDateString()}${!isAllDay ? ' ' + new Date(absence.endTime!).toLocaleTimeString() : ''}</td>
@@ -3359,14 +3348,14 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
                                     <td style="padding: 0.75rem; font-weight: 600;">${formatDecimalHours(hours)}</td>
                                 </tr>
                             `;
-                                })
-                                .join('')}
+                    })
+                    .join('')}
                         </tbody>
                     </table>
                 </div>
             </div>
             `
-                    : ''
+                : ''
             }
 
             <!-- Export Options -->
@@ -3612,7 +3601,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
         ) as HTMLButtonElement;
 
         addManualEntryBtn?.addEventListener('click', () => {
-            showAddManualEntry = true;
+            showAddManualEntry = !showAddManualEntry; // Toggle instead of always true
             render();
         });
 
@@ -3838,8 +3827,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
         const absenceAllDayCheckbox = element.querySelector('#absence-all-day') as HTMLInputElement;
 
         addAbsenceBtn?.addEventListener('click', () => {
-            showAddAbsence = true;
-            editingAbsence = null;
+            showAddAbsence = !showAddAbsence; // Toggle instead of always true
             render();
         });
 
