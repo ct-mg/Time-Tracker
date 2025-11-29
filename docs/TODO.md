@@ -316,18 +316,60 @@
 
 ### 🟡 Priorität: Mittel
 
-#### Bulk Edit für Time Entries
+#### Bulk Edit für Time Entries ⏳ IN PROGRESS
 **Use Case:** User hat 10 Einträge mit falscher Kategorie
-**Feature:** Multi-Select + Kategorie-Änderung für mehrere Einträge
-**Status:** Offen
+**Feature:** Multi-Select + Bulk Delete + Kategorie-Änderung für mehrere Einträge
+**Status:** In Progress (Branch: feature/bulk-edit)
 **Aufwand:** Mittel
 
 **Implementierungs-Schritte:**
-1. Checkbox für jeden Eintrag
-2. "Select All" Toggle
-3. Bulk-Action Bar mit Kategorie-Dropdown
-4. "Update Selected" Button
-5. Confirmation Dialog mit Anzahl
+1. ✅ Checkbox für jeden Eintrag
+2. ✅ "Select All" Toggle
+3. ✅ Bulk-Action Bar mit Kategorie-Dropdown
+4. ✅ "Update Selected" Button
+5. ⏳ Bulk Delete Button + Confirmation Dialog
+6. ⏳ Testing
+
+---
+
+#### Time Filter Presets
+**Use Case:** User möchte schnell Zeiträume filtern ohne Datum manuell einzugeben
+**Feature:** Vordefinierte Zeitfilter für Time Entries
+**Status:** Geplant (Separate Branch)
+**Aufwand:** Klein
+**Priority:** Mittel
+
+**Gewünschte Filter:**
+- Dieser Monat
+- Letzter Monat
+- Dieses Jahr
+- Letztes Jahr
+- Letzte 365 Tage
+- Letzte 30 Tage
+
+**Location:** Time Entries Filter Sektion
+
+---
+
+#### UI/UX Verbesserungen - Dialoge
+**Problem:** Inkonsistenzen bei Dialog-Verhalten und Buttons
+**Status:** Geplant (Separate Branch)
+**Aufwand:** Klein
+**Priority:** Mittel
+
+**Issues:**
+1. **Toggle-Konflikt:** Öffnet man "Manuelle Einträge" während "Massenimport" offen ist, bleibt Massenimport offen
+   - Erwartet: Massenimport sollte sich schließen
+   - Wichtig: Eingegebene Daten müssen erhalten bleiben (falls versehentlich geschlossen)
+   
+2. **Button Inkonsistenz:** 
+   - Massenimport: Hat "X" zum Schließen
+   - Manuelle Einträge: Hat "Abbruch" Button
+   - Gewünscht: Überall "Abbruch" Button statt "X"
+
+3. **Fehlende Übersetzung:**
+   - "Manual Entries" zeigt sich auf Englisch auch wenn Deutsch ausgewählt
+   - Fehlender Key: `ct.extension.timetracker.bulkEntry.title`
 
 ---
 

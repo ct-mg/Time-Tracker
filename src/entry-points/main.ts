@@ -1021,6 +1021,93 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
         }
     }
 
+    // Bulk delete selected entries
+    async function bulkDeleteEntries(entryIds: string[]): Promise<void> {
+        try {
+            console.log('[TimeTracker] Bulk delete starting for', entryIds.length, 'entries');
+
+            const cat = await getCustomDataCategory<object>('timeentries');
+            if (!cat) {
+                console.error('[TimeTracker] Time entries category not found');
+                throw new Error('Time entries category not found');
+            }
+
+            // Fetch all values once (optimization)
+            const allValues = await getCustomDataValues<TimeEntry>(cat.id, moduleId!);
+            console.log('[TimeTracker] Fetched', allValues.length, 'total entries from KV store');
+
+            // Delete each entry
+            let successCount = 0;
+            for (const startTime of entryIds) {
+                try {
+                    const entry = timeEntries.find((e) => e.startTime === startTime);
+                    if (!entry) {
+                        console.warn('[TimeTracker] Entry not found in local array:', startTime);
+                        continue;
+                    }
+
+                    // Find in KV store
+                    const existingValue = allValues.find((v) => v.startTime === entry.startTime);
+
+                    if (existingValue) {
+                        const kvStoreId = (existingValue as any).id;
+                        console.log(
+                            '[TimeTracker] Deleting entry',
+                            startTime,
+                            'with kvStoreId',
+                            kvStoreId
+                        );
+
+                        await deleteCustomDataValue(cat.id, kvStoreId, moduleId!);
+
+                        // Remove from local array
+                        const index = timeEntries.findIndex((e) => e.startTime === entry.startTime);
+                        if (index !== -1) {
+                            timeEntries.splice(index, 1);
+                        }
+                        successCount++;
+                        console.log('[TimeTracker] Successfully deleted entry', startTime);
+                    } else {
+                        console.warn('[TimeTracker] Entry not found in KV store:', startTime);
+                    }
+                } catch (entryError) {
+                    console.error(
+                        '[TimeTracker] Failed to delete individual entry:',
+                        startTime,
+                        entryError
+                    );
+                }
+            }
+
+            console.log(
+                '[TimeTracker] Bulk delete completed:',
+                successCount,
+                'of',
+                entryIds.length
+            );
+
+            if (successCount > 0) {
+                showNotification(
+                    t('ct.extension.timetracker.bulkEdit.deleteSuccess').replace(
+                        '{count}',
+                        successCount.toString()
+                    ),
+                    'success'
+                );
+            } else {
+                showNotification('No entries were deleted', 'warning');
+            }
+
+            // Reset bulk edit state
+            selectedEntryIds.clear();
+            bulkEditMode = false;
+            render();
+        } catch (error) {
+            console.error('[TimeTracker] Bulk delete failed:', error);
+            showNotification('Bulk delete failed: ' + (error as Error).message, 'error');
+        }
+    }
+
     // Bulk entry management
     function addBulkEntryRow() {
         const now = new Date();
@@ -2909,6 +2996,13 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
                         <button id="bulk-apply-category" style="padding: 0.5rem 1rem; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 0.9rem; display: inline-flex; align-items: center; gap: 0.5rem;">
                             ${t('ct.extension.timetracker.bulkEdit.changeCategory')}
                         </button>
+                        <button id="bulk-delete-btn" style="padding: 0.5rem 1rem; background: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 0.9rem; display: inline-flex; align-items: center; gap: 0.5rem;">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="3 6 5 6 21 6"></polyline>
+                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                            </svg>
+                            ${t('ct.extension.timetracker.bulkEdit.deleteSelected')}
+                        </button>
                         <button id="bulk-cancel" style="padding: 0.5rem 1rem; background: rgba(255,255,255,0.2); color: white; border: 1px solid rgba(255,255,255,0.3); border-radius: 4px; cursor: pointer; font-size: 0.9rem;">
                             ${t('ct.extension.timetracker.bulkEdit.cancel')}
                         </button>
@@ -3625,6 +3719,22 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
                 )
             ) {
                 await bulkUpdateCategory(Array.from(selectedEntryIds), newCategoryId);
+            }
+            render();
+        });
+
+        // Bulk delete
+        const bulkDeleteBtn = element.querySelector('#bulk-delete-btn');
+        bulkDeleteBtn?.addEventListener('click', async () => {
+            if (
+                confirm(
+                    t('ct.extension.timetracker.bulkEdit.confirmDelete').replace(
+                        '{count}',
+                        selectedEntryIds.size.toString()
+                    )
+                )
+            ) {
+                await bulkDeleteEntries(Array.from(selectedEntryIds));
             }
             render();
         });
