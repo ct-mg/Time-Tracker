@@ -158,6 +158,13 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
     let cachedStats: any | null = null;
     let lastFilterState = '';
 
+    // Virtual scrolling state
+    let virtualScrollTop = 0;
+    let virtualContainerHeight = 600; // Default viewport height in pixels
+    let virtualItemHeight = 80; // Average height per entry (estimated)
+    let virtualBufferSize = 10; // Number of extra items to render above/below viewport
+    let scrollDebounceTimer: number | null = null;
+
     // Refresh data
     async function refreshData() {
         try {
@@ -1940,6 +1947,14 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
         `;
 
         attachEventHandlers();
+
+        // Restore scroll position for virtual scrolling
+        const virtualScrollContainer = element.querySelector<HTMLDivElement>(
+            '#virtual-scroll-container'
+        );
+        if (virtualScrollContainer && virtualScrollTop > 0) {
+            virtualScrollContainer.scrollTop = virtualScrollTop;
+        }
     }
 
     // Render the appropriate view based on currentView
@@ -2558,10 +2573,62 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
         `;
     }
 
+    // Calculate which entries should be visible based on scroll position (for virtual scrolling)
+    function calculateVisibleRange(entries: TimeEntry[]): {
+        visibleEntries: TimeEntry[];
+        topPadding: number;
+        bottomPadding: number;
+        totalHeight: number;
+    } {
+        // If fewer than 100 entries, render all (no virtual scrolling needed)
+        if (entries.length < 100) {
+            return {
+                visibleEntries: entries,
+                topPadding: 0,
+                bottomPadding: 0,
+                totalHeight: 0,
+            };
+        }
+
+        // Calculate visible range based on scroll position
+        const scrollTop = virtualScrollTop;
+        const viewportHeight = virtualContainerHeight;
+        const itemHeight = virtualItemHeight;
+        const bufferSize = virtualBufferSize;
+
+        // Estimate total content height
+        const totalHeight = entries.length * itemHeight;
+
+        // Calculate which items should be visible
+        const startIndex = Math.max(0, Math.floor(scrollTop / itemHeight) - bufferSize);
+        const endIndex = Math.min(
+            entries.length,
+            Math.ceil((scrollTop + viewportHeight) / itemHeight) + bufferSize
+        );
+
+        // Get visible slice of entries
+        const visibleEntries = entries.slice(startIndex, endIndex);
+
+        // Calculate padding to maintain scroll position
+        const topPadding = startIndex * itemHeight;
+        const bottomPadding = (entries.length - endIndex) * itemHeight;
+
+        return {
+            visibleEntries,
+            topPadding,
+            bottomPadding,
+            totalHeight,
+        };
+    }
+
     function renderEntriesList(entries: TimeEntry[]): string {
         if (entries.length === 0) {
             return `<p style="color: #666; text-align: center; padding: 2rem;">${t('ct.extension.timetracker.timeEntries.noEntries')}</p>`;
         }
+
+        // Calculate visible range for virtual scrolling
+        const { visibleEntries, topPadding, bottomPadding, totalHeight } =
+            calculateVisibleRange(entries);
 
         // Get user-specific hours
         const userHours = getUserHours();
@@ -2575,7 +2642,8 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
 
         const weekGroups = new Map<string, WeekGroup>(); // key: "YYYY-WW"
 
-        entries.forEach((entry) => {
+        // Use visibleEntries instead of all entries
+        visibleEntries.forEach((entry) => {
             const date = new Date(entry.startTime);
             const weekNum = getISOWeek(date);
             const yearNum = getISOWeekYear(date);
@@ -2602,7 +2670,27 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
             b[0].localeCompare(a[0])
         );
 
-        let html = '<div style="display: flex; flex-direction: column; gap: 1.5rem;">';
+        // Wrap content in virtual scroll container
+        let html = '';
+
+        // Add virtual scroll styles and container only if using virtual scrolling
+        if (entries.length >= 100) {
+            html += `
+                <div 
+                    id="virtual-scroll-container" 
+                    style="
+                        max-height: ${virtualContainerHeight}px; 
+                        overflow-y: auto; 
+                        position: relative;
+                    "
+                >
+                    <!-- Top padding spacer -->
+                    <div style="height: ${topPadding}px;"></div>
+                    <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+            `;
+        } else {
+            html += '<div style="display: flex; flex-direction: column; gap: 1.5rem;">';
+        }
 
         for (const [, week] of sortedWeeks) {
             // weekKey unused, use _ or omit
@@ -2829,7 +2917,17 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
             `;
         }
 
-        html += '</div>'; // Close main container
+        html += '</div>'; // Close main content container
+
+        // Add bottom padding and close virtual scroll container if using virtual scrolling
+        if (entries.length >= 100) {
+            html += `
+                <!-- Bottom padding spacer -->
+                <div style="height: ${bottomPadding}px;"></div>
+            </div>
+            `;
+        }
+
         return html;
     }
 
@@ -3461,26 +3559,47 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
         ) as HTMLButtonElement;
 
         applyFiltersBtn?.addEventListener('click', () => {
-            const dateFromInput = element.querySelector('#filter-date-from') as HTMLInputElement;
-            const dateToInput = element.querySelector('#filter-date-to') as HTMLInputElement;
-            const categorySelect = element.querySelector('#filter-category') as HTMLSelectElement;
-            const searchInput = element.querySelector('#filter-search') as HTMLInputElement;
-            const userSelect = element.querySelector('#filter-user') as HTMLSelectElement;
+            const fromInput = element.querySelector<HTMLInputElement>('#filter-date-from');
+            const toInput = element.querySelector<HTMLInputElement>('#filter-date-to');
+            const categorySelect =
+                element.querySelector<HTMLSelectElement>('#filter-category');
+            const searchInput = element.querySelector<HTMLInputElement>('#filter-search');
+            const userSelect = element.querySelector<HTMLSelectElement>('#filter-user');
 
-            filterDateFrom = dateFromInput.value;
-            filterDateTo = dateToInput.value;
-            filterCategory = categorySelect.value;
-            filterSearch = searchInput?.value || '';
-            if (userSelect) {
-                filterUser = userSelect.value;
-            }
+            if (fromInput) filterDateFrom = fromInput.value;
+            if (toInput) filterDateTo = toInput.value;
+            if (categorySelect) filterCategory = categorySelect.value;
+            if (searchInput) filterSearch = searchInput.value;
+            if (userSelect) filterUser = userSelect.value;
 
-            // Clear cache to force recalculation
-            cachedFilteredEntries = null;
-
+            // Reset scroll position when filters change
+            virtualScrollTop = 0;
             render();
         });
 
+        // Virtual scroll event handler
+        const virtualScrollContainer = element.querySelector<HTMLDivElement>(
+            '#virtual-scroll-container'
+        );
+        virtualScrollContainer?.addEventListener('scroll', () => {
+            // Debounce scroll events to avoid excessive re-renders
+            if (scrollDebounceTimer !== null) {
+                clearTimeout(scrollDebounceTimer);
+            }
+
+            scrollDebounceTimer = window.setTimeout(() => {
+                // Update scroll position
+                virtualScrollTop = virtualScrollContainer.scrollTop;
+
+                // Update container height in case window was resized
+                virtualContainerHeight = virtualScrollContainer.clientHeight;
+
+                // Re-render with new visible range
+                render();
+
+                scrollDebounceTimer = null;
+            }, 150); // 150ms debounce delay
+        });
         // Bulk Edit toggle
         const bulkEditToggle = element.querySelector('#bulk-edit-toggle');
         bulkEditToggle?.addEventListener('click', () => {
