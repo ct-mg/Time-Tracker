@@ -259,33 +259,19 @@
 
 ### 🔴 Priorität: Hoch
 
-#### Collapsible Button Toggle Verbesserung
+#### Collapsible Button Toggle Verbesserung ✅ COMPLETED
 **Problem:** Offene Buttons (z.B. "Add Time Entry", "Add Absence") schließen nicht beim erneuten Klick
-**Lösung:** Toggle-Verhalten implementieren - Button schließt Dialog wenn bereits offen
-**Requirement:** Daten für aktuelle Session behalten wenn Dialog geschlossen wird
-**Status:** Offen
-**Aufwand:** Klein
-**User Impact:** Mittel (bessere UX)
-
-**Implementierungs-Hinweise:**
-- State-Variable prüfen ob Dialog offen
-- Bei erneutem Klick: Dialog schließen ABER Eingaben behalten
-- Erst beim "Cancel" oder "Save" State clearen
+**Lösung:** Toggle-Verhalten implementiert - Button schließt Dialog wenn bereits offen  
+**Status:** ✅ Completed (2025-11-29)
+**Implementation:** Changed `showAddManualEntry = true` to `= !showAddManualEntry`
 
 ---
 
-#### CSV Export Success Toast
+#### CSV Export Success Toast ✅ COMPLETED
 **Problem:** Nach CSV/Excel Export gibt es keine visuelle Bestätigung
-**Lösung:** Success Toast rechts oben einfliegen lassen nach erfolgreichem Export
-**Status:** Offen
-**Aufwand:** Klein
-**User Impact:** Mittel (besseres Feedback)
-
-**Implementierungs-Details:**
-1. Nach erfolgreichem Export: Toast mit "Excel exported successfully!"
-2. Position: Rechts oben
-3. Auto-Hide nach 3 Sekunden
-4. Grüne Farbe für Success
+**Lösung:** Success Toast rechts oben nach erfolgreichem Export
+**Status:** ✅ Completed (2025-11-29)
+**Implementation:** Added `notification:show` event after XLSX.writeFile
 
 ---
 
