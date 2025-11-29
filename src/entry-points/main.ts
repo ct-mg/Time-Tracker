@@ -2142,13 +2142,10 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
             <!-- Bulk Entry Form -->
             <div style="background: #e7e3ff; border: 2px solid #6f42c1; border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-                    <h1 style="margin: 0; font-size: 1.5rem; color: #333; display: flex; align-items: center; gap: 0.75rem;">
-                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <circle cx="12" cy="12" r="10"></circle>
-                    <polyline points="12 6 12 12 16 14"></polyline>
-                </svg>
-                ${t('ct.extension.timetracker.common.timeTracker')}
-            </h1>rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
+                    <h3 style="margin: 0; font-size: 1.25rem; color: #333; display: flex; align-items: center; gap: 0.75rem;">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
+                            <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
                             <line x1="12" y1="11" x2="12" y2="17"></line>
                             <line x1="9" y1="14" x2="15" y2="14"></line>
                         </svg>
@@ -2438,6 +2435,15 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
 
             ${showAddManualEntry || editingEntry
                 ? `
+                <h1 class="tab-title" style="display: flex; align-items: center; gap: 0.5rem; margin: 0 0 1.5rem 0; padding: 0; font-size: 1.5rem; font-weight: 600; color: #333;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
+                    <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
+                    <path d="M9 12h6"></path>
+                    <path d="M9 16h6"></path>
+                </svg>
+                ${t('ct.extension.timetracker.bulkEntry.title') || 'Bulk Entry'}
+            </h1>
                 <!-- Add/Edit Manual Entry Form -->
                 <div style="background: ${editingEntry ? '#d1ecf1' : '#fff3cd'}; border: 1px solid ${editingEntry ? '#17a2b8' : '#ffc107'}; border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem;">
                     <h3 style="margin: 0 0 1rem 0; color: #333; display: flex; align-items: center; gap: 0.5rem;">
@@ -3397,10 +3403,9 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
         const viewEntries = element.querySelector('#view-entries') as HTMLButtonElement;
         const viewAbsences = element.querySelector('#view-absences') as HTMLButtonElement;
         const viewReports = element.querySelector('#view-reports') as HTMLButtonElement;
-        const viewAllEntries = element.querySelector('#view-all-entries') as HTMLButtonElement;
-
-        viewDashboard?.addEventListener('click', () => {
-            currentView = 'dashboard';
+        const toggleBulkEntryBtn = element.querySelector('#toggle-bulk-entry') as HTMLButtonElement;
+        toggleBulkEntryBtn?.addEventListener('click', () => {
+            showBulkEntry = !showBulkEntry; // Toggle instead of always true
             render();
         });
 
