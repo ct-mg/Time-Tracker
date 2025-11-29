@@ -8,9 +8,20 @@
 
 ## Aktueller Status
 
-**Letztes Update:** 2025-11-24
-**Aktuelle Phase:** Phase 3 - Performance & UX Improvements ✅ ABGESCHLOSSEN
-**Nächste Phase:** Phase 4 - Advanced Features ⏳ BEREIT
+**Letztes Update:** 2025-11-28
+**Aktuelle Phase:** Phase 4 - Advanced Features (HR/Manager Dashboard) ⏳ IN PROGRESS
+**Nächste Phase:** Phase 5 - Polish & Testing
+
+---
+
+## 🔜 Refactoring Backlog (Separate Branch)
+
+### Notification System Centralization
+- [ ] Create centralized notification utility (`src/utils/notifications.ts`)
+- [ ] Expose `showSuccess()`, `showError()`, `showWarning()` helpers
+- [ ] Replace all `emit('notification:show')` calls across codebase
+- [ ] Benefits: DRY, single source of truth, clean API
+- [ ] **Branch:** `refactor/centralize-notifications`
 
 ---
 
@@ -435,19 +446,19 @@
 - ✅ User Requirements Document
 - ✅ Maintenance Guidelines
 - ✅ TODO Roadmap
-- ⏳ User Manual (für Endnutzer, nicht Entwickler)
+- ✅ User Manual (für Endnutzer, nicht Entwickler) - docs/USER-MANUAL.md
 - ⏳ API Documentation (wenn public API)
 
 ### Testing
-- ⏳ Unit Tests (Vitest)
-- ⏳ Integration Tests
-- ⏳ E2E Tests (Playwright)
+- ✅ Unit Tests (Vitest) - 7 tests for i18n.ts, 69.56% coverage
+- ⏳ Integration Tests (expand coverage to kv-store, calculations)
+- ⏳ E2E Tests (Playwright) - deferred for future
 
 ### Code Quality
-- ⏳ ESLint Configuration
-- ⏳ Prettier Configuration
-- ⏳ TypeScript Strict Mode (aktuell nicht)
-- ⏳ Code Coverage Tracking
+- ✅ ESLint Configuration (v9 with flat config, TypeScript support)
+- ✅ Prettier Configuration (integrated with ESLint)
+- ✅ TypeScript Strict Mode (already enabled in tsconfig.json)
+- ⏳ Code Coverage Tracking (future enhancement)
 
 ---
 

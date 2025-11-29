@@ -137,10 +137,12 @@ export async function renderExtension<TData = any>(
         emit: (event: string, ...args: any[]) => eventBusCTToExtension.emit(event, ...args),
 
         // ChurchTools can listen to events FROM the extension
-        on: (event: string, handler: (...args: any[]) => void) => eventBusExtensionToCT.on(event, handler),
+        on: (event: string, handler: (...args: any[]) => void) =>
+            eventBusExtensionToCT.on(event, handler),
 
         // ChurchTools can unsubscribe from extension events
-        off: (event: string, handler: (...args: any[]) => void) => eventBusExtensionToCT.off(event, handler),
+        off: (event: string, handler: (...args: any[]) => void) =>
+            eventBusExtensionToCT.off(event, handler),
 
         // Cleanup: call extension cleanup, clear all event handlers
         destroy: async () => {
