@@ -2627,7 +2627,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
         }
 
         // Calculate visible range for virtual scrolling
-        const { visibleEntries, topPadding, bottomPadding, totalHeight } =
+        const { visibleEntries, topPadding, bottomPadding } =
             calculateVisibleRange(entries);
 
         // Get user-specific hours
