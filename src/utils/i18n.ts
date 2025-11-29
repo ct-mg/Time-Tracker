@@ -1,6 +1,6 @@
 /**
  * Internationalization (i18n) Utility
- * 
+ *
  * Provides translation functionality for the Time Tracker extension.
  * Designed to be easily adaptable for ChurchTools native i18n when available.
  */

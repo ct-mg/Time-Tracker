@@ -35,7 +35,8 @@ interface TimeEntry {
     isManual: boolean;
     isBreak: boolean; // If true, does not count towards work hours
     createdAt: string;
-    settingsSnapshot?: { // Settings at time of entry creation (for accurate historical SOLL calculations)
+    settingsSnapshot?: {
+        // Settings at time of entry creation (for accurate historical SOLL calculations)
         hoursPerDay: number;
         hoursPerWeek: number;
         workWeekDays: number[]; // 0=Sunday, 1=Monday, ..., 6=Saturday
@@ -58,6 +59,11 @@ interface UserHoursConfig {
     workWeekDays?: number[]; // Individual work week (0=Sun, 1=Mon, ..., 6=Sat). Falls back to global setting if undefined.
 }
 
+interface ManagerAssignment {
+    managerId: number;
+    managerName: string;
+    employeeIds: number[];
+}
 
 interface Settings {
     defaultHoursPerDay: number;
@@ -66,18 +72,21 @@ interface Settings {
     reportPeriod?: 'week' | 'month' | 'year' | 'custom'; // User's preferred report period
     employeeGroupId?: number; // ChurchTools group ID for employees (with individual SOLL)
     volunteerGroupId?: number; // ChurchTools group ID for volunteers (no SOLL requirements)
+    hrGroupId?: number; // ChurchTools group ID for HR (can see all time entries)
+    managerGroupId?: number; // ChurchTools group ID for managers (can see assigned employees)
     userHoursConfig?: UserHoursConfig[]; // Individual SOLL hours for employees
+    managerAssignments?: ManagerAssignment[]; // Manager -> Employee assignments
     workWeekDays?: number[]; // Days of week that count as work days (0=Sunday, 1=Monday, ..., 6=Saturday). Default: [1,2,3,4,5] (Mon-Fri)
     language?: 'auto' | 'de' | 'en'; // UI language (auto = browser detection)
 }
 
+interface UserPermissions {
+    canSeeAllEntries: boolean; // HR role
+    canSeeOwnEntries: boolean; // Everyone
+    managedEmployeeIds: number[]; // Empty for non-managers
+}
 
-const mainEntryPoint: EntryPoint<MainModuleData> = ({
-    element,
-    churchtoolsClient,
-    user,
-    KEY,
-}) => {
+const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient, user, KEY }) => {
     // State
     let timeEntries: TimeEntry[] = [];
     let workCategories: WorkCategory[] = [];
@@ -85,12 +94,12 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
         defaultHoursPerDay: 8,
         defaultHoursPerWeek: 40,
         excelImportEnabled: false, // Default: disabled (Alpha)
-        workWeekDays: [1, 2, 3, 4, 5] // Default: Monday to Friday
+        workWeekDays: [1, 2, 3, 4, 5], // Default: Monday to Friday
     };
     let currentEntry: TimeEntry | null = null;
     let absences: Absence[] = [];
     let absenceReasons: AbsenceReason[] = [];
-    let userList: Array<{ id: number, name: string }> = []; // All users for dropdown (managers only)
+    let userList: Array<{ id: number; name: string }> = []; // All users for dropdown (managers only)
     let isManager = false; // Does current user have manager/admin permissions?
     let isLoading = true;
     let errorMessage = '';
@@ -123,6 +132,8 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
     let reportPeriod: 'week' | 'month' | 'year' | 'custom' = 'week';
     let showAddAbsence = false;
     let editingAbsence: Absence | null = null;
+    // TODO: Implement User Filter Dropdown (Phase 4 from implementation plan)
+    // let selectedViewUserId: number | 'all' = 'all'; // Which user's entries to view (managers/HR only)
 
     // Bulk entry rows
     interface BulkEntryRow {
@@ -214,8 +225,8 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                 await loadUserList();
             }
 
-            // Check access
-            const hasAccess = await checkUserAccess();
+            // Check access (for future use)
+            // const hasAccess = await checkUserAccess();
 
             // Check if there's a currently active entry
             currentEntry =
@@ -250,12 +261,12 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                     );
 
                 // Parse each value and preserve the string ID
-                workCategories = rawValues.map(rawVal => {
+                workCategories = rawValues.map((rawVal) => {
                     const parsedCategory = JSON.parse(rawVal.value) as WorkCategory;
                     return {
                         id: parsedCategory.id, // String ID from stored data
                         name: parsedCategory.name,
-                        color: parsedCategory.color
+                        color: parsedCategory.color,
                     };
                 });
             } else {
@@ -280,11 +291,14 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
 
         try {
             // Get user's groups from ChurchTools
-            const userGroups = await churchtoolsClient.get(`/persons/${user.id}/groups`) as Array<{ id: number }>;
+            const userGroups = (await churchtoolsClient.get(
+                `/persons/${user.id}/groups`
+            )) as Array<{ id: number }>;
             const groupIds = userGroups.map((g: { id: number }) => g.id);
 
             // Check if user is in either employee or volunteer group
-            const hasAccess = (!!settings.employeeGroupId && groupIds.includes(settings.employeeGroupId)) ||
+            const hasAccess =
+                (!!settings.employeeGroupId && groupIds.includes(settings.employeeGroupId)) ||
                 (!!settings.volunteerGroupId && groupIds.includes(settings.volunteerGroupId));
 
             return hasAccess;
@@ -299,15 +313,25 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
         if (!user?.id) return false;
 
         try {
-            // Get current user's permissions from ChurchTools
-            const permissions = await churchtoolsClient.get<string[]>('/permissions') as string[];
+            // Check if user is in HR group (has manager-level access)
+            if (settings.hrGroupId) {
+                const isHR = await userIsInGroup(user.id, settings.hrGroupId);
+                if (isHR) return true;
+            }
 
-            // Check for admin or churchdb permissions (managers have these)
-            const isAdmin = permissions.includes('churchdb#view') ||
-                permissions.includes('churchcore#admin') ||
-                permissions.includes('adm in');
+            // Check if user is in manager group
+            if (settings.managerGroupId) {
+                const isManagerInGroup = await userIsInGroup(user.id, settings.managerGroupId);
+                if (isManagerInGroup) return true;
+            }
 
-            return isAdmin;
+            // Check if user has any manager assignments
+            const hasAssignments = settings.managerAssignments?.some(
+                (a) => a.managerId === user.id
+            );
+            if (hasAssignments) return true;
+
+            return false;
         } catch (error) {
             console.error('[TimeTracker] Failed to check manager role:', error);
             return false; // Deny manager status if check fails
@@ -323,19 +347,25 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
 
         try {
             // Fetch all persons from ChurchTools
-            const response = await churchtoolsClient.get<Array<{
-                id: number;
-                domainAttributes: {
-                    firstName?: string;
-                    lastName?: string;
-                };
-            }>>('/persons');
+            const response = await churchtoolsClient.get<
+                Array<{
+                    id: number;
+                    domainAttributes: {
+                        firstName?: string;
+                        lastName?: string;
+                    };
+                }>
+            >('/persons');
 
             // Map to simplified format
-            userList = (response || []).map(person => ({
-                id: person.id,
-                name: `${person.domainAttributes?.firstName || ''} ${person.domainAttributes?.lastName || ''}`.trim() || `User ${person.id}`
-            })).filter(u => u.id); // Remove invalid entries
+            userList = (response || [])
+                .map((person) => ({
+                    id: person.id,
+                    name:
+                        `${person.domainAttributes?.firstName || ''} ${person.domainAttributes?.lastName || ''}`.trim() ||
+                        `User ${person.id}`,
+                }))
+                .filter((u) => u.id); // Remove invalid entries
 
             console.log('[TimeTracker] Loaded', userList.length, 'users for filter');
         } catch (error) {
@@ -349,16 +379,16 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
         if (!user?.id) {
             return {
                 hoursPerDay: settings.defaultHoursPerDay,
-                hoursPerWeek: settings.defaultHoursPerWeek
+                hoursPerWeek: settings.defaultHoursPerWeek,
             };
         }
 
         // Check if user has individual config (employees only)
-        const userConfig = settings.userHoursConfig?.find(c => c.userId === user.id);
+        const userConfig = settings.userHoursConfig?.find((c) => c.userId === user.id);
         if (userConfig) {
             return {
                 hoursPerDay: userConfig.hoursPerDay,
-                hoursPerWeek: userConfig.hoursPerWeek
+                hoursPerWeek: userConfig.hoursPerWeek,
             };
         }
 
@@ -368,19 +398,19 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
         // Default to settings
         return {
             hoursPerDay: settings.defaultHoursPerDay,
-            hoursPerWeek: settings.defaultHoursPerWeek
+            hoursPerWeek: settings.defaultHoursPerWeek,
         };
     }
 
     // Create settings snapshot for a time entry (preserves settings at time of creation)
     function createSettingsSnapshot(userId: number): TimeEntry['settingsSnapshot'] {
         // Priority 1: User-specific settings
-        const userConfig = settings.userHoursConfig?.find(u => u.userId === userId);
+        const userConfig = settings.userHoursConfig?.find((u) => u.userId === userId);
 
         return {
             hoursPerDay: userConfig?.hoursPerDay ?? settings.defaultHoursPerDay,
             hoursPerWeek: userConfig?.hoursPerWeek ?? settings.defaultHoursPerWeek,
-            workWeekDays: userConfig?.workWeekDays ?? settings.workWeekDays ?? [1, 2, 3, 4, 5]
+            workWeekDays: userConfig?.workWeekDays ?? settings.workWeekDays ?? [1, 2, 3, 4, 5],
         };
     }
 
@@ -390,7 +420,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
 
         // Priority 1: User-specific work week
         if (userId !== undefined && settings.userHoursConfig) {
-            const userConfig = settings.userHoursConfig.find(u => u.userId === userId);
+            const userConfig = settings.userHoursConfig.find((u) => u.userId === userId);
             if (userConfig?.workWeekDays) {
                 return userConfig.workWeekDays.includes(dayOfWeek);
             }
@@ -410,7 +440,8 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
         end.setHours(0, 0, 0, 0);
 
         while (current <= end) {
-            if (isWorkDay(current, userId)) { // Pass userId to isWorkDay
+            if (isWorkDay(current, userId)) {
+                // Pass userId to isWorkDay
                 count++;
             }
             current.setDate(current.getDate() + 1);
@@ -438,7 +469,8 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                     const hasAccess = await checkUserAccess();
                     if (!hasAccess) {
                         isLoading = false;
-                        errorMessage = 'You do not have access to the Time Tracker. Please contact your administrator.';
+                        errorMessage =
+                            'You do not have access to the Time Tracker. Please contact your administrator.';
                         render();
                         return;
                     }
@@ -481,6 +513,40 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
         }
     }
 
+    // Check if user is in a specific ChurchTools group
+    async function userIsInGroup(userId: number, groupId: number): Promise<boolean> {
+        try {
+            const groupMembers = (await churchtoolsClient.get(
+                `/groups/${groupId}/members`
+            )) as any[];
+            return groupMembers.some(
+                (member: { personId?: number; id?: number }) =>
+                    (member.personId || member.id) === userId
+            );
+        } catch (error) {
+            console.error(
+                `[TimeTracker] Failed to check group membership for user ${userId} in group ${groupId}:`,
+                error
+            );
+            return false;
+        }
+    }
+
+    // Get user's permissions based on group memberships and manager assignments
+    function getUserPermissions(userId: number): UserPermissions {
+        // Check if user is in HR group (for future async permission check)
+        // const isHR = settings.hrGroupId !== undefined; // Will check async later
+
+        // Check if user is manager and get assigned employees
+        const managerAssignment = settings.managerAssignments?.find((m) => m.managerId === userId);
+
+        return {
+            canSeeAllEntries: false, // Will be set async after group check
+            canSeeOwnEntries: true,
+            managedEmployeeIds: managerAssignment?.employeeIds || [],
+        };
+    }
+
     // Load time entries from KV store
     async function loadTimeEntries(): Promise<void> {
         try {
@@ -493,25 +559,68 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                     );
 
                 // Parse each value and update categoryName from current categories
-                timeEntries = rawValues.map(rawVal => {
-                    const entry = JSON.parse(rawVal.value) as TimeEntry;
+                timeEntries = rawValues
+                    .map((rawVal) => {
+                        const entry = JSON.parse(rawVal.value) as TimeEntry;
 
-                    // Backward compatibility: set isBreak to false if undefined
-                    if (entry.isBreak === undefined) {
-                        entry.isBreak = false;
+                        // Backward compatibility: set isBreak to false if undefined
+                        if (entry.isBreak === undefined) {
+                            entry.isBreak = false;
+                        }
+
+                        // Update categoryName from current categories (in case it was renamed)
+                        const currentCategory = workCategories.find(
+                            (c) => c.id === entry.categoryId
+                        );
+                        if (currentCategory) {
+                            entry.categoryName = currentCategory.name;
+                        }
+
+                        return entry;
+                    })
+                    .sort(
+                        (a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime()
+                    );
+
+                // Apply permission-based filtering
+                const permissions = getUserPermissions(user.id);
+
+                // Determine user role (for future use)
+                // const isHR = permissions.canSeeAllEntries;
+                // const isManager = permissions.managedEmployeeIds.length > 0;
+                // const isEmployee = !permissions.canSeeAllEntries && !isManager;
+
+                // Check if user has access to view entries (for future use)
+                // const hasAccess = permissions.canSeeAllEntries ||
+                //                  permissions.managedEmployeeIds.length > 0 ||
+                //                  userId === user.id;
+
+                // Check if user is in HR group (async)
+                if (settings.hrGroupId) {
+                    const isHR = await userIsInGroup(user.id, settings.hrGroupId);
+                    if (isHR) {
+                        // HR sees everything - no filtering needed
+                        console.log('[TimeTracker] User is HR - showing all entries');
+                        return;
                     }
+                }
 
-                    // Update categoryName from current categories (in case it was renamed)
-                    const currentCategory = workCategories.find(c => c.id === entry.categoryId);
-                    if (currentCategory) {
-                        entry.categoryName = currentCategory.name;
-                    }
-
-                    return entry;
-                }).sort(
-                    (a, b) =>
-                        new Date(b.startTime).getTime() - new Date(a.startTime).getTime()
-                );
+                // Filter based on permissions (non-HR users)
+                if (permissions.managedEmployeeIds.length > 0) {
+                    // Manager: see own entries + managed employees' entries
+                    timeEntries = timeEntries.filter(
+                        (entry) =>
+                            entry.userId === user.id ||
+                            permissions.managedEmployeeIds.includes(entry.userId)
+                    );
+                    console.log(
+                        `[TimeTracker] Manager viewing own + ${permissions.managedEmployeeIds.length} managed employees' entries`
+                    );
+                } else {
+                    // Regular employee: see only own entries
+                    timeEntries = timeEntries.filter((entry) => entry.userId === user.id);
+                    console.log('[TimeTracker] Employee viewing only own entries');
+                }
             } else {
                 // Create category if it doesn't exist
                 await createCustomDataCategory(
@@ -540,9 +649,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
 
         try {
             // Get absences for the current user
-            const response = await churchtoolsClient.get<Absence[]>(
-                `/persons/${user.id}/absences`
-            );
+            const response = await churchtoolsClient.get<Absence[]>(`/persons/${user.id}/absences`);
             absences = response || [];
         } catch (error) {
             console.error('[TimeTracker] Failed to load absences:', error);
@@ -557,7 +664,11 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
             const response = await churchtoolsClient.get<EventMasterData>('/event/masterdata');
             console.log('[TimeTracker] Masterdata response:', response);
             absenceReasons = response?.absenceReasons || [];
-            console.log('[TimeTracker] Loaded absence reasons:', absenceReasons.length, absenceReasons);
+            console.log(
+                '[TimeTracker] Loaded absence reasons:',
+                absenceReasons.length,
+                absenceReasons
+            );
         } catch (error) {
             console.error('[TimeTracker] Failed to load absence reasons:', error);
             absenceReasons = [];
@@ -646,7 +757,10 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
 
         try {
             // Use the generic request method with DELETE
-            await (churchtoolsClient as any).request('DELETE', `/persons/${user.id}/absences/${absenceId}`);
+            await (churchtoolsClient as any).request(
+                'DELETE',
+                `/persons/${user.id}/absences/${absenceId}`
+            );
             await loadAbsences();
             render();
             showNotification('Absence deleted successfully!', 'success');
@@ -714,7 +828,8 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
             // Find the active entry by userId and null endTime
             const allValues = await getCustomDataValues<TimeEntry>(cat.id, moduleId!);
             const existingValue = allValues.find(
-                (v) => v.userId === currentEntry!.userId &&
+                (v) =>
+                    v.userId === currentEntry!.userId &&
                     v.startTime === currentEntry!.startTime &&
                     v.endTime === null
             );
@@ -726,7 +841,12 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
             // Get the KV store ID - it should be in the metadata after our fix
             const kvStoreId = (existingValue as any).id;
             if (!kvStoreId || typeof kvStoreId !== 'number') {
-                console.error('[TimeTracker] Invalid KV store ID:', kvStoreId, 'Entry:', existingValue);
+                console.error(
+                    '[TimeTracker] Invalid KV store ID:',
+                    kvStoreId,
+                    'Entry:',
+                    existingValue
+                );
                 throw new Error(`Invalid KV store ID: ${kvStoreId}`);
             }
 
@@ -738,7 +858,9 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
             );
 
             // Update local state
-            const entryIndex = timeEntries.findIndex(e => e.startTime === currentEntry!.startTime);
+            const entryIndex = timeEntries.findIndex(
+                (e) => e.startTime === currentEntry!.startTime
+            );
             if (entryIndex !== -1) {
                 timeEntries[entryIndex] = { ...currentEntry };
             }
@@ -751,7 +873,9 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
             showNotification('Failed to clock out. Please try again.', 'error');
             // Reload to get fresh state
             await loadTimeEntries();
-            currentEntry = timeEntries.find((entry) => entry.endTime === null && entry.userId === user?.id) || null;
+            currentEntry =
+                timeEntries.find((entry) => entry.endTime === null && entry.userId === user?.id) ||
+                null;
             render();
         }
     }
@@ -766,7 +890,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
 
             // Find the entry in KV store
             const allValues = await getCustomDataValues<TimeEntry>(cat.id, moduleId!);
-            const existingValue = allValues.find(v => v.startTime === startTime);
+            const existingValue = allValues.find((v) => v.startTime === startTime);
 
             if (!existingValue) {
                 throw new Error('Time entry not found in database');
@@ -776,7 +900,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
             await deleteCustomDataValue(cat.id, kvStoreId, moduleId!);
 
             // Remove from local array
-            timeEntries = timeEntries.filter(e => e.startTime !== startTime);
+            timeEntries = timeEntries.filter((e) => e.startTime !== startTime);
 
             render();
         } catch (error) {
@@ -790,7 +914,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
         try {
             console.log('[TimeTracker] Bulk update starting for', entryIds.length, 'entries');
 
-            const category = workCategories.find(c => c.id === newCategoryId);
+            const category = workCategories.find((c) => c.id === newCategoryId);
             if (!category) {
                 console.error('[TimeTracker] Category not found:', newCategoryId);
                 showNotification('Category not found', 'error');
@@ -811,7 +935,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
             let successCount = 0;
             for (const startTime of entryIds) {
                 try {
-                    const entry = timeEntries.find(e => e.startTime === startTime);
+                    const entry = timeEntries.find((e) => e.startTime === startTime);
                     if (!entry) {
                         console.warn('[TimeTracker] Entry not found in local array:', startTime);
                         continue;
@@ -824,11 +948,16 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                     };
 
                     // Find in KV store
-                    const existingValue = allValues.find(v => v.startTime === entry.startTime);
+                    const existingValue = allValues.find((v) => v.startTime === entry.startTime);
 
                     if (existingValue) {
                         const kvStoreId = (existingValue as any).id;
-                        console.log('[TimeTracker] Updating entry', startTime, 'with kvStoreId', kvStoreId);
+                        console.log(
+                            '[TimeTracker] Updating entry',
+                            startTime,
+                            'with kvStoreId',
+                            kvStoreId
+                        );
 
                         await updateCustomDataValue(
                             cat.id,
@@ -838,7 +967,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                         );
 
                         // Update local array
-                        const index = timeEntries.findIndex(e => e.startTime === entry.startTime);
+                        const index = timeEntries.findIndex((e) => e.startTime === entry.startTime);
                         if (index !== -1) {
                             timeEntries[index] = updatedEntry;
                         }
@@ -848,15 +977,27 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                         console.warn('[TimeTracker] Entry not found in KV store:', startTime);
                     }
                 } catch (entryError) {
-                    console.error('[TimeTracker] Failed to update individual entry:', startTime, entryError);
+                    console.error(
+                        '[TimeTracker] Failed to update individual entry:',
+                        startTime,
+                        entryError
+                    );
                 }
             }
 
-            console.log('[TimeTracker] Bulk update completed:', successCount, 'of', entryIds.length);
+            console.log(
+                '[TimeTracker] Bulk update completed:',
+                successCount,
+                'of',
+                entryIds.length
+            );
 
             if (successCount > 0) {
                 showNotification(
-                    t('ct.extension.timetracker.bulkEdit.success').replace('{count}', successCount.toString()),
+                    t('ct.extension.timetracker.bulkEdit.success').replace(
+                        '{count}',
+                        successCount.toString()
+                    ),
                     'success'
                 );
             } else {
@@ -893,12 +1034,12 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
     }
 
     function removeBulkEntryRow(rowId: number) {
-        bulkEntryRows = bulkEntryRows.filter(row => row.id !== rowId);
+        bulkEntryRows = bulkEntryRows.filter((row) => row.id !== rowId);
         render();
     }
 
     function updateBulkEntryRow(rowId: number, field: keyof BulkEntryRow, value: string | boolean) {
-        const row = bulkEntryRows.find(r => r.id === rowId);
+        const row = bulkEntryRows.find((r) => r.id === rowId);
         if (row && field !== 'id') {
             (row as any)[field] = value;
         }
@@ -944,7 +1085,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
 
         // If there are invalid categories, show error
         if (invalidRows.length > 0) {
-            const availableCategoryIds = workCategories.map(c => `"${c.id}"`).join(', ');
+            const availableCategoryIds = workCategories.map((c) => `"${c.id}"`).join(', ');
             showNotification(
                 `Invalid category IDs in row(s) ${invalidRows.join(', ')}: ${invalidCategories.join(', ')}. Available: ${availableCategoryIds}`,
                 'error',
@@ -1001,7 +1142,10 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
 
             // Only show success message if entries were actually saved
             if (savedCount > 0) {
-                showNotification(`Successfully saved ${savedCount} ${savedCount === 1 ? 'entry' : 'entries'}!`, 'success');
+                showNotification(
+                    `Successfully saved ${savedCount} ${savedCount === 1 ? 'entry' : 'entries'}!`,
+                    'success'
+                );
             } else {
                 showNotification('No entries were saved.', 'warning');
             }
@@ -1014,7 +1158,10 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
     // Download Excel template
     function downloadExcelTemplate() {
         if (workCategories.length === 0) {
-            showNotification('No categories available. Please create categories in the Admin panel first.', 'error');
+            showNotification(
+                'No categories available. Please create categories in the Admin panel first.',
+                'error'
+            );
             return;
         }
 
@@ -1030,12 +1177,12 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
 
         // Set column widths
         worksheet['!cols'] = [
-            { wch: 15 },  // Start Date
-            { wch: 12 },  // Start Time
-            { wch: 15 },  // End Date
-            { wch: 12 },  // End Time
-            { wch: 20 },  // Category ID
-            { wch: 40 },  // Description
+            { wch: 15 }, // Start Date
+            { wch: 12 }, // Start Time
+            { wch: 15 }, // End Date
+            { wch: 12 }, // End Time
+            { wch: 20 }, // Category ID
+            { wch: 40 }, // Description
         ];
 
         // Create workbook
@@ -1045,16 +1192,33 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
         // Add a second sheet with category reference (for copy/paste)
         const categoriesData = [
             ['Category Name', 'Category ID (copy this to Time Entries sheet)', 'Color'],
-            ...workCategories.map(cat => [cat.name, cat.id, cat.color])
+            ...workCategories.map((cat) => [cat.name, cat.id, cat.color]),
         ];
         const categoriesSheet = XLSX.utils.aoa_to_sheet(categoriesData);
         categoriesSheet['!cols'] = [{ wch: 25 }, { wch: 45 }, { wch: 15 }];
         XLSX.utils.book_append_sheet(workbook, categoriesSheet, 'Available Categories');
 
         // Generate Excel file and trigger download
-        XLSX.writeFile(workbook, `TimeTracker_Template_${new Date().toISOString().split('T')[0]}.xlsx`);
+        XLSX.writeFile(
+            workbook,
+            `TimeTracker_Template_${new Date().toISOString().split('T')[0]}.xlsx`
+        );
 
-        showNotification('Excel template downloaded! Check the "Available Categories" sheet for valid category IDs.', 'success', 5000);
+        // Show success toast
+        window.dispatchEvent(
+            new CustomEvent('notification:show', {
+                detail: {
+                    message: t('ct.extension.timetracker.export.success') || 'Excel exported successfully!',
+                    type: 'success',
+                    duration: 3000,
+                },
+            })
+        );
+        showNotification(
+            'Excel template downloaded! Check the "Available Categories" sheet for valid category IDs.',
+            'success',
+            5000
+        );
     }
 
     // Import from Excel
@@ -1149,7 +1313,8 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                     // Find category by ID or name (case-insensitive)
                     let categoryId = categoryIdOrName;
                     const categoryMatch = workCategories.find(
-                        c => c.name.toLowerCase() === categoryIdOrName.toLowerCase() ||
+                        (c) =>
+                            c.name.toLowerCase() === categoryIdOrName.toLowerCase() ||
                             c.id.toLowerCase() === categoryIdOrName.toLowerCase()
                     );
                     if (categoryMatch) {
@@ -1179,13 +1344,23 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                 render();
 
                 if (skippedCount > 0) {
-                    showNotification(`Successfully imported ${importedCount} entries. ${skippedCount} rows were skipped due to missing required fields.`, 'success', 5000);
+                    showNotification(
+                        `Successfully imported ${importedCount} entries. ${skippedCount} rows were skipped due to missing required fields.`,
+                        'success',
+                        5000
+                    );
                 } else {
-                    showNotification(`Successfully imported ${importedCount} entries from Excel!`, 'success');
+                    showNotification(
+                        `Successfully imported ${importedCount} entries from Excel!`,
+                        'success'
+                    );
                 }
             } catch (error) {
                 console.error('[TimeTracker] Failed to import Excel:', error);
-                showNotification('Failed to import Excel file. Please make sure it uses the correct template format.', 'error');
+                showNotification(
+                    'Failed to import Excel file. Please make sure it uses the correct template format.',
+                    'error'
+                );
             }
         };
 
@@ -1197,7 +1372,11 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
     }
 
     // Show notification toast
-    function showNotification(message: string, type: 'success' | 'error' | 'warning' = 'success', duration: number = 3000) {
+    function showNotification(
+        message: string,
+        type: 'success' | 'error' | 'warning' = 'success',
+        duration: number = 3000
+    ) {
         // Create or get notification container
         let container = document.getElementById('notification-container');
         if (!container) {
@@ -1249,8 +1428,8 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                 opacity: 0.8;
                 transition: opacity 0.2s;
             `;
-            closeButton.onmouseover = () => closeButton.style.opacity = '1';
-            closeButton.onmouseout = () => closeButton.style.opacity = '0.8';
+            closeButton.onmouseover = () => (closeButton.style.opacity = '1');
+            closeButton.onmouseout = () => (closeButton.style.opacity = '0.8');
             closeButton.onclick = () => {
                 notification.style.animation = 'slideOut 0.3s ease-out';
                 setTimeout(() => {
@@ -1346,7 +1525,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
 
         const filtered = getFilteredEntries();
         // Exclude breaks from work hour calculations
-        const workEntries = filtered.filter(entry => !entry.isBreak);
+        const workEntries = filtered.filter((entry) => !entry.isBreak);
         const totalMs = workEntries.reduce((sum, entry) => {
             const start = new Date(entry.startTime).getTime();
             const end = entry.endTime ? new Date(entry.endTime).getTime() : new Date().getTime();
@@ -1362,7 +1541,11 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
         const userHours = getUserHours();
 
         // Count actual work days in the period (respecting workWeekDays configuration)
-        const workDaysCount = countWorkDays(new Date(filterDateFrom), new Date(filterDateTo), user?.id);
+        const workDaysCount = countWorkDays(
+            new Date(filterDateFrom),
+            new Date(filterDateTo),
+            user?.id
+        );
 
         // Expected hours = work days count * hours per day - absence hours
         const expectedHours = workDaysCount * userHours.hoursPerDay - absenceHours;
@@ -1381,7 +1564,10 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
     }
 
     // Set report period dates
-    function setReportPeriod(period: 'week' | 'month' | 'year' | 'custom', saveToSettings: boolean = true) {
+    function setReportPeriod(
+        period: 'week' | 'month' | 'year' | 'custom',
+        saveToSettings: boolean = true
+    ) {
         reportPeriod = period;
         const now = new Date();
 
@@ -1451,7 +1637,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
 
         // Helper: Calculate hours for date range
         function calculateHours(startDate: string, endDate: string) {
-            const entries = timeEntries.filter(e => {
+            const entries = timeEntries.filter((e) => {
                 if (e.isBreak || !e.endTime) return false;
                 const entryDate = new Date(e.startTime).toISOString().split('T')[0];
                 return entryDate >= startDate && entryDate <= endDate;
@@ -1488,7 +1674,9 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
         const weekYear = getISOWeekYear(now);
 
         // THIS MONTH
-        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
+            .toISOString()
+            .split('T')[0];
         const monthEnd = today;
         const monthIst = calculateHours(monthStart, monthEnd);
         const monthWorkdays = countWorkdays(new Date(monthStart), new Date(monthEnd));
@@ -1507,7 +1695,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
             today: { ist: todayIst, soll: todaySoll },
             week: { ist: weekIst, soll: weekSoll, weekNumber, year: weekYear },
             month: { ist: monthIst, soll: monthSoll },
-            lastMonth: { ist: lastMonthIst, soll: lastMonthSoll }
+            lastMonth: { ist: lastMonthIst, soll: lastMonthSoll },
         };
     }
 
@@ -1586,7 +1774,11 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
             if (filterCategory !== 'all' && entry.categoryId !== filterCategory) return false;
 
             // Filter by description search
-            if (filterSearch && !entry.description?.toLowerCase().includes(filterSearch.toLowerCase())) return false;
+            if (
+                filterSearch &&
+                !entry.description?.toLowerCase().includes(filterSearch.toLowerCase())
+            )
+                return false;
 
             return true;
         });
@@ -1622,7 +1814,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
         const firstThursday = target.valueOf();
         target.setMonth(0, 1); // January 1st
         if (target.getDay() !== 4) {
-            target.setMonth(0, 1 + ((4 - target.getDay()) + 7) % 7);
+            target.setMonth(0, 1 + ((4 - target.getDay() + 7) % 7));
         }
         return 1 + Math.ceil((firstThursday - target.valueOf()) / 604800000); // 604800000 = 7 * 24 * 3600 * 1000
     }
@@ -1630,7 +1822,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
     // Get ISO week year
     function getISOWeekYear(date: Date): number {
         const target = new Date(date.valueOf());
-        target.setDate(target.getDate() + 3 - (target.getDay() + 6) % 7);
+        target.setDate(target.getDate() + 3 - ((target.getDay() + 6) % 7));
         return target.getFullYear();
     }
 
@@ -1845,7 +2037,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                     <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.5rem;">
                         <div>
                             <div style="color: #999; font-size: 0.75rem;">IST</div>
-                            <div style="font-size: 1.5rem; font-weight: 700; color: ${dashStats.today.ist >= dashStats.today.soll ? '#28a745' : (dashStats.today.soll > 0 ? '#dc3545' : '#6c757d')};">
+                            <div style="font-size: 1.5rem; font-weight: 700; color: ${dashStats.today.ist >= dashStats.today.soll ? '#28a745' : dashStats.today.soll > 0 ? '#dc3545' : '#6c757d'};">
                                 ${formatDecimalHours(dashStats.today.ist)}
                             </div>
                         </div>
@@ -1950,13 +2142,10 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
             <!-- Bulk Entry Form -->
             <div style="background: #e7e3ff; border: 2px solid #6f42c1; border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-                    <h1 style="margin: 0; font-size: 1.5rem; color: #333; display: flex; align-items: center; gap: 0.75rem;">
-                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <circle cx="12" cy="12" r="10"></circle>
-                    <polyline points="12 6 12 12 16 14"></polyline>
-                </svg>
-                ${t('ct.extension.timetracker.common.timeTracker')}
-            </h1>rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
+                    <h3 style="margin: 0; font-size: 1.25rem; color: #333; display: flex; align-items: center; gap: 0.75rem;">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
+                            <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
                             <line x1="12" y1="11" x2="12" y2="17"></line>
                             <line x1="9" y1="14" x2="15" y2="14"></line>
                         </svg>
@@ -1980,13 +2169,17 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                             </tr>
                         </thead>
                         <tbody>
-                            ${bulkEntryRows.length === 0 ? `
+                            ${bulkEntryRows.length === 0
+                ? `
                                 <tr>
                                     <td colspan="8" style="padding: 2rem; text-align: center; color: #666;">
                                         No entries yet. Click "Add Row" to start.
                                     </td>
                                 </tr>
-                            ` : bulkEntryRows.map(row => `
+                            `
+                : bulkEntryRows
+                    .map(
+                        (row) => `
                                 <tr style="border-bottom: 1px solid #dee2e6;" data-row-id="${row.id}">
                                     <td style="padding: 0.5rem;">
                                         <input
@@ -2035,9 +2228,13 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                                             data-field="categoryId"
                                             style="width: 100%; padding: 0.375rem; border: 1px solid #ddd; border-radius: 3px;"
                                         >
-                                            ${workCategories.map(cat => `
+                                            ${workCategories
+                                .map(
+                                    (cat) => `
                                                 <option value="${cat.id}" ${row.categoryId === cat.id ? 'selected' : ''}>${cat.name}</option>
-                                            `).join('')}
+                                            `
+                                )
+                                .join('')}
                                         </select>
                                     </td>
                                     <td style="padding: 0.5rem;">
@@ -2073,13 +2270,17 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                                             </svg></button>
                                     </td>
                                 </tr>
-                            `).join('')}
+                            `
+                    )
+                    .join('')
+            }
                         </tbody>
                     </table>
                 </div>
 
                 <!-- Excel Import/Export (Alpha Feature) -->
-                ${settings.excelImportEnabled ? `
+                ${settings.excelImportEnabled
+                ? `
                 <div style="background: #fff3cd; border: 1px solid #ffc107; border-radius: 6px; padding: 1rem; margin-bottom: 1rem;">
                     <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#856404" stroke-width="2">
@@ -2113,7 +2314,9 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                         <span style="color: #856404; font-size: 0.85rem; font-style: italic;">Import will replace existing entries in the table</span>
                     </div>
                 </div>
-                ` : ''}
+                `
+                : ''
+            }
 
                 <div style="display: flex; gap: 0.5rem; justify-content: space-between; flex-wrap: wrap;">
                     <button id="add-bulk-row-btn" style="padding: 0.5rem 1rem; background: #6f42c1; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; display: inline-flex; align-items: center; gap: 0.5rem;">
@@ -2180,7 +2383,8 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                             style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;"
                         />
                     </div>
-                    ${isManager ? `
+                    ${isManager
+                ? `
                     <div>
                         <label for="filter-user" style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #555;">${t('ct.extension.timetracker.entries.filterUser')}</label>
                         <select
@@ -2188,10 +2392,12 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                             style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;"
                         >
                             <option value="all">${t('ct.extension.timetracker.entries.allUsers')}</option>
-                            ${userList.map(u => `<option value="${u.id}" ${filterUser === u.id.toString() ? 'selected' : ''}>${u.name}</option>`).join('')}
+                            ${userList.map((u) => `<option value="${u.id}" ${filterUser === u.id.toString() ? 'selected' : ''}>${u.name}</option>`).join('')}
                         </select>
                     </div>
-                    ` : ''}
+                    `
+                : ''
+            }
                 </div>
                 <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center;">
                     <button id="bulk-edit-toggle" style="padding: 0.5rem 1rem; background: ${bulkEditMode ? '#dc3545' : '#6c757d'}; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.9rem;">
@@ -2229,22 +2435,34 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
 
             ${showAddManualEntry || editingEntry
                 ? `
+                <h1 class="tab-title" style="display: flex; align-items: center; gap: 0.5rem; margin: 0 0 1.5rem 0; padding: 0; font-size: 1.5rem; font-weight: 600; color: #333;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
+                    <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
+                    <path d="M9 12h6"></path>
+                    <path d="M9 16h6"></path>
+                </svg>
+                ${t('ct.extension.timetracker.bulkEntry.title') || 'Bulk Entry'}
+            </h1>
                 <!-- Add/Edit Manual Entry Form -->
                 <div style="background: ${editingEntry ? '#d1ecf1' : '#fff3cd'}; border: 1px solid ${editingEntry ? '#17a2b8' : '#ffc107'}; border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem;">
                     <h3 style="margin: 0 0 1rem 0; color: #333; display: flex; align-items: center; gap: 0.5rem;">
-                    ${editingEntry ? `
+                    ${editingEntry
+                    ? `
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
                             <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
                         </svg>
                         ${t('ct.extension.timetracker.common.edit')}
-                    ` : `
+                    `
+                    : `
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <circle cx="12" cy="12" r="10"></circle>
                             <polyline points="12 6 12 12 16 14"></polyline>
                         </svg>
                         ${t('ct.extension.timetracker.timeEntries.addManualEntryTitle')}
-                    `}
+                    `
+                }
                 </h3>
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
                         <div>
@@ -2324,13 +2542,16 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
             <div style="background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
                     <h2 style="margin: 0; font-size: 1.2rem; color: #333;">Time Entries (${getFilteredEntries().length})</h2>
-                    ${getFilteredEntries().length > ENTRIES_PER_PAGE ? `
+                    ${getFilteredEntries().length > ENTRIES_PER_PAGE
+                ? `
                         <div style="display: flex; gap: 0.5rem; align-items: center;">
                             <span style="color: #666; font-size: 0.9rem;">Page ${entriesPage} of ${Math.ceil(getFilteredEntries().length / ENTRIES_PER_PAGE)}</span>
                             <button id="entries-prev-page" ${entriesPage === 1 ? 'disabled' : ''} style="padding: 0.25rem 0.5rem; background: ${entriesPage === 1 ? '#e9ecef' : '#007bff'}; color: ${entriesPage === 1 ? '#6c757d' : 'white'}; border: none; border-radius: 3px; cursor: ${entriesPage === 1 ? 'not-allowed' : 'pointer'};">‹ Prev</button>
                             <button id="entries-next-page" ${entriesPage >= Math.ceil(getFilteredEntries().length / ENTRIES_PER_PAGE) ? 'disabled' : ''} style="padding: 0.25rem 0.5rem; background: ${entriesPage >= Math.ceil(getFilteredEntries().length / ENTRIES_PER_PAGE) ? '#e9ecef' : '#007bff'}; color: ${entriesPage >= Math.ceil(getFilteredEntries().length / ENTRIES_PER_PAGE) ? '#6c757d' : 'white'}; border: none; border-radius: 3px; cursor: ${entriesPage >= Math.ceil(getFilteredEntries().length / ENTRIES_PER_PAGE) ? 'not-allowed' : 'pointer'};">Next ›</button>
                         </div>
-                    ` : ''}
+                    `
+                : ''
+            }
                 </div>
                 ${renderEntriesList(getFilteredEntries())}
             </div>
@@ -2354,7 +2575,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
 
         const weekGroups = new Map<string, WeekGroup>(); // key: "YYYY-WW"
 
-        entries.forEach(entry => {
+        entries.forEach((entry) => {
             const date = new Date(entry.startTime);
             const weekNum = getISOWeek(date);
             const yearNum = getISOWeekYear(date);
@@ -2365,7 +2586,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                 weekGroups.set(weekKey, {
                     weekNumber: weekNum,
                     year: yearNum,
-                    days: new Map()
+                    days: new Map(),
                 });
             }
 
@@ -2377,16 +2598,18 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
         });
 
         // Convert to array and sort by week (newest first)
-        const sortedWeeks = Array.from(weekGroups.entries())
-            .sort((a, b) => b[0].localeCompare(a[0]));
+        const sortedWeeks = Array.from(weekGroups.entries()).sort((a, b) =>
+            b[0].localeCompare(a[0])
+        );
 
         let html = '<div style="display: flex; flex-direction: column; gap: 1.5rem;">';
 
-        for (const [, week] of sortedWeeks) { // weekKey unused, use _ or omit
+        for (const [, week] of sortedWeeks) {
+            // weekKey unused, use _ or omit
             // Calculate week totals
             const weekWorkEntries = Array.from(week.days.values())
                 .flat()
-                .filter(e => !e.isBreak && e.endTime);
+                .filter((e) => !e.isBreak && e.endTime);
             const weekIstMs = weekWorkEntries.reduce((sum, e) => {
                 const start = new Date(e.startTime).getTime();
                 const end = new Date(e.endTime!).getTime();
@@ -2412,16 +2635,21 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                     </div>`;
 
             // Sort days (newest first)
-            const sortedDays = Array.from(week.days.entries())
-                .sort((a, b) => b[0].localeCompare(a[0]));
+            const sortedDays = Array.from(week.days.entries()).sort((a, b) =>
+                b[0].localeCompare(a[0])
+            );
 
             for (const [dayKey, dayEntries] of sortedDays) {
                 const date = new Date(dayKey);
                 const dayName = date.toLocaleDateString('de-DE', { weekday: 'long' });
-                const dateStr = date.toLocaleDateString('de-DE', { year: 'numeric', month: 'long', day: 'numeric' });
+                const dateStr = date.toLocaleDateString('de-DE', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                });
 
                 // Calculate day totals (excluding breaks)
-                const dayWorkEntries = dayEntries.filter(e => !e.isBreak && e.endTime);
+                const dayWorkEntries = dayEntries.filter((e) => !e.isBreak && e.endTime);
                 const dayIstMs = dayWorkEntries.reduce((sum, e) => {
                     const start = new Date(e.startTime).getTime();
                     const end = new Date(e.endTime!).getTime();
@@ -2441,7 +2669,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                             </h4>
                             <div style="display: flex; gap: 1rem; font-size: 0.85rem;">
                                 <span style="color: #666;">
-                                    <strong>${t('ct.extension.timetracker.dashboard.dayActual')}:</strong> <span style="color: ${dayIstMs >= userHours.hoursPerDay * 3600000 ? '#28a745' : (isWorkday ? '#dc3545' : '#6c757d')}; font-weight: 600;">${dayIst}</span>
+                                    <strong>${t('ct.extension.timetracker.dashboard.dayActual')}:</strong> <span style="color: ${dayIstMs >= userHours.hoursPerDay * 3600000 ? '#28a745' : isWorkday ? '#dc3545' : '#6c757d'}; font-weight: 600;">${dayIst}</span>
                                 </span>
                                 <span style="color: #666;">
                                     <strong>${t('ct.extension.timetracker.dashboard.dayTarget')}:</strong> <span style="font-weight: 600;">${daySoll}</span>
@@ -2451,9 +2679,12 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                         <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
                             <thead>
                                 <tr style="background: #f8f9fa; border-bottom: 1px solid #dee2e6;">
-                                    ${bulkEditMode ? `<th style="padding: 0.5rem; text-align: center; font-weight: 600; color: #495057; font-size: 0.85rem; width: 40px;">
+                                    ${bulkEditMode
+                        ? `<th style="padding: 0.5rem; text-align: center; font-weight: 600; color: #495057; font-size: 0.85rem; width: 40px;">
                                         <input type="checkbox" id="select-all-day-${dayKey}" class="select-all-checkbox" data-day="${dayKey}" style="cursor: pointer;" />
-                                    </th>` : ''}
+                                    </th>`
+                        : ''
+                    }
                                     <th style="padding: 0.5rem; text-align: left; font-weight: 600; color: #495057; font-size: 0.85rem;">${t('ct.extension.timetracker.timeEntries.startTime')}</th>
                                     <th style="padding: 0.5rem; text-align: left; font-weight: 600; color: #495057; font-size: 0.85rem;">${t('ct.extension.timetracker.timeEntries.endTime')}</th>
                                     <th style="padding: 0.5rem; text-align: left; font-weight: 600; color: #495057; font-size: 0.85rem;">${t('ct.extension.timetracker.timeEntries.duration')}</th>
@@ -2464,17 +2695,27 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                                 </tr>
                             </thead>
                             <tbody>
-                                ${dayEntries.map(entry => {
-                    const start = new Date(entry.startTime);
-                    const end = entry.endTime ? new Date(entry.endTime) : new Date();
-                    const duration = formatDuration(end.getTime() - start.getTime());
-                    const category = workCategories.find((c) => c.id === entry.categoryId);
+                                ${dayEntries
+                        .map((entry) => {
+                            const start = new Date(entry.startTime);
+                            const end = entry.endTime
+                                ? new Date(entry.endTime)
+                                : new Date();
+                            const duration = formatDuration(
+                                end.getTime() - start.getTime()
+                            );
+                            const category = workCategories.find(
+                                (c) => c.id === entry.categoryId
+                            );
 
-                    return `
+                            return `
                                         <tr style="border-bottom: 1px solid #e9ecef;">
-                                            ${bulkEditMode ? `<td style="padding: 0.5rem; text-align: center;">
+                                            ${bulkEditMode
+                                    ? `<td style="padding: 0.5rem; text-align: center;">
                                                 <input type="checkbox" class="entry-checkbox" data-entry-id="${entry.startTime}" ${selectedEntryIds.has(entry.startTime) ? 'checked' : ''} style="cursor: pointer;" />
-                                            </td>` : ''}
+                                            </td>`
+                                    : ''
+                                }
                                             <td style="padding: 0.5rem;">${start.toLocaleTimeString()}</td>
                                             <td style="padding: 0.5rem;">${entry.endTime ? end.toLocaleTimeString() : '<span style="color: #28a745; font-weight: 600;">Active</span>'}</td>
                                             <td style="padding: 0.5rem; font-weight: 600;">${duration}</td>
@@ -2488,22 +2729,26 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                                                 <div style="display: flex; flex-direction: column; gap: 0.15rem;">
                                                     <span style="color: ${entry.isManual ? '#ffc107' : '#6c757d'}; font-size: 0.75rem;">
                                                         <span style="display: inline-flex; align-items: center; gap: 0.2rem;">
-                                                            ${entry.isManual ? `
+                                                            ${entry.isManual
+                                    ? `
                                                                 <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                                                     <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
                                                                     <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
                                                                 </svg>
                                                                 ${t('ct.extension.timetracker.timeEntries.manual')}
-                                                            ` : `
+                                                            `
+                                    : `
                                                                 <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                                                     <circle cx="12" cy="12" r="10"></circle>
                                                                     <polyline points="12 6 12 12 16 14"></polyline>
                                                                 </svg>
                                                                 ${t('ct.extension.timetracker.timeEntries.clockedIn')}
-                                                            `}
+                                                            `
+                                }
                                                         </span>
                                                     </span>
-                                                    ${entry.isBreak ? `
+                                                    ${entry.isBreak
+                                    ? `
                                                         <span style="background: #e7f5f7; color: #17a2b8; padding: 0.15rem 0.4rem; border-radius: 3px; font-size: 0.75rem; font-weight: 600; border: 1px solid #b8dfe4;">
                                                             <span style="display: inline-flex; align-items: center; gap: 0.25rem;">
                                                                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
@@ -2513,11 +2758,14 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                                                                 ${t('ct.extension.timetracker.timeEntries.break')}
                                                             </span>
                                                         </span>
-                                                    ` : ''}
+                                                    `
+                                    : ''
+                                }
                                                 </div>
                                             </td>
                                             <td style="padding: 0.5rem; text-align: center;">
-                                                ${entry.endTime ? `
+                                                ${entry.endTime
+                                    ? `
                                                     <div style="display: flex; gap: 0.2rem; justify-content: center;">
                                                         <button
                                                             class="edit-entry-btn"
@@ -2538,11 +2786,14 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                                                             <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
                                                         </svg></button>
                                                     </div>
-                                                ` : '<span style="color: #999; font-size: 0.75rem;">-</span>'}
+                                                `
+                                    : '<span style="color: #999; font-size: 0.75rem;">-</span>'
+                                }
                                             </td>
                                         </tr>
                                     `;
-                }).join('')}
+                        })
+                        .join('')}
                             </tbody>
                         </table>
                     </div>
@@ -2565,7 +2816,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                     </div>
                     <div style="display: flex; gap: 0.75rem; align-items: center;">
                         <select id="bulk-category-select" style="padding: 0.5rem 1rem; border: none; border-radius: 4px; font-size: 0.9rem; cursor: pointer;">
-                            ${workCategories.map(cat => `<option value="${cat.id}">${cat.name}</option>`).join('')}
+                            ${workCategories.map((cat) => `<option value="${cat.id}">${cat.name}</option>`).join('')}
                         </select>
                         <button id="bulk-apply-category" style="padding: 0.5rem 1rem; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 0.9rem; display: inline-flex; align-items: center; gap: 0.5rem;">
                             ${t('ct.extension.timetracker.bulkEdit.changeCategory')}
@@ -2589,19 +2840,22 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
             <!-- Add/Edit Absence Form -->
             <div style="background: ${editingAbsence ? '#d1ecf1' : '#d4edda'}; border: 1px solid ${editingAbsence ? '#17a2b8' : '#28a745'}; border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem;">
                 <h3 style="margin: 0 0 1rem 0; color: #333; display: flex; align-items: center; gap: 0.5rem;">
-                    ${editingAbsence ? `
+                    ${editingAbsence
+                    ? `
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
                             <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
                         </svg>
                         ${t('ct.extension.timetracker.absences.editAbsence')}
-                    ` : `
+                    `
+                    : `
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <line x1="12" y1="5" x2="12" y2="19"></line>
                             <line x1="5" y1="12" x2="19" y2="12"></line>
                         </svg>
                         ${t('ct.extension.timetracker.absences.addAbsence')}
-                    `}
+                    `
+                }
                 </h3>
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
                     <div>
@@ -2661,12 +2915,18 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                         style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;"
                         ${absenceReasons.length === 0 ? 'disabled' : ''}
                     >
-                        ${absenceReasons.length === 0 ?
-                    '<option value="">No reasons available - check admin settings</option>' :
-                    (editingAbsence ? '' : `<option value="">-- ${t('ct.extension.timetracker.absences.selectReason')} --</option>`) +
-                    absenceReasons.map(reason => `
+                        ${absenceReasons.length === 0
+                    ? '<option value="">No reasons available - check admin settings</option>'
+                    : (editingAbsence
+                        ? ''
+                        : `<option value="">-- ${t('ct.extension.timetracker.absences.selectReason')} --</option>`) +
+                    absenceReasons
+                        .map(
+                            (reason) => `
                                 <option value="${reason.id}" ${editingAbsence && editingAbsence.absenceReason.id === reason.id ? 'selected' : ''}>${reason.nameTranslated || reason.name}</option>
-                            `).join('')
+                            `
+                        )
+                        .join('')
                 }
                     </select>
                 </div>
@@ -2707,7 +2967,9 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                         ${t('ct.extension.timetracker.absences.addAbsence')}
                     </button>
                 </div>
-                ${absences.length === 0 ? `<p style="color: #666; text-align: center; padding: 2rem;">${t('ct.extension.timetracker.absences.noAbsences')}</p>` : `
+                ${absences.length === 0
+                ? `<p style="color: #666; text-align: center; padding: 2rem;">${t('ct.extension.timetracker.absences.noAbsences')}</p>`
+                : `
                 <div style="overflow-x: auto;">
                     <table style="width: 100%; border-collapse: collapse;">
                         <thead>
@@ -2721,11 +2983,13 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                             </tr>
                         </thead>
                         <tbody>
-                            ${absences.map(absence => {
-                const isAllDay = absence.startTime === null || absence.endTime === null;
-                const start = new Date(absence.startDate);
-                const end = new Date(absence.endDate);
-                return `
+                            ${absences
+                    .map((absence) => {
+                        const isAllDay =
+                            absence.startTime === null || absence.endTime === null;
+                        const start = new Date(absence.startDate);
+                        const end = new Date(absence.endDate);
+                        return `
                                 <tr style="border-bottom: 1px solid #dee2e6;">
                                     <td style="padding: 0.75rem;">${start.toLocaleDateString()}${!isAllDay ? ' ' + new Date(absence.startTime!).toLocaleTimeString() : ''}</td>
                                     <td style="padding: 0.75rem;">${end.toLocaleDateString()}${!isAllDay ? ' ' + new Date(absence.endTime!).toLocaleTimeString() : ''}</td>
@@ -2759,11 +3023,14 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                                         </div>
                                     </td>
                                 </tr>
-                            `}).join('')}
+                            `;
+                    })
+                    .join('')}
                         </tbody>
                     </table>
                 </div>
-                `}
+                `
+            }
             </div>
         `;
     }
@@ -2831,7 +3098,8 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
             </div>
 
             <!-- Custom Period Selection -->
-            ${reportPeriod === 'custom' ? `
+            ${reportPeriod === 'custom'
+                ? `
             <div style="background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
                 <h2 style="margin: 0 0 1rem 0; font-size: 1.2rem; color: #333;">${t('ct.extension.timetracker.reports.periodSelect.custom')}</h2>
                 <div style="display: grid; grid-template-columns: 1fr 1fr auto; gap: 1rem; align-items: end;">
@@ -2858,7 +3126,9 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                     <button id="apply-report-filters-btn" style="padding: 0.5rem 1rem; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">${t('ct.extension.timetracker.common.refresh')}</button>
                 </div>
             </div>
-            ` : ''}
+            `
+                : ''
+            }
 
             <!-- Summary Stats -->
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
@@ -2896,7 +3166,11 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                 const soll = parseFloat(stats.expectedHours);
                 const percentage = soll > 0 ? (ist / soll) * 100 : 0;
                 const isOverTarget = ist >= soll;
-                const progressColor = isOverTarget ? '#28a745' : (percentage >= 80 ? '#ffc107' : '#dc3545');
+                const progressColor = isOverTarget
+                    ? '#28a745'
+                    : percentage >= 80
+                        ? '#ffc107'
+                        : '#dc3545';
 
                 return `
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 1.5rem;">
@@ -2929,20 +3203,24 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                             </div>
                             <div style="background: #e9ecef; height: 24px; border-radius: 12px; overflow: hidden; position: relative;">
                                 <div style="background: ${progressColor}; height: 100%; width: ${Math.min(percentage, 100)}%; transition: width 0.3s; display: flex; align-items: center; justify-content: center;">
-                                    ${percentage > 100 ? '' : (percentage >= 10 ? `<span style="color: white; font-weight: 600; font-size: 0.85rem;">${percentage.toFixed(1)}%</span>` : '')}
+                                    ${percentage > 100 ? '' : percentage >= 10 ? `<span style="color: white; font-weight: 600; font-size: 0.85rem;">${percentage.toFixed(1)}%</span>` : ''}
                                 </div>
-                                ${percentage > 100 ? `
+                                ${percentage > 100
+                        ? `
                                     <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;">
                                         <span style="color: white; font-weight: 700; font-size: 0.85rem;">Target Exceeded! 🎉</span>
                                     </div>
-                                ` : ''}
+                                `
+                        : ''
+                    }
                             </div>
                         </div>
 
-                        <div style="padding: 1rem; background: ${isOverTarget ? '#d4edda' : (percentage >= 80 ? '#fff3cd' : '#f8d7da')}; border-radius: 6px; border-left: 4px solid ${progressColor};">
+                        <div style="padding: 1rem; background: ${isOverTarget ? '#d4edda' : percentage >= 80 ? '#fff3cd' : '#f8d7da'}; border-radius: 6px; border-left: 4px solid ${progressColor};">
 
-                            <div style="font-weight: 600; color: ${isOverTarget ? '#155724' : (percentage >= 80 ? '#856404' : '#721c24')}; margin-bottom: 0.25rem;">
-                                ${isOverTarget ? `
+                            <div style="font-weight: 600; color: ${isOverTarget ? '#155724' : percentage >= 80 ? '#856404' : '#721c24'}; margin-bottom: 0.25rem;">
+                                ${isOverTarget
+                        ? `
                                     <span style="display: inline-flex; align-items: center; gap: 0.25rem;">
                                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                             <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
@@ -2950,7 +3228,9 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                                         </svg>
                                         ${t('ct.extension.timetracker.reports.targetAchieved')}
                                     </span>
-                                ` : (percentage >= 80 ? `
+                                `
+                        : percentage >= 80
+                            ? `
                                     <span style="display: inline-flex; align-items: center; gap: 0.25rem;">
                                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                             <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
@@ -2959,7 +3239,8 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                                         </svg>
                                         Close to Target
                                     </span>
-                                ` : `
+                                `
+                            : `
                                     <span style="display: inline-flex; align-items: center; gap: 0.25rem;">
                                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                             <circle cx="12" cy="12" r="10"></circle>
@@ -2968,9 +3249,10 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                                         </svg>
                                         Below Target
                                     </span>
-                                `)}
+                                `
+                    }
                             </div>
-                            <div style="color: ${isOverTarget ? '#155724' : (percentage >= 80 ? '#856404' : '#721c24')}; font-size: 0.9rem;">
+                            <div style="color: ${isOverTarget ? '#155724' : percentage >= 80 ? '#856404' : '#721c24'}; font-size: 0.9rem;">
                                 ${isOverTarget
                         ? `${t('ct.extension.timetracker.reports.targetAchievedMessage').replace('{hours}', parseFloat(stats.overtime).toFixed(0) + 'h ' + Math.round((parseFloat(stats.overtime) % 1) * 60) + 'm')}`
                         : `You need to work ${formatDecimalHours(Math.abs(parseFloat(stats.overtime)))} more to reach your target.`
@@ -2989,8 +3271,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                 .map((catId) => {
                     const category = workCategories.find((c) => c.id === catId);
                     const data = entriesByCategory[catId];
-                    const percentage =
-                        (data.hours / parseFloat(stats.totalHours)) * 100;
+                    const percentage = (data.hours / parseFloat(stats.totalHours)) * 100;
                     return `
                         <div style="padding: 1rem; border: 1px solid #dee2e6; border-radius: 6px;">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
@@ -3015,7 +3296,8 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
             </div>
 
             <!-- Absences in Period -->
-            ${absences.length > 0 ? `
+            ${absences.length > 0
+                ? `
             <div style="background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
                 <h2 style="margin: 0 0 1rem 0; font-size: 1.2rem; color: #333;">${t('ct.extension.timetracker.absences.title')}</h2>
                 <div style="overflow-x: auto;">
@@ -3029,29 +3311,38 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                             </tr>
                         </thead>
                         <tbody>
-                            ${absences.filter(absence => {
-                    const absenceStart = new Date(absence.startDate);
-                    const absenceEnd = new Date(absence.endDate);
-                    const fromDate = new Date(filterDateFrom);
-                    const toDate = new Date(filterDateTo);
-                    return !(absenceEnd < fromDate || absenceStart > toDate);
-                }).map(absence => {
-                    const isAllDay = absence.startTime === null || absence.endTime === null;
-                    const start = new Date(absence.startDate);
-                    const end = new Date(absence.endDate);
+                            ${absences
+                    .filter((absence) => {
+                        const absenceStart = new Date(absence.startDate);
+                        const absenceEnd = new Date(absence.endDate);
+                        const fromDate = new Date(filterDateFrom);
+                        const toDate = new Date(filterDateTo);
+                        return !(absenceEnd < fromDate || absenceStart > toDate);
+                    })
+                    .map((absence) => {
+                        const isAllDay =
+                            absence.startTime === null || absence.endTime === null;
+                        const start = new Date(absence.startDate);
+                        const end = new Date(absence.endDate);
 
-                    let hours = 0;
-                    if (isAllDay) {
-                        const days = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
-                        const userConfig = getUserHours();
-                        hours = days * userConfig.hoursPerDay;
-                    } else {
-                        const startTime = new Date(absence.startTime!);
-                        const endTime = new Date(absence.endTime!);
-                        hours = (endTime.getTime() - startTime.getTime()) / (1000 * 60 * 60);
-                    }
+                        let hours = 0;
+                        if (isAllDay) {
+                            const days =
+                                Math.ceil(
+                                    (end.getTime() - start.getTime()) /
+                                    (1000 * 60 * 60 * 24)
+                                ) + 1;
+                            const userConfig = getUserHours();
+                            hours = days * userConfig.hoursPerDay;
+                        } else {
+                            const startTime = new Date(absence.startTime!);
+                            const endTime = new Date(absence.endTime!);
+                            hours =
+                                (endTime.getTime() - startTime.getTime()) /
+                                (1000 * 60 * 60);
+                        }
 
-                    return `
+                        return `
                                 <tr style="border-bottom: 1px solid #dee2e6;">
                                     <td style="padding: 0.75rem;">${start.toLocaleDateString()}${!isAllDay ? ' ' + new Date(absence.startTime!).toLocaleTimeString() : ''}</td>
                                     <td style="padding: 0.75rem;">${end.toLocaleDateString()}${!isAllDay ? ' ' + new Date(absence.endTime!).toLocaleTimeString() : ''}</td>
@@ -3062,12 +3353,16 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                                     </td>
                                     <td style="padding: 0.75rem; font-weight: 600;">${formatDecimalHours(hours)}</td>
                                 </tr>
-                            `}).join('')}
+                            `;
+                    })
+                    .join('')}
                         </tbody>
                     </table>
                 </div>
             </div>
-            ` : ''}
+            `
+                : ''
+            }
 
             <!-- Export Options -->
             <div style="background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
@@ -3092,7 +3387,8 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
             const originalContent = refreshBtn.innerHTML;
             refreshBtn.disabled = true;
             refreshBtn.style.opacity = '0.6';
-            refreshBtn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation: spin 1s linear infinite;"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg><style>@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }</style>';
+            refreshBtn.innerHTML =
+                '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation: spin 1s linear infinite;"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg><style>@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }</style>';
 
             await refreshData();
 
@@ -3141,16 +3437,16 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
         const clockOutBtn = element.querySelector('#clock-out-btn') as HTMLButtonElement;
 
         clockInBtn?.addEventListener('click', async () => {
-            const categorySelect = element.querySelector(
-                '#clock-in-category'
-            ) as HTMLSelectElement;
+            const categorySelect = element.querySelector('#clock-in-category') as HTMLSelectElement;
             const descriptionInput = element.querySelector(
                 '#clock-in-description'
             ) as HTMLInputElement;
-            const isBreakCheckbox = element.querySelector(
-                '#clock-in-is-break'
-            ) as HTMLInputElement;
-            await clockIn(categorySelect.value, descriptionInput.value, isBreakCheckbox?.checked || false);
+            const isBreakCheckbox = element.querySelector('#clock-in-is-break') as HTMLInputElement;
+            await clockIn(
+                categorySelect.value,
+                descriptionInput.value,
+                isBreakCheckbox?.checked || false
+            );
         });
 
         clockOutBtn?.addEventListener('click', async () => {
@@ -3165,13 +3461,9 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
         ) as HTMLButtonElement;
 
         applyFiltersBtn?.addEventListener('click', () => {
-            const dateFromInput = element.querySelector(
-                '#filter-date-from'
-            ) as HTMLInputElement;
+            const dateFromInput = element.querySelector('#filter-date-from') as HTMLInputElement;
             const dateToInput = element.querySelector('#filter-date-to') as HTMLInputElement;
-            const categorySelect = element.querySelector(
-                '#filter-category'
-            ) as HTMLSelectElement;
+            const categorySelect = element.querySelector('#filter-category') as HTMLSelectElement;
             const searchInput = element.querySelector('#filter-search') as HTMLInputElement;
             const userSelect = element.querySelector('#filter-user') as HTMLSelectElement;
 
@@ -3200,10 +3492,19 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
         // Bulk apply category
         const bulkApplyBtn = element.querySelector('#bulk-apply-category');
         bulkApplyBtn?.addEventListener('click', async () => {
-            const categorySelect = element.querySelector('#bulk-category-select') as HTMLSelectElement;
+            const categorySelect = element.querySelector(
+                '#bulk-category-select'
+            ) as HTMLSelectElement;
             const newCategoryId = categorySelect.value;
 
-            if (confirm(t('ct.extension.timetracker.bulkEdit.confirmChange').replace('{count}', selectedEntryIds.size.toString()))) {
+            if (
+                confirm(
+                    t('ct.extension.timetracker.bulkEdit.confirmChange').replace(
+                        '{count}',
+                        selectedEntryIds.size.toString()
+                    )
+                )
+            ) {
                 await bulkUpdateCategory(Array.from(selectedEntryIds), newCategoryId);
             }
             render();
@@ -3246,9 +3547,13 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
 
         // Report period buttons
         const reportPeriodWeek = element.querySelector('#report-period-week') as HTMLButtonElement;
-        const reportPeriodMonth = element.querySelector('#report-period-month') as HTMLButtonElement;
+        const reportPeriodMonth = element.querySelector(
+            '#report-period-month'
+        ) as HTMLButtonElement;
         const reportPeriodYear = element.querySelector('#report-period-year') as HTMLButtonElement;
-        const reportPeriodCustom = element.querySelector('#report-period-custom') as HTMLButtonElement;
+        const reportPeriodCustom = element.querySelector(
+            '#report-period-custom'
+        ) as HTMLButtonElement;
 
         reportPeriodWeek?.addEventListener('click', () => {
             setReportPeriod('week');
@@ -3278,9 +3583,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
         ) as HTMLButtonElement;
 
         applyReportFiltersBtn?.addEventListener('click', () => {
-            const dateFromInput = element.querySelector(
-                '#report-date-from'
-            ) as HTMLInputElement;
+            const dateFromInput = element.querySelector('#report-date-from') as HTMLInputElement;
             const dateToInput = element.querySelector('#report-date-to') as HTMLInputElement;
 
             filterDateFrom = dateFromInput.value;
@@ -3304,7 +3607,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
         ) as HTMLButtonElement;
 
         addManualEntryBtn?.addEventListener('click', () => {
-            showAddManualEntry = true;
+            showAddManualEntry = !showAddManualEntry; // Toggle instead of always true
             render();
         });
 
@@ -3318,9 +3621,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
         saveManualEntryBtn?.addEventListener('click', async () => {
             const startInput = element.querySelector('#manual-start') as HTMLInputElement;
             const endInput = element.querySelector('#manual-end') as HTMLInputElement;
-            const categorySelect = element.querySelector(
-                '#manual-category'
-            ) as HTMLSelectElement;
+            const categorySelect = element.querySelector('#manual-category') as HTMLSelectElement;
             const descriptionInput = element.querySelector(
                 '#manual-description'
             ) as HTMLInputElement;
@@ -3360,7 +3661,9 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
 
                     // Find in KV store and update
                     const allValues = await getCustomDataValues<TimeEntry>(cat.id, moduleId!);
-                    const existingValue = allValues.find(v => v.startTime === editingEntry!.startTime);
+                    const existingValue = allValues.find(
+                        (v) => v.startTime === editingEntry!.startTime
+                    );
 
                     if (existingValue) {
                         const kvStoreId = (existingValue as any).id;
@@ -3373,7 +3676,9 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                     }
 
                     // Update local array
-                    const index = timeEntries.findIndex(e => e.startTime === editingEntry!.startTime);
+                    const index = timeEntries.findIndex(
+                        (e) => e.startTime === editingEntry!.startTime
+                    );
                     if (index !== -1) {
                         timeEntries[index] = updatedEntry;
                     }
@@ -3404,8 +3709,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
 
                     timeEntries.unshift(newEntry);
                     timeEntries.sort(
-                        (a, b) =>
-                            new Date(b.startTime).getTime() - new Date(a.startTime).getTime()
+                        (a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime()
                     );
 
                     showAddManualEntry = false;
@@ -3419,20 +3723,34 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
         });
 
         // Bulk entry
-        const bulkAddEntriesBtn = element.querySelector('#bulk-add-entries-btn') as HTMLButtonElement;
-        const closeBulkEntryBtn = element.querySelector('#close-bulk-entry-btn') as HTMLButtonElement;
+        const closeBulkEntryBtn = element.querySelector(
+            '#close-bulk-entry-btn'
+        ) as HTMLButtonElement;
         const addBulkRowBtn = element.querySelector('#add-bulk-row-btn') as HTMLButtonElement;
-        const saveBulkEntriesBtn = element.querySelector('#save-bulk-entries-btn') as HTMLButtonElement;
+        const bulkAddEntriesBtn = element.querySelector(
+            '#bulk-add-entries-btn'
+        ) as HTMLButtonElement;
+        const toggleBulkEntryBtn = element.querySelector('#toggle-bulk-entry') as HTMLButtonElement;
+        const saveBulkEntriesBtn = element.querySelector(
+            '#save-bulk-entries-btn'
+        ) as HTMLButtonElement;
+
+        toggleBulkEntryBtn?.addEventListener('click', () => {
+            showBulkEntry = !showBulkEntry;
+            render();
+        });
 
         bulkAddEntriesBtn?.addEventListener('click', () => {
-            showBulkEntry = true;
-            showAddManualEntry = false;
-            editingEntry = null;
-            // Start with 3 empty rows
-            if (bulkEntryRows.length === 0) {
-                addBulkEntryRow();
-                addBulkEntryRow();
-                addBulkEntryRow();
+            showBulkEntry = !showBulkEntry; // Toggle instead of always opening
+            if (showBulkEntry) {
+                showAddManualEntry = false;
+                editingEntry = null;
+                // Start with 3 empty rows only when opening
+                if (bulkEntryRows.length === 0) {
+                    addBulkEntryRow();
+                    addBulkEntryRow();
+                    addBulkEntryRow();
+                }
             }
             render();
         });
@@ -3452,9 +3770,13 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
 
         // Excel import/export (Alpha Feature)
         if (settings.excelImportEnabled) {
-            const downloadExcelTemplateBtn = element.querySelector('#download-excel-template-btn') as HTMLButtonElement;
+            const downloadExcelTemplateBtn = element.querySelector(
+                '#download-excel-template-btn'
+            ) as HTMLButtonElement;
             const importExcelBtn = element.querySelector('#import-excel-btn') as HTMLButtonElement;
-            const importExcelInput = element.querySelector('#import-excel-input') as HTMLInputElement;
+            const importExcelInput = element.querySelector(
+                '#import-excel-input'
+            ) as HTMLInputElement;
 
             downloadExcelTemplateBtn?.addEventListener('click', () => {
                 downloadExcelTemplate();
@@ -3519,8 +3841,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
         const absenceAllDayCheckbox = element.querySelector('#absence-all-day') as HTMLInputElement;
 
         addAbsenceBtn?.addEventListener('click', () => {
-            showAddAbsence = true;
-            editingAbsence = null;
+            showAddAbsence = !showAddAbsence; // Toggle instead of always true
             render();
         });
 
@@ -3544,7 +3865,9 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
             const startTimeInput = element.querySelector('#absence-start-time') as HTMLInputElement;
             const endTimeInput = element.querySelector('#absence-end-time') as HTMLInputElement;
             const reasonSelect = element.querySelector('#absence-reason') as HTMLSelectElement;
-            const commentTextarea = element.querySelector('#absence-comment') as HTMLTextAreaElement;
+            const commentTextarea = element.querySelector(
+                '#absence-comment'
+            ) as HTMLTextAreaElement;
             const allDayCheckbox = element.querySelector('#absence-all-day') as HTMLInputElement;
 
             if (!startDateInput?.value || !endDateInput?.value || !reasonSelect?.value) {
@@ -3557,8 +3880,14 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
                 comment: commentTextarea?.value || '',
                 startDate: startDateInput.value,
                 endDate: endDateInput.value,
-                startTime: !allDayCheckbox?.checked && startTimeInput?.value ? startTimeInput.value : undefined,
-                endTime: !allDayCheckbox?.checked && endTimeInput?.value ? endTimeInput.value : undefined,
+                startTime:
+                    !allDayCheckbox?.checked && startTimeInput?.value
+                        ? startTimeInput.value
+                        : undefined,
+                endTime:
+                    !allDayCheckbox?.checked && endTimeInput?.value
+                        ? endTimeInput.value
+                        : undefined,
             };
 
             if (editingAbsence) {
@@ -3659,7 +3988,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({
             const dayKey = target.dataset.day;
 
             // Find all entries for this day and toggle selection
-            timeEntries.forEach(entry => {
+            timeEntries.forEach((entry) => {
                 const entryDate = new Date(entry.startTime).toISOString().split('T')[0];
                 if (entryDate === dayKey) {
                     if (checked) {

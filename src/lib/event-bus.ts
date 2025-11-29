@@ -43,7 +43,7 @@ export class EventBus {
         // get handlers for '*' event (wildcard) AND specific event
         const eventHandlers = this.handlers.get(event);
         if (eventHandlers) {
-            eventHandlers.forEach(handler => {
+            eventHandlers.forEach((handler) => {
                 try {
                     handler(...data);
                 } catch (error) {
@@ -53,7 +53,7 @@ export class EventBus {
         }
         const wildcardHandlers = this.handlers.get('*');
         if (wildcardHandlers) {
-            wildcardHandlers.forEach(handler => {
+            wildcardHandlers.forEach((handler) => {
                 try {
                     handler(event, ...data);
                 } catch (error) {

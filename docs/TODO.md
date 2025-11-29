@@ -8,9 +8,20 @@
 
 ## Aktueller Status
 
-**Letztes Update:** 2025-11-24
-**Aktuelle Phase:** Phase 3 - Performance & UX Improvements ✅ ABGESCHLOSSEN
-**Nächste Phase:** Phase 4 - Advanced Features ⏳ BEREIT
+**Letztes Update:** 2025-11-28
+**Aktuelle Phase:** Phase 4 - Advanced Features (HR/Manager Dashboard) ⏳ IN PROGRESS
+**Nächste Phase:** Phase 5 - Polish & Testing
+
+---
+
+## 🔜 Refactoring Backlog (Separate Branch)
+
+### Notification System Centralization
+- [ ] Create centralized notification utility (`src/utils/notifications.ts`)
+- [ ] Expose `showSuccess()`, `showError()`, `showWarning()` helpers
+- [ ] Replace all `emit('notification:show')` calls across codebase
+- [ ] Benefits: DRY, single source of truth, clean API
+- [ ] **Branch:** `refactor/centralize-notifications`
 
 ---
 
@@ -248,6 +259,22 @@
 
 ### 🔴 Priorität: Hoch
 
+#### Collapsible Button Toggle Verbesserung ✅ COMPLETED
+**Problem:** Offene Buttons (z.B. "Add Time Entry", "Add Absence") schließen nicht beim erneuten Klick
+**Lösung:** Toggle-Verhalten implementiert - Button schließt Dialog wenn bereits offen  
+**Status:** ✅ Completed (2025-11-29)
+**Implementation:** Changed `showAddManualEntry = true` to `= !showAddManualEntry`
+
+---
+
+#### CSV Export Success Toast ✅ COMPLETED
+**Problem:** Nach CSV/Excel Export gibt es keine visuelle Bestätigung
+**Lösung:** Success Toast rechts oben nach erfolgreichem Export
+**Status:** ✅ Completed (2025-11-29)
+**Implementation:** Added `notification:show` event after XLSX.writeFile
+
+---
+
 #### Performance-Optimierung bei vielen Einträgen
 **Problem:** Bei >1000 Einträgen wird Rendering langsam
 **Lösung:** Virtual Scrolling für Time Entries Tabelle
@@ -435,19 +462,21 @@
 - ✅ User Requirements Document
 - ✅ Maintenance Guidelines
 - ✅ TODO Roadmap
-- ⏳ User Manual (für Endnutzer, nicht Entwickler)
+- ✅ User Manual (für Endnutzer, nicht Entwickler) - docs/USER-MANUAL.md
 - ⏳ API Documentation (wenn public API)
 
 ### Testing
-- ⏳ Unit Tests (Vitest)
-- ⏳ Integration Tests
-- ⏳ E2E Tests (Playwright)
+- ✅ Unit Tests (Vitest) - 20 tests total, 10 passing (50%)
+  - i18n.ts: 7/7 tests, 69.56% coverage ✅
+  - kv-store.ts: 3/13 tests passing ⚠️ (mocking complexity)
+- ⏳ Integration Tests (future - complex API mocking needed)
+- ⏳ E2E Tests (Playwright) - deferred for future
 
 ### Code Quality
-- ⏳ ESLint Configuration
-- ⏳ Prettier Configuration
-- ⏳ TypeScript Strict Mode (aktuell nicht)
-- ⏳ Code Coverage Tracking
+- ✅ ESLint Configuration (v9 with flat config, TypeScript support)
+- ✅ Prettier Configuration (integrated with ESLint)
+- ✅ TypeScript Strict Mode (already enabled in tsconfig.json)
+- ⏳ Code Coverage Tracking (future enhancement)
 
 ---
 

@@ -73,9 +73,7 @@ export async function loadEntryPoint(
 
     if (!loader) {
         const available = Object.keys(entryPointRegistry).join(', ');
-        throw new Error(
-            `Entry point "${name}" not found. Available entry points: ${available}`
-        );
+        throw new Error(`Entry point "${name}" not found. Available entry points: ${available}`);
     }
 
     try {
@@ -86,7 +84,7 @@ export async function loadEntryPoint(
             // Log a warning: basePath is usually not needed with relative imports
             console.info(
                 `[Extension] Loading "${name}" with explicit basePath: ${basePath}. ` +
-                `Note: Relative imports usually work automatically.`
+                    `Note: Relative imports usually work automatically.`
             );
         }
 
