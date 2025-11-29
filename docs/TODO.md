@@ -480,8 +480,10 @@
 - ⏳ API Documentation (wenn public API)
 
 ### Testing
-- ✅ Unit Tests (Vitest) - 7 tests for i18n.ts, 69.56% coverage
-- ⏳ Integration Tests (expand coverage to kv-store, calculations)
+- ✅ Unit Tests (Vitest) - 20 tests total, 10 passing (50%)
+  - i18n.ts: 7/7 tests, 69.56% coverage ✅
+  - kv-store.ts: 3/13 tests passing ⚠️ (mocking complexity)
+- ⏳ Integration Tests (future - complex API mocking needed)
 - ⏳ E2E Tests (Playwright) - deferred for future
 
 ### Code Quality
