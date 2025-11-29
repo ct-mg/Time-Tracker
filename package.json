@@ -15,7 +15,11 @@
         "deploy": "npm run clean && npm run build && node scripts/package.js",
         "deploy:simple": "npm run clean &&  VITE_BUILD_MODE=simple npm run build && node scripts/package.js",
         "deploy:advanced": "npm run clean &&  VITE_BUILD_MODE=advanced npm run build && node scripts/package.js",
-        "deploy:legacy": "npm run clean && npm run build:legacy && node scripts/package.js"
+        "deploy:legacy": "npm run clean && npm run build:legacy && node scripts/package.js",
+        "lint": "eslint src --ext .ts",
+        "lint:fix": "eslint src --ext .ts --fix",
+        "format": "prettier --write \"src/**/*.ts\"",
+        "format:check": "prettier --check \"src/**/*.ts\""
     },
     "dependencies": {
         "@churchtools/extension-points": "github:churchtools/churchtools-extension-points",
@@ -23,8 +27,16 @@
     },
     "devDependencies": {
         "@churchtools/churchtools-client": "^1.4.0",
+        "@eslint/js": "^9.39.1",
         "@types/node": "^24.3.0",
+        "@typescript-eslint/eslint-plugin": "^8.48.0",
+        "@typescript-eslint/parser": "^8.48.0",
+        "eslint": "^9.39.1",
+        "eslint-config-prettier": "^10.1.8",
+        "eslint-plugin-prettier": "^5.5.4",
+        "prettier": "^3.7.2",
         "typescript": "^5.9.2",
+        "typescript-eslint": "^8.48.0",
         "vite": "^7.1.2"
     }
 }

@@ -6281,7 +6281,13 @@ export type SyncConflicts = {
     /**
      * Conflict Type
      */
-    type?: 'duplicate in CT' | 'duplicate in source' | 'link and update' | 'update' | 'delete or create' | 'create';
+    type?:
+        | 'duplicate in CT'
+        | 'duplicate in source'
+        | 'link and update'
+        | 'update'
+        | 'delete or create'
+        | 'create';
 };
 
 /**
@@ -6705,7 +6711,11 @@ export enum VerificationStatus {
     FAILED = 'failed',
 }
 
-export type WebsiteData = WebsiteDataStaff | WebsiteDataCalendar | WebsiteDataPerson | WebsiteDataPostsInGroup;
+export type WebsiteData =
+    | WebsiteDataStaff
+    | WebsiteDataCalendar
+    | WebsiteDataPerson
+    | WebsiteDataPostsInGroup;
 
 export type WebsiteDataBase = {
     domainId: number;
@@ -7409,7 +7419,9 @@ export type ZuluDateDeprecated = string;
 /**
  * A timestamp in Zulu time format, e.g. '2022-10-19T12:00:00Z'
  */
-export type ZuluDateNullable = `${number}-${number}-${number}T${number}:${number}:${number}Z` | null;
+export type ZuluDateNullable =
+    | `${number}-${number}-${number}T${number}:${number}:${number}Z`
+    | null;
 
 /**
  * ID of accounting period to get master data for
@@ -7607,7 +7619,13 @@ export type GroupIdOrGuid = number;
  * Include additional information (currently, 'roles' are included by default but this behaviour is now deprecated)
  */
 export type GroupInclude = Array<
-    'hasPermissions' | 'roles' | 'tags' | 'memberStatistics' | 'places' | 'publicPostsStatistic' | 'signupConditions'
+    | 'hasPermissions'
+    | 'roles'
+    | 'tags'
+    | 'memberStatistics'
+    | 'places'
+    | 'publicPostsStatistic'
+    | 'signupConditions'
 >;
 
 /**
@@ -7914,7 +7932,8 @@ export type GetAddressesSearchResponses = {
     };
 };
 
-export type GetAddressesSearchResponse = GetAddressesSearchResponses[keyof GetAddressesSearchResponses];
+export type GetAddressesSearchResponse =
+    GetAddressesSearchResponses[keyof GetAddressesSearchResponses];
 
 export type GetAddressesDomainTypeDomainIdentifierData = {
     body?: never;
@@ -8201,7 +8220,8 @@ export type PostAgendasIdExportResponses = {
     };
 };
 
-export type PostAgendasIdExportResponse = PostAgendasIdExportResponses[keyof PostAgendasIdExportResponses];
+export type PostAgendasIdExportResponse =
+    PostAgendasIdExportResponses[keyof PostAgendasIdExportResponses];
 
 export type GetBookingsData = {
     body?: never;
@@ -8311,7 +8331,8 @@ export type PostBookingsConflictsErrors = {
     403: unknown;
 };
 
-export type PostBookingsConflictsError = PostBookingsConflictsErrors[keyof PostBookingsConflictsErrors];
+export type PostBookingsConflictsError =
+    PostBookingsConflictsErrors[keyof PostBookingsConflictsErrors];
 
 export type PostBookingsConflictsResponses = {
     /**
@@ -8323,7 +8344,8 @@ export type PostBookingsConflictsResponses = {
     };
 };
 
-export type PostBookingsConflictsResponse = PostBookingsConflictsResponses[keyof PostBookingsConflictsResponses];
+export type PostBookingsConflictsResponse =
+    PostBookingsConflictsResponses[keyof PostBookingsConflictsResponses];
 
 export type DeleteBookingsData = {
     body?: never;
@@ -8513,7 +8535,8 @@ export type PostBookingsIdConflictsErrors = {
     403: unknown;
 };
 
-export type PostBookingsIdConflictsError = PostBookingsIdConflictsErrors[keyof PostBookingsIdConflictsErrors];
+export type PostBookingsIdConflictsError =
+    PostBookingsIdConflictsErrors[keyof PostBookingsIdConflictsErrors];
 
 export type PostBookingsIdConflictsResponses = {
     /**
@@ -8525,7 +8548,8 @@ export type PostBookingsIdConflictsResponses = {
     };
 };
 
-export type PostBookingsIdConflictsResponse = PostBookingsIdConflictsResponses[keyof PostBookingsIdConflictsResponses];
+export type PostBookingsIdConflictsResponse =
+    PostBookingsIdConflictsResponses[keyof PostBookingsIdConflictsResponses];
 
 export type PutBookingsBookingIdAnswerData = {
     body?: never;
@@ -8558,7 +8582,8 @@ export type PutBookingsBookingIdAnswerErrors = {
     404: unknown;
 };
 
-export type PutBookingsBookingIdAnswerError = PutBookingsBookingIdAnswerErrors[keyof PutBookingsBookingIdAnswerErrors];
+export type PutBookingsBookingIdAnswerError =
+    PutBookingsBookingIdAnswerErrors[keyof PutBookingsBookingIdAnswerErrors];
 
 export type PutBookingsBookingIdAnswerResponses = {
     /**
@@ -8650,7 +8675,8 @@ export type PostBulkjobsInfosResponses = {
     };
 };
 
-export type PostBulkjobsInfosResponse = PostBulkjobsInfosResponses[keyof PostBulkjobsInfosResponses];
+export type PostBulkjobsInfosResponse =
+    PostBulkjobsInfosResponses[keyof PostBulkjobsInfosResponses];
 
 export type GetCalendarsData = {
     body?: never;
@@ -8724,7 +8750,9 @@ export type GetCalendarsAppointmentsData = {
     path?: never;
     query: {
         'calendar_ids[]': Array<number>;
-        'include[]'?: Array<'titleSuffix' | 'event' | 'group' | 'meetingRequests' | 'bookings' | 'tags'>;
+        'include[]'?: Array<
+            'titleSuffix' | 'event' | 'group' | 'meetingRequests' | 'bookings' | 'tags'
+        >;
         /**
          * Return entities starting from this date.
          */
@@ -8749,7 +8777,8 @@ export type GetCalendarsAppointmentsErrors = {
     403: unknown;
 };
 
-export type GetCalendarsAppointmentsError = GetCalendarsAppointmentsErrors[keyof GetCalendarsAppointmentsErrors];
+export type GetCalendarsAppointmentsError =
+    GetCalendarsAppointmentsErrors[keyof GetCalendarsAppointmentsErrors];
 
 export type GetCalendarsAppointmentsResponses = {
     /**
@@ -9036,7 +9065,8 @@ export type DeleteCalendarsCalendarIdErrors = {
     404: unknown;
 };
 
-export type DeleteCalendarsCalendarIdError = DeleteCalendarsCalendarIdErrors[keyof DeleteCalendarsCalendarIdErrors];
+export type DeleteCalendarsCalendarIdError =
+    DeleteCalendarsCalendarIdErrors[keyof DeleteCalendarsCalendarIdErrors];
 
 export type DeleteCalendarsCalendarIdResponses = {
     /**
@@ -9075,7 +9105,8 @@ export type GetCalendarsCalendarIdErrors = {
     404: unknown;
 };
 
-export type GetCalendarsCalendarIdError = GetCalendarsCalendarIdErrors[keyof GetCalendarsCalendarIdErrors];
+export type GetCalendarsCalendarIdError =
+    GetCalendarsCalendarIdErrors[keyof GetCalendarsCalendarIdErrors];
 
 export type GetCalendarsCalendarIdResponses = {
     /**
@@ -9086,7 +9117,8 @@ export type GetCalendarsCalendarIdResponses = {
     };
 };
 
-export type GetCalendarsCalendarIdResponse = GetCalendarsCalendarIdResponses[keyof GetCalendarsCalendarIdResponses];
+export type GetCalendarsCalendarIdResponse =
+    GetCalendarsCalendarIdResponses[keyof GetCalendarsCalendarIdResponses];
 
 export type PutCalendarsCalendarIdData = {
     body: CalendarUpdate;
@@ -9115,7 +9147,8 @@ export type PutCalendarsCalendarIdErrors = {
     404: unknown;
 };
 
-export type PutCalendarsCalendarIdError = PutCalendarsCalendarIdErrors[keyof PutCalendarsCalendarIdErrors];
+export type PutCalendarsCalendarIdError =
+    PutCalendarsCalendarIdErrors[keyof PutCalendarsCalendarIdErrors];
 
 export type PutCalendarsCalendarIdResponses = {
     /**
@@ -9126,7 +9159,8 @@ export type PutCalendarsCalendarIdResponses = {
     };
 };
 
-export type PutCalendarsCalendarIdResponse = PutCalendarsCalendarIdResponses[keyof PutCalendarsCalendarIdResponses];
+export type PutCalendarsCalendarIdResponse =
+    PutCalendarsCalendarIdResponses[keyof PutCalendarsCalendarIdResponses];
 
 export type GetCalendarsCalendarIdAppointmentsData = {
     body?: never;
@@ -9146,7 +9180,9 @@ export type GetCalendarsCalendarIdAppointmentsData = {
          */
         to?: DateString;
         query?: string;
-        'include[]'?: Array<'titleSuffix' | 'event' | 'group' | 'meetingRequests' | 'bookings' | 'tags'>;
+        'include[]'?: Array<
+            'titleSuffix' | 'event' | 'group' | 'meetingRequests' | 'bookings' | 'tags'
+        >;
     };
     url: '/calendars/{calendarId}/appointments';
 };
@@ -9507,50 +9543,53 @@ export type PostCalendarsCalendarIdAppointmentsAppointmentIdMeetingrequestsRespo
 export type PostCalendarsCalendarIdAppointmentsAppointmentIdMeetingrequestsResponse =
     PostCalendarsCalendarIdAppointmentsAppointmentIdMeetingrequestsResponses[keyof PostCalendarsCalendarIdAppointmentsAppointmentIdMeetingrequestsResponses];
 
-export type DeleteCalendarsCalendarIdAppointmentsAppointmentIdMeetingrequestsMeetingRequestIdData = {
-    body?: never;
-    path: {
-        /**
-         * ID of Calendar
-         */
-        calendarId: number;
-        /**
-         * ID of appointment
-         */
-        appointmentId: number;
-        /**
-         * ID of meeting request
-         */
-        meetingRequestId: number;
+export type DeleteCalendarsCalendarIdAppointmentsAppointmentIdMeetingrequestsMeetingRequestIdData =
+    {
+        body?: never;
+        path: {
+            /**
+             * ID of Calendar
+             */
+            calendarId: number;
+            /**
+             * ID of appointment
+             */
+            appointmentId: number;
+            /**
+             * ID of meeting request
+             */
+            meetingRequestId: number;
+        };
+        query?: never;
+        url: '/calendars/{calendarId}/appointments/{appointmentId}/meetingrequests/{meetingRequestId}';
     };
-    query?: never;
-    url: '/calendars/{calendarId}/appointments/{appointmentId}/meetingrequests/{meetingRequestId}';
-};
 
-export type DeleteCalendarsCalendarIdAppointmentsAppointmentIdMeetingrequestsMeetingRequestIdErrors = {
-    /**
-     * Unauthorized
-     */
-    401: string;
-    /**
-     * Forbidden to see, create, update, or delete resource
-     */
-    403: unknown;
-    /**
-     * Resource not found
-     */
-    404: unknown;
-};
+export type DeleteCalendarsCalendarIdAppointmentsAppointmentIdMeetingrequestsMeetingRequestIdErrors =
+    {
+        /**
+         * Unauthorized
+         */
+        401: string;
+        /**
+         * Forbidden to see, create, update, or delete resource
+         */
+        403: unknown;
+        /**
+         * Resource not found
+         */
+        404: unknown;
+    };
 
 export type DeleteCalendarsCalendarIdAppointmentsAppointmentIdMeetingrequestsMeetingRequestIdError =
     DeleteCalendarsCalendarIdAppointmentsAppointmentIdMeetingrequestsMeetingRequestIdErrors[keyof DeleteCalendarsCalendarIdAppointmentsAppointmentIdMeetingrequestsMeetingRequestIdErrors];
 
-export type DeleteCalendarsCalendarIdAppointmentsAppointmentIdMeetingrequestsMeetingRequestIdResponses = {
-    /**
-     * No Content
-     */
-    204: void;
-};
+export type DeleteCalendarsCalendarIdAppointmentsAppointmentIdMeetingrequestsMeetingRequestIdResponses =
+    {
+        /**
+         * No Content
+         */
+        204: void;
+    };
 
 export type DeleteCalendarsCalendarIdAppointmentsAppointmentIdMeetingrequestsMeetingRequestIdResponse =
     DeleteCalendarsCalendarIdAppointmentsAppointmentIdMeetingrequestsMeetingRequestIdResponses[keyof DeleteCalendarsCalendarIdAppointmentsAppointmentIdMeetingrequestsMeetingRequestIdResponses];
@@ -9593,12 +9632,13 @@ export type PutCalendarsCalendarIdAppointmentsAppointmentIdMeetingrequestsMeetin
 export type PutCalendarsCalendarIdAppointmentsAppointmentIdMeetingrequestsMeetingRequestIdError =
     PutCalendarsCalendarIdAppointmentsAppointmentIdMeetingrequestsMeetingRequestIdErrors[keyof PutCalendarsCalendarIdAppointmentsAppointmentIdMeetingrequestsMeetingRequestIdErrors];
 
-export type PutCalendarsCalendarIdAppointmentsAppointmentIdMeetingrequestsMeetingRequestIdResponses = {
-    /**
-     * OK
-     */
-    200: MeetingRequest;
-};
+export type PutCalendarsCalendarIdAppointmentsAppointmentIdMeetingrequestsMeetingRequestIdResponses =
+    {
+        /**
+         * OK
+         */
+        200: MeetingRequest;
+    };
 
 export type PutCalendarsCalendarIdAppointmentsAppointmentIdMeetingrequestsMeetingRequestIdResponse =
     PutCalendarsCalendarIdAppointmentsAppointmentIdMeetingrequestsMeetingRequestIdResponses[keyof PutCalendarsCalendarIdAppointmentsAppointmentIdMeetingrequestsMeetingRequestIdResponses];
@@ -10215,7 +10255,8 @@ export type PostCheckinPersonsResponses = {
     };
 };
 
-export type PostCheckinPersonsResponse = PostCheckinPersonsResponses[keyof PostCheckinPersonsResponses];
+export type PostCheckinPersonsResponse =
+    PostCheckinPersonsResponses[keyof PostCheckinPersonsResponses];
 
 export type PutCheckinPersonsData = {
     body: {
@@ -10292,7 +10333,8 @@ export type PutCheckinPersonsResponses = {
     };
 };
 
-export type PutCheckinPersonsResponse = PutCheckinPersonsResponses[keyof PutCheckinPersonsResponses];
+export type PutCheckinPersonsResponse =
+    PutCheckinPersonsResponses[keyof PutCheckinPersonsResponses];
 
 export type PostChurchqueryDebugExportData = {
     body: string;
@@ -10321,7 +10363,8 @@ export type PostChurchqueryDebugExportErrors = {
     404: unknown;
 };
 
-export type PostChurchqueryDebugExportError = PostChurchqueryDebugExportErrors[keyof PostChurchqueryDebugExportErrors];
+export type PostChurchqueryDebugExportError =
+    PostChurchqueryDebugExportErrors[keyof PostChurchqueryDebugExportErrors];
 
 export type GetChurchqueryMetadataData = {
     body?: never;
@@ -10345,7 +10388,8 @@ export type GetChurchqueryMetadataErrors = {
     404: unknown;
 };
 
-export type GetChurchqueryMetadataError = GetChurchqueryMetadataErrors[keyof GetChurchqueryMetadataErrors];
+export type GetChurchqueryMetadataError =
+    GetChurchqueryMetadataErrors[keyof GetChurchqueryMetadataErrors];
 
 export type GetConfigData = {
     body?: never;
@@ -10497,7 +10541,8 @@ export type PostContactlabelsResponses = {
     };
 };
 
-export type PostContactlabelsResponse = PostContactlabelsResponses[keyof PostContactlabelsResponses];
+export type PostContactlabelsResponse =
+    PostContactlabelsResponses[keyof PostContactlabelsResponses];
 
 export type DeleteContactlabelsIdData = {
     body?: never;
@@ -10530,7 +10575,8 @@ export type DeleteContactlabelsIdErrors = {
     404: unknown;
 };
 
-export type DeleteContactlabelsIdError = DeleteContactlabelsIdErrors[keyof DeleteContactlabelsIdErrors];
+export type DeleteContactlabelsIdError =
+    DeleteContactlabelsIdErrors[keyof DeleteContactlabelsIdErrors];
 
 export type DeleteContactlabelsIdResponses = {
     /**
@@ -10539,7 +10585,8 @@ export type DeleteContactlabelsIdResponses = {
     204: void;
 };
 
-export type DeleteContactlabelsIdResponse = DeleteContactlabelsIdResponses[keyof DeleteContactlabelsIdResponses];
+export type DeleteContactlabelsIdResponse =
+    DeleteContactlabelsIdResponses[keyof DeleteContactlabelsIdResponses];
 
 export type GetContactlabelsIdData = {
     body?: never;
@@ -10579,7 +10626,8 @@ export type GetContactlabelsIdResponses = {
     };
 };
 
-export type GetContactlabelsIdResponse = GetContactlabelsIdResponses[keyof GetContactlabelsIdResponses];
+export type GetContactlabelsIdResponse =
+    GetContactlabelsIdResponses[keyof GetContactlabelsIdResponses];
 
 export type PutContactlabelsIdData = {
     body: {
@@ -10636,7 +10684,8 @@ export type PutContactlabelsIdResponses = {
     };
 };
 
-export type PutContactlabelsIdResponse = PutContactlabelsIdResponses[keyof PutContactlabelsIdResponses];
+export type PutContactlabelsIdResponse =
+    PutContactlabelsIdResponses[keyof PutContactlabelsIdResponses];
 
 export type GetCsrftokenData = {
     body?: never;
@@ -10771,7 +10820,8 @@ export type DeleteDbfieldsFieldIdErrors = {
     404: unknown;
 };
 
-export type DeleteDbfieldsFieldIdError = DeleteDbfieldsFieldIdErrors[keyof DeleteDbfieldsFieldIdErrors];
+export type DeleteDbfieldsFieldIdError =
+    DeleteDbfieldsFieldIdErrors[keyof DeleteDbfieldsFieldIdErrors];
 
 export type DeleteDbfieldsFieldIdResponses = {
     /**
@@ -10780,7 +10830,8 @@ export type DeleteDbfieldsFieldIdResponses = {
     204: void;
 };
 
-export type DeleteDbfieldsFieldIdResponse = DeleteDbfieldsFieldIdResponses[keyof DeleteDbfieldsFieldIdResponses];
+export type DeleteDbfieldsFieldIdResponse =
+    DeleteDbfieldsFieldIdResponses[keyof DeleteDbfieldsFieldIdResponses];
 
 export type GetDbfieldsFieldIdData = {
     body?: never;
@@ -10821,7 +10872,8 @@ export type GetDbfieldsFieldIdResponses = {
     };
 };
 
-export type GetDbfieldsFieldIdResponse = GetDbfieldsFieldIdResponses[keyof GetDbfieldsFieldIdResponses];
+export type GetDbfieldsFieldIdResponse =
+    GetDbfieldsFieldIdResponses[keyof GetDbfieldsFieldIdResponses];
 
 export type PutDbfieldsFieldIdData = {
     body: DbFieldUpdate;
@@ -10862,7 +10914,8 @@ export type PutDbfieldsFieldIdResponses = {
     };
 };
 
-export type PutDbfieldsFieldIdResponse = PutDbfieldsFieldIdResponses[keyof PutDbfieldsFieldIdResponses];
+export type PutDbfieldsFieldIdResponse =
+    PutDbfieldsFieldIdResponses[keyof PutDbfieldsFieldIdResponses];
 
 export type GetDbfieldsFieldIdOptionsData = {
     body?: never;
@@ -10892,7 +10945,8 @@ export type GetDbfieldsFieldIdOptionsErrors = {
     404: unknown;
 };
 
-export type GetDbfieldsFieldIdOptionsError = GetDbfieldsFieldIdOptionsErrors[keyof GetDbfieldsFieldIdOptionsErrors];
+export type GetDbfieldsFieldIdOptionsError =
+    GetDbfieldsFieldIdOptionsErrors[keyof GetDbfieldsFieldIdOptionsErrors];
 
 export type GetDbfieldsFieldIdOptionsResponses = {
     /**
@@ -10935,7 +10989,8 @@ export type PostDbfieldsIdOptionsErrors = {
     404: unknown;
 };
 
-export type PostDbfieldsIdOptionsError = PostDbfieldsIdOptionsErrors[keyof PostDbfieldsIdOptionsErrors];
+export type PostDbfieldsIdOptionsError =
+    PostDbfieldsIdOptionsErrors[keyof PostDbfieldsIdOptionsErrors];
 
 export type PostDbfieldsIdOptionsResponses = {
     /**
@@ -10946,7 +11001,8 @@ export type PostDbfieldsIdOptionsResponses = {
     };
 };
 
-export type PostDbfieldsIdOptionsResponse = PostDbfieldsIdOptionsResponses[keyof PostDbfieldsIdOptionsResponses];
+export type PostDbfieldsIdOptionsResponse =
+    PostDbfieldsIdOptionsResponses[keyof PostDbfieldsIdOptionsResponses];
 
 export type GetDbfieldsFieldIdOptionsMetadataData = {
     body?: never;
@@ -11233,7 +11289,8 @@ export type PostDomainobjectsResponses = {
     };
 };
 
-export type PostDomainobjectsResponse = PostDomainobjectsResponses[keyof PostDomainobjectsResponses];
+export type PostDomainobjectsResponse =
+    PostDomainobjectsResponses[keyof PostDomainobjectsResponses];
 
 export type GetDynamicgroupsData = {
     body?: never;
@@ -11302,7 +11359,8 @@ export type PostDynamicgroupsResponses = {
     };
 };
 
-export type PostDynamicgroupsResponse = PostDynamicgroupsResponses[keyof PostDynamicgroupsResponses];
+export type PostDynamicgroupsResponse =
+    PostDynamicgroupsResponses[keyof PostDynamicgroupsResponses];
 
 export type PostDynamicgroupsIdRefreshData = {
     body?: never;
@@ -11332,7 +11390,8 @@ export type PostDynamicgroupsIdRefreshErrors = {
     404: unknown;
 };
 
-export type PostDynamicgroupsIdRefreshError = PostDynamicgroupsIdRefreshErrors[keyof PostDynamicgroupsIdRefreshErrors];
+export type PostDynamicgroupsIdRefreshError =
+    PostDynamicgroupsIdRefreshErrors[keyof PostDynamicgroupsIdRefreshErrors];
 
 export type PostDynamicgroupsIdRefreshResponses = {
     /**
@@ -11423,7 +11482,8 @@ export type GetDynamicgroupsIdRulesetErrors = {
     404: unknown;
 };
 
-export type GetDynamicgroupsIdRulesetError = GetDynamicgroupsIdRulesetErrors[keyof GetDynamicgroupsIdRulesetErrors];
+export type GetDynamicgroupsIdRulesetError =
+    GetDynamicgroupsIdRulesetErrors[keyof GetDynamicgroupsIdRulesetErrors];
 
 export type GetDynamicgroupsIdRulesetResponses = {
     /**
@@ -11470,7 +11530,8 @@ export type PutDynamicgroupsIdRulesetErrors = {
     404: unknown;
 };
 
-export type PutDynamicgroupsIdRulesetError = PutDynamicgroupsIdRulesetErrors[keyof PutDynamicgroupsIdRulesetErrors];
+export type PutDynamicgroupsIdRulesetError =
+    PutDynamicgroupsIdRulesetErrors[keyof PutDynamicgroupsIdRulesetErrors];
 
 export type PutDynamicgroupsIdRulesetResponses = {
     /**
@@ -11511,7 +11572,8 @@ export type GetDynamicgroupsIdStatusErrors = {
     404: unknown;
 };
 
-export type GetDynamicgroupsIdStatusError = GetDynamicgroupsIdStatusErrors[keyof GetDynamicgroupsIdStatusErrors];
+export type GetDynamicgroupsIdStatusError =
+    GetDynamicgroupsIdStatusErrors[keyof GetDynamicgroupsIdStatusErrors];
 
 export type GetDynamicgroupsIdStatusResponses = {
     /**
@@ -11558,7 +11620,8 @@ export type PutDynamicgroupsIdStatusErrors = {
     404: unknown;
 };
 
-export type PutDynamicgroupsIdStatusError = PutDynamicgroupsIdStatusErrors[keyof PutDynamicgroupsIdStatusErrors];
+export type PutDynamicgroupsIdStatusError =
+    PutDynamicgroupsIdStatusErrors[keyof PutDynamicgroupsIdStatusErrors];
 
 export type PutDynamicgroupsIdStatusResponses = {
     /**
@@ -11684,7 +11747,8 @@ export type GetEventMasterdataResponses = {
     };
 };
 
-export type GetEventMasterdataResponse = GetEventMasterdataResponses[keyof GetEventMasterdataResponses];
+export type GetEventMasterdataResponse =
+    GetEventMasterdataResponses[keyof GetEventMasterdataResponses];
 
 export type GetEventsData = {
     body?: never;
@@ -12065,7 +12129,8 @@ export type GetEventsIdAgendaResponses = {
     };
 };
 
-export type GetEventsIdAgendaResponse = GetEventsIdAgendaResponses[keyof GetEventsIdAgendaResponses];
+export type GetEventsIdAgendaResponse =
+    GetEventsIdAgendaResponses[keyof GetEventsIdAgendaResponses];
 
 export type GetEventsIdAgendaSongsData = {
     body?: never;
@@ -12098,7 +12163,8 @@ export type GetEventsIdAgendaSongsErrors = {
     404: unknown;
 };
 
-export type GetEventsIdAgendaSongsError = GetEventsIdAgendaSongsErrors[keyof GetEventsIdAgendaSongsErrors];
+export type GetEventsIdAgendaSongsError =
+    GetEventsIdAgendaSongsErrors[keyof GetEventsIdAgendaSongsErrors];
 
 export type GetEventsIdAgendaSongsResponses = {
     /**
@@ -12109,7 +12175,8 @@ export type GetEventsIdAgendaSongsResponses = {
     };
 };
 
-export type GetEventsIdAgendaSongsResponse = GetEventsIdAgendaSongsResponses[keyof GetEventsIdAgendaSongsResponses];
+export type GetEventsIdAgendaSongsResponse =
+    GetEventsIdAgendaSongsResponses[keyof GetEventsIdAgendaSongsResponses];
 
 export type PostEventsIdChatData = {
     body: StartStopChat;
@@ -12176,7 +12243,8 @@ export type PutEventsIdEventservicesErrors = {
     403: unknown;
 };
 
-export type PutEventsIdEventservicesError = PutEventsIdEventservicesErrors[keyof PutEventsIdEventservicesErrors];
+export type PutEventsIdEventservicesError =
+    PutEventsIdEventservicesErrors[keyof PutEventsIdEventservicesErrors];
 
 export type PutEventsIdEventservicesResponses = {
     /**
@@ -12267,7 +12335,8 @@ export type PutEventsIdEventservicesIdErrors = {
     403: unknown;
 };
 
-export type PutEventsIdEventservicesIdError = PutEventsIdEventservicesIdErrors[keyof PutEventsIdEventservicesIdErrors];
+export type PutEventsIdEventservicesIdError =
+    PutEventsIdEventservicesIdErrors[keyof PutEventsIdEventservicesIdErrors];
 
 export type PutEventsIdEventservicesIdResponses = {
     /**
@@ -12316,7 +12385,8 @@ export type GetEventsEventIdFactsResponses = {
     };
 };
 
-export type GetEventsEventIdFactsResponse = GetEventsEventIdFactsResponses[keyof GetEventsEventIdFactsResponses];
+export type GetEventsEventIdFactsResponse =
+    GetEventsEventIdFactsResponses[keyof GetEventsEventIdFactsResponses];
 
 export type DeleteEventsEventIdFactsFactIdData = {
     body?: never;
@@ -12511,7 +12581,8 @@ export type PutEventsServicerequestsErrors = {
     403: unknown;
 };
 
-export type PutEventsServicerequestsError = PutEventsServicerequestsErrors[keyof PutEventsServicerequestsErrors];
+export type PutEventsServicerequestsError =
+    PutEventsServicerequestsErrors[keyof PutEventsServicerequestsErrors];
 
 export type PutEventsServicerequestsResponses = {
     /**
@@ -12829,7 +12900,8 @@ export type GetExternalloginsResponses = {
     };
 };
 
-export type GetExternalloginsResponse = GetExternalloginsResponses[keyof GetExternalloginsResponses];
+export type GetExternalloginsResponse =
+    GetExternalloginsResponses[keyof GetExternalloginsResponses];
 
 export type PostExternalloginsData = {
     body: ExternalLoginCreate;
@@ -12864,7 +12936,8 @@ export type PostExternalloginsResponses = {
     };
 };
 
-export type PostExternalloginsResponse = PostExternalloginsResponses[keyof PostExternalloginsResponses];
+export type PostExternalloginsResponse =
+    PostExternalloginsResponses[keyof PostExternalloginsResponses];
 
 export type DeleteExternalloginsExternalloginidData = {
     body?: never;
@@ -12968,7 +13041,8 @@ export type GetExternalloginsIdResponses = {
     };
 };
 
-export type GetExternalloginsIdResponse = GetExternalloginsIdResponses[keyof GetExternalloginsIdResponses];
+export type GetExternalloginsIdResponse =
+    GetExternalloginsIdResponses[keyof GetExternalloginsIdResponses];
 
 export type PutExternalloginsIdData = {
     body: ExternalLogin;
@@ -13005,7 +13079,8 @@ export type PutExternalloginsIdResponses = {
     };
 };
 
-export type PutExternalloginsIdResponse = PutExternalloginsIdResponses[keyof PutExternalloginsIdResponses];
+export type PutExternalloginsIdResponse =
+    PutExternalloginsIdResponses[keyof PutExternalloginsIdResponses];
 
 export type GetExternalpostsData = {
     body?: never;
@@ -13682,7 +13757,8 @@ export type GetFilesIdMetadataResponses = {
     };
 };
 
-export type GetFilesIdMetadataResponse = GetFilesIdMetadataResponses[keyof GetFilesIdMetadataResponses];
+export type GetFilesIdMetadataResponse =
+    GetFilesIdMetadataResponses[keyof GetFilesIdMetadataResponses];
 
 export type DeleteFilesIdData = {
     body?: never;
@@ -13763,7 +13839,8 @@ export type GetFinanceAccountclassesErrors = {
     404: unknown;
 };
 
-export type GetFinanceAccountclassesError = GetFinanceAccountclassesErrors[keyof GetFinanceAccountclassesErrors];
+export type GetFinanceAccountclassesError =
+    GetFinanceAccountclassesErrors[keyof GetFinanceAccountclassesErrors];
 
 export type GetFinanceAccountclassesResponses = {
     /**
@@ -13798,7 +13875,8 @@ export type PostFinanceAccountclassesErrors = {
     404: unknown;
 };
 
-export type PostFinanceAccountclassesError = PostFinanceAccountclassesErrors[keyof PostFinanceAccountclassesErrors];
+export type PostFinanceAccountclassesError =
+    PostFinanceAccountclassesErrors[keyof PostFinanceAccountclassesErrors];
 
 export type PostFinanceAccountclassesResponses = {
     /**
@@ -13909,7 +13987,8 @@ export type GetFinanceAccountclassesIdErrors = {
     404: unknown;
 };
 
-export type GetFinanceAccountclassesIdError = GetFinanceAccountclassesIdErrors[keyof GetFinanceAccountclassesIdErrors];
+export type GetFinanceAccountclassesIdError =
+    GetFinanceAccountclassesIdErrors[keyof GetFinanceAccountclassesIdErrors];
 
 export type GetFinanceAccountclassesIdResponses = {
     /**
@@ -13953,7 +14032,8 @@ export type PutFinanceAccountclassesIdErrors = {
     404: unknown;
 };
 
-export type PutFinanceAccountclassesIdError = PutFinanceAccountclassesIdErrors[keyof PutFinanceAccountclassesIdErrors];
+export type PutFinanceAccountclassesIdError =
+    PutFinanceAccountclassesIdErrors[keyof PutFinanceAccountclassesIdErrors];
 
 export type PutFinanceAccountclassesIdResponses = {
     /**
@@ -13985,7 +14065,8 @@ export type GetFinanceAccountgroupsErrors = {
     403: unknown;
 };
 
-export type GetFinanceAccountgroupsError = GetFinanceAccountgroupsErrors[keyof GetFinanceAccountgroupsErrors];
+export type GetFinanceAccountgroupsError =
+    GetFinanceAccountgroupsErrors[keyof GetFinanceAccountgroupsErrors];
 
 export type GetFinanceAccountgroupsResponses = {
     /**
@@ -13996,7 +14077,8 @@ export type GetFinanceAccountgroupsResponses = {
     };
 };
 
-export type GetFinanceAccountgroupsResponse = GetFinanceAccountgroupsResponses[keyof GetFinanceAccountgroupsResponses];
+export type GetFinanceAccountgroupsResponse =
+    GetFinanceAccountgroupsResponses[keyof GetFinanceAccountgroupsResponses];
 
 export type PostFinanceAccountgroupsData = {
     /**
@@ -14019,7 +14101,8 @@ export type PostFinanceAccountgroupsErrors = {
     403: unknown;
 };
 
-export type PostFinanceAccountgroupsError = PostFinanceAccountgroupsErrors[keyof PostFinanceAccountgroupsErrors];
+export type PostFinanceAccountgroupsError =
+    PostFinanceAccountgroupsErrors[keyof PostFinanceAccountgroupsErrors];
 
 export type PostFinanceAccountgroupsResponses = {
     /**
@@ -14130,7 +14213,8 @@ export type GetFinanceAccountgroupsIdErrors = {
     404: unknown;
 };
 
-export type GetFinanceAccountgroupsIdError = GetFinanceAccountgroupsIdErrors[keyof GetFinanceAccountgroupsIdErrors];
+export type GetFinanceAccountgroupsIdError =
+    GetFinanceAccountgroupsIdErrors[keyof GetFinanceAccountgroupsIdErrors];
 
 export type GetFinanceAccountgroupsIdResponses = {
     /**
@@ -14174,7 +14258,8 @@ export type PutFinanceAccountgroupsIdErrors = {
     404: unknown;
 };
 
-export type PutFinanceAccountgroupsIdError = PutFinanceAccountgroupsIdErrors[keyof PutFinanceAccountgroupsIdErrors];
+export type PutFinanceAccountgroupsIdError =
+    PutFinanceAccountgroupsIdErrors[keyof PutFinanceAccountgroupsIdErrors];
 
 export type PutFinanceAccountgroupsIdResponses = {
     /**
@@ -15087,7 +15172,8 @@ export type GetFinanceAccountsResponses = {
     };
 };
 
-export type GetFinanceAccountsResponse = GetFinanceAccountsResponses[keyof GetFinanceAccountsResponses];
+export type GetFinanceAccountsResponse =
+    GetFinanceAccountsResponses[keyof GetFinanceAccountsResponses];
 
 export type PostFinanceAccountsData = {
     /**
@@ -15121,7 +15207,8 @@ export type PostFinanceAccountsResponses = {
     };
 };
 
-export type PostFinanceAccountsResponse = PostFinanceAccountsResponses[keyof PostFinanceAccountsResponses];
+export type PostFinanceAccountsResponse =
+    PostFinanceAccountsResponses[keyof PostFinanceAccountsResponses];
 
 export type PostFinanceAccountsBulkcreateData = {
     body?: never;
@@ -15189,7 +15276,8 @@ export type GetFinanceAccountsExportErrors = {
     404: unknown;
 };
 
-export type GetFinanceAccountsExportError = GetFinanceAccountsExportErrors[keyof GetFinanceAccountsExportErrors];
+export type GetFinanceAccountsExportError =
+    GetFinanceAccountsExportErrors[keyof GetFinanceAccountsExportErrors];
 
 export type PostFinanceAccountsExporttemplateData = {
     body: {
@@ -15286,7 +15374,8 @@ export type DeleteFinanceAccountsIdErrors = {
     };
 };
 
-export type DeleteFinanceAccountsIdError = DeleteFinanceAccountsIdErrors[keyof DeleteFinanceAccountsIdErrors];
+export type DeleteFinanceAccountsIdError =
+    DeleteFinanceAccountsIdErrors[keyof DeleteFinanceAccountsIdErrors];
 
 export type DeleteFinanceAccountsIdResponses = {
     /**
@@ -15295,7 +15384,8 @@ export type DeleteFinanceAccountsIdResponses = {
     204: void;
 };
 
-export type DeleteFinanceAccountsIdResponse = DeleteFinanceAccountsIdResponses[keyof DeleteFinanceAccountsIdResponses];
+export type DeleteFinanceAccountsIdResponse =
+    DeleteFinanceAccountsIdResponses[keyof DeleteFinanceAccountsIdResponses];
 
 export type GetFinanceAccountsIdData = {
     body?: never;
@@ -15324,7 +15414,8 @@ export type GetFinanceAccountsIdErrors = {
     404: unknown;
 };
 
-export type GetFinanceAccountsIdError = GetFinanceAccountsIdErrors[keyof GetFinanceAccountsIdErrors];
+export type GetFinanceAccountsIdError =
+    GetFinanceAccountsIdErrors[keyof GetFinanceAccountsIdErrors];
 
 export type GetFinanceAccountsIdResponses = {
     /**
@@ -15335,7 +15426,8 @@ export type GetFinanceAccountsIdResponses = {
     };
 };
 
-export type GetFinanceAccountsIdResponse = GetFinanceAccountsIdResponses[keyof GetFinanceAccountsIdResponses];
+export type GetFinanceAccountsIdResponse =
+    GetFinanceAccountsIdResponses[keyof GetFinanceAccountsIdResponses];
 
 export type PutFinanceAccountsIdData = {
     /**
@@ -15367,7 +15459,8 @@ export type PutFinanceAccountsIdErrors = {
     404: unknown;
 };
 
-export type PutFinanceAccountsIdError = PutFinanceAccountsIdErrors[keyof PutFinanceAccountsIdErrors];
+export type PutFinanceAccountsIdError =
+    PutFinanceAccountsIdErrors[keyof PutFinanceAccountsIdErrors];
 
 export type PutFinanceAccountsIdResponses = {
     /**
@@ -15378,7 +15471,8 @@ export type PutFinanceAccountsIdResponses = {
     };
 };
 
-export type PutFinanceAccountsIdResponse = PutFinanceAccountsIdResponses[keyof PutFinanceAccountsIdResponses];
+export type PutFinanceAccountsIdResponse =
+    PutFinanceAccountsIdResponses[keyof PutFinanceAccountsIdResponses];
 
 export type GetFinanceAccounttypesData = {
     body?: never;
@@ -15398,7 +15492,8 @@ export type GetFinanceAccounttypesErrors = {
     403: unknown;
 };
 
-export type GetFinanceAccounttypesError = GetFinanceAccounttypesErrors[keyof GetFinanceAccounttypesErrors];
+export type GetFinanceAccounttypesError =
+    GetFinanceAccounttypesErrors[keyof GetFinanceAccounttypesErrors];
 
 export type GetFinanceAccounttypesResponses = {
     /**
@@ -15409,7 +15504,8 @@ export type GetFinanceAccounttypesResponses = {
     };
 };
 
-export type GetFinanceAccounttypesResponse = GetFinanceAccounttypesResponses[keyof GetFinanceAccounttypesResponses];
+export type GetFinanceAccounttypesResponse =
+    GetFinanceAccounttypesResponses[keyof GetFinanceAccounttypesResponses];
 
 export type PostFinanceAccounttypesData = {
     /**
@@ -15432,7 +15528,8 @@ export type PostFinanceAccounttypesErrors = {
     403: unknown;
 };
 
-export type PostFinanceAccounttypesError = PostFinanceAccounttypesErrors[keyof PostFinanceAccounttypesErrors];
+export type PostFinanceAccounttypesError =
+    PostFinanceAccounttypesErrors[keyof PostFinanceAccounttypesErrors];
 
 export type PostFinanceAccounttypesResponses = {
     /**
@@ -15443,7 +15540,8 @@ export type PostFinanceAccounttypesResponses = {
     };
 };
 
-export type PostFinanceAccounttypesResponse = PostFinanceAccounttypesResponses[keyof PostFinanceAccounttypesResponses];
+export type PostFinanceAccounttypesResponse =
+    PostFinanceAccounttypesResponses[keyof PostFinanceAccounttypesResponses];
 
 export type DeleteFinanceAccounttypesIdData = {
     body?: never;
@@ -15547,7 +15645,8 @@ export type GetFinanceAccounttypesIdErrors = {
     404: unknown;
 };
 
-export type GetFinanceAccounttypesIdError = GetFinanceAccounttypesIdErrors[keyof GetFinanceAccounttypesIdErrors];
+export type GetFinanceAccounttypesIdError =
+    GetFinanceAccounttypesIdErrors[keyof GetFinanceAccounttypesIdErrors];
 
 export type GetFinanceAccounttypesIdResponses = {
     /**
@@ -15591,7 +15690,8 @@ export type PutFinanceAccounttypesIdErrors = {
     404: unknown;
 };
 
-export type PutFinanceAccounttypesIdError = PutFinanceAccounttypesIdErrors[keyof PutFinanceAccounttypesIdErrors];
+export type PutFinanceAccounttypesIdError =
+    PutFinanceAccounttypesIdErrors[keyof PutFinanceAccounttypesIdErrors];
 
 export type PutFinanceAccounttypesIdResponses = {
     /**
@@ -15701,7 +15801,8 @@ export type DeleteFinanceBillsIdErrors = {
     };
 };
 
-export type DeleteFinanceBillsIdError = DeleteFinanceBillsIdErrors[keyof DeleteFinanceBillsIdErrors];
+export type DeleteFinanceBillsIdError =
+    DeleteFinanceBillsIdErrors[keyof DeleteFinanceBillsIdErrors];
 
 export type DeleteFinanceBillsIdResponses = {
     /**
@@ -15710,7 +15811,8 @@ export type DeleteFinanceBillsIdResponses = {
     204: void;
 };
 
-export type DeleteFinanceBillsIdResponse = DeleteFinanceBillsIdResponses[keyof DeleteFinanceBillsIdResponses];
+export type DeleteFinanceBillsIdResponse =
+    DeleteFinanceBillsIdResponses[keyof DeleteFinanceBillsIdResponses];
 
 export type GetFinanceBillsIdData = {
     body?: never;
@@ -15750,7 +15852,8 @@ export type GetFinanceBillsIdResponses = {
     };
 };
 
-export type GetFinanceBillsIdResponse = GetFinanceBillsIdResponses[keyof GetFinanceBillsIdResponses];
+export type GetFinanceBillsIdResponse =
+    GetFinanceBillsIdResponses[keyof GetFinanceBillsIdResponses];
 
 export type PutFinanceBillsIdData = {
     /**
@@ -15793,7 +15896,8 @@ export type PutFinanceBillsIdResponses = {
     };
 };
 
-export type PutFinanceBillsIdResponse = PutFinanceBillsIdResponses[keyof PutFinanceBillsIdResponses];
+export type PutFinanceBillsIdResponse =
+    PutFinanceBillsIdResponses[keyof PutFinanceBillsIdResponses];
 
 export type GetFinanceCashdiscountsData = {
     body?: never;
@@ -15813,7 +15917,8 @@ export type GetFinanceCashdiscountsErrors = {
     403: unknown;
 };
 
-export type GetFinanceCashdiscountsError = GetFinanceCashdiscountsErrors[keyof GetFinanceCashdiscountsErrors];
+export type GetFinanceCashdiscountsError =
+    GetFinanceCashdiscountsErrors[keyof GetFinanceCashdiscountsErrors];
 
 export type GetFinanceCashdiscountsResponses = {
     /**
@@ -15824,7 +15929,8 @@ export type GetFinanceCashdiscountsResponses = {
     };
 };
 
-export type GetFinanceCashdiscountsResponse = GetFinanceCashdiscountsResponses[keyof GetFinanceCashdiscountsResponses];
+export type GetFinanceCashdiscountsResponse =
+    GetFinanceCashdiscountsResponses[keyof GetFinanceCashdiscountsResponses];
 
 export type PostFinanceCashdiscountsData = {
     /**
@@ -15847,7 +15953,8 @@ export type PostFinanceCashdiscountsErrors = {
     403: unknown;
 };
 
-export type PostFinanceCashdiscountsError = PostFinanceCashdiscountsErrors[keyof PostFinanceCashdiscountsErrors];
+export type PostFinanceCashdiscountsError =
+    PostFinanceCashdiscountsErrors[keyof PostFinanceCashdiscountsErrors];
 
 export type PostFinanceCashdiscountsResponses = {
     /**
@@ -15963,7 +16070,8 @@ export type GetFinanceCashdiscountsIdErrors = {
     404: unknown;
 };
 
-export type GetFinanceCashdiscountsIdError = GetFinanceCashdiscountsIdErrors[keyof GetFinanceCashdiscountsIdErrors];
+export type GetFinanceCashdiscountsIdError =
+    GetFinanceCashdiscountsIdErrors[keyof GetFinanceCashdiscountsIdErrors];
 
 export type GetFinanceCashdiscountsIdResponses = {
     /**
@@ -16007,7 +16115,8 @@ export type PutFinanceCashdiscountsIdErrors = {
     404: unknown;
 };
 
-export type PutFinanceCashdiscountsIdError = PutFinanceCashdiscountsIdErrors[keyof PutFinanceCashdiscountsIdErrors];
+export type PutFinanceCashdiscountsIdError =
+    PutFinanceCashdiscountsIdErrors[keyof PutFinanceCashdiscountsIdErrors];
 
 export type PutFinanceCashdiscountsIdResponses = {
     /**
@@ -16050,7 +16159,8 @@ export type GetFinanceClientsResponses = {
     };
 };
 
-export type GetFinanceClientsResponse = GetFinanceClientsResponses[keyof GetFinanceClientsResponses];
+export type GetFinanceClientsResponse =
+    GetFinanceClientsResponses[keyof GetFinanceClientsResponses];
 
 export type PostFinanceClientsData = {
     /**
@@ -16071,7 +16181,8 @@ export type PostFinanceClientsResponses = {
     };
 };
 
-export type PostFinanceClientsResponse = PostFinanceClientsResponses[keyof PostFinanceClientsResponses];
+export type PostFinanceClientsResponse =
+    PostFinanceClientsResponses[keyof PostFinanceClientsResponses];
 
 export type DeleteFinanceClientsIdData = {
     body?: never;
@@ -16135,7 +16246,8 @@ export type DeleteFinanceClientsIdErrors = {
     };
 };
 
-export type DeleteFinanceClientsIdError = DeleteFinanceClientsIdErrors[keyof DeleteFinanceClientsIdErrors];
+export type DeleteFinanceClientsIdError =
+    DeleteFinanceClientsIdErrors[keyof DeleteFinanceClientsIdErrors];
 
 export type DeleteFinanceClientsIdResponses = {
     /**
@@ -16144,7 +16256,8 @@ export type DeleteFinanceClientsIdResponses = {
     204: void;
 };
 
-export type DeleteFinanceClientsIdResponse = DeleteFinanceClientsIdResponses[keyof DeleteFinanceClientsIdResponses];
+export type DeleteFinanceClientsIdResponse =
+    DeleteFinanceClientsIdResponses[keyof DeleteFinanceClientsIdResponses];
 
 export type GetFinanceClientsIdData = {
     body?: never;
@@ -16184,7 +16297,8 @@ export type GetFinanceClientsIdResponses = {
     };
 };
 
-export type GetFinanceClientsIdResponse = GetFinanceClientsIdResponses[keyof GetFinanceClientsIdResponses];
+export type GetFinanceClientsIdResponse =
+    GetFinanceClientsIdResponses[keyof GetFinanceClientsIdResponses];
 
 export type PutFinanceClientsIdData = {
     /**
@@ -16227,7 +16341,8 @@ export type PutFinanceClientsIdResponses = {
     };
 };
 
-export type PutFinanceClientsIdResponse = PutFinanceClientsIdResponses[keyof PutFinanceClientsIdResponses];
+export type PutFinanceClientsIdResponse =
+    PutFinanceClientsIdResponses[keyof PutFinanceClientsIdResponses];
 
 export type GetFinanceCostcentersData = {
     body?: never;
@@ -16252,7 +16367,8 @@ export type GetFinanceCostcentersErrors = {
     403: unknown;
 };
 
-export type GetFinanceCostcentersError = GetFinanceCostcentersErrors[keyof GetFinanceCostcentersErrors];
+export type GetFinanceCostcentersError =
+    GetFinanceCostcentersErrors[keyof GetFinanceCostcentersErrors];
 
 export type GetFinanceCostcentersResponses = {
     /**
@@ -16263,7 +16379,8 @@ export type GetFinanceCostcentersResponses = {
     };
 };
 
-export type GetFinanceCostcentersResponse = GetFinanceCostcentersResponses[keyof GetFinanceCostcentersResponses];
+export type GetFinanceCostcentersResponse =
+    GetFinanceCostcentersResponses[keyof GetFinanceCostcentersResponses];
 
 export type PostFinanceCostcentersData = {
     /**
@@ -16295,7 +16412,8 @@ export type PostFinanceCostcentersErrors = {
     403: unknown;
 };
 
-export type PostFinanceCostcentersError = PostFinanceCostcentersErrors[keyof PostFinanceCostcentersErrors];
+export type PostFinanceCostcentersError =
+    PostFinanceCostcentersErrors[keyof PostFinanceCostcentersErrors];
 
 export type PostFinanceCostcentersResponses = {
     /**
@@ -16306,7 +16424,8 @@ export type PostFinanceCostcentersResponses = {
     };
 };
 
-export type PostFinanceCostcentersResponse = PostFinanceCostcentersResponses[keyof PostFinanceCostcentersResponses];
+export type PostFinanceCostcentersResponse =
+    PostFinanceCostcentersResponses[keyof PostFinanceCostcentersResponses];
 
 export type PostFinanceCostcentersBulkcreateData = {
     body: {
@@ -16437,7 +16556,8 @@ export type DeleteFinanceCostcentersIdErrors = {
     };
 };
 
-export type DeleteFinanceCostcentersIdError = DeleteFinanceCostcentersIdErrors[keyof DeleteFinanceCostcentersIdErrors];
+export type DeleteFinanceCostcentersIdError =
+    DeleteFinanceCostcentersIdErrors[keyof DeleteFinanceCostcentersIdErrors];
 
 export type DeleteFinanceCostcentersIdResponses = {
     /**
@@ -16476,7 +16596,8 @@ export type GetFinanceCostcentersIdErrors = {
     404: unknown;
 };
 
-export type GetFinanceCostcentersIdError = GetFinanceCostcentersIdErrors[keyof GetFinanceCostcentersIdErrors];
+export type GetFinanceCostcentersIdError =
+    GetFinanceCostcentersIdErrors[keyof GetFinanceCostcentersIdErrors];
 
 export type GetFinanceCostcentersIdResponses = {
     /**
@@ -16487,7 +16608,8 @@ export type GetFinanceCostcentersIdResponses = {
     };
 };
 
-export type GetFinanceCostcentersIdResponse = GetFinanceCostcentersIdResponses[keyof GetFinanceCostcentersIdResponses];
+export type GetFinanceCostcentersIdResponse =
+    GetFinanceCostcentersIdResponses[keyof GetFinanceCostcentersIdResponses];
 
 export type PutFinanceCostcentersIdData = {
     /**
@@ -16528,7 +16650,8 @@ export type PutFinanceCostcentersIdErrors = {
     404: unknown;
 };
 
-export type PutFinanceCostcentersIdError = PutFinanceCostcentersIdErrors[keyof PutFinanceCostcentersIdErrors];
+export type PutFinanceCostcentersIdError =
+    PutFinanceCostcentersIdErrors[keyof PutFinanceCostcentersIdErrors];
 
 export type PutFinanceCostcentersIdResponses = {
     /**
@@ -16539,7 +16662,8 @@ export type PutFinanceCostcentersIdResponses = {
     };
 };
 
-export type PutFinanceCostcentersIdResponse = PutFinanceCostcentersIdResponses[keyof PutFinanceCostcentersIdResponses];
+export type PutFinanceCostcentersIdResponse =
+    PutFinanceCostcentersIdResponses[keyof PutFinanceCostcentersIdResponses];
 
 export type GetFinanceDonatorsData = {
     body?: never;
@@ -16596,7 +16720,8 @@ export type GetFinanceDonatorsResponses = {
     };
 };
 
-export type GetFinanceDonatorsResponse = GetFinanceDonatorsResponses[keyof GetFinanceDonatorsResponses];
+export type GetFinanceDonatorsResponse =
+    GetFinanceDonatorsResponses[keyof GetFinanceDonatorsResponses];
 
 export type DeleteFinanceDonatorsReceiptsData = {
     body?: never;
@@ -16659,7 +16784,8 @@ export type GetFinanceDonatorsReceiptsErrors = {
     403: unknown;
 };
 
-export type GetFinanceDonatorsReceiptsError = GetFinanceDonatorsReceiptsErrors[keyof GetFinanceDonatorsReceiptsErrors];
+export type GetFinanceDonatorsReceiptsError =
+    GetFinanceDonatorsReceiptsErrors[keyof GetFinanceDonatorsReceiptsErrors];
 
 export type GetFinanceDonatorsReceiptsResponses = {
     /**
@@ -16806,7 +16932,8 @@ export type GetFinanceMasterdataErrors = {
     404: unknown;
 };
 
-export type GetFinanceMasterdataError = GetFinanceMasterdataErrors[keyof GetFinanceMasterdataErrors];
+export type GetFinanceMasterdataError =
+    GetFinanceMasterdataErrors[keyof GetFinanceMasterdataErrors];
 
 export type GetFinanceMasterdataResponses = {
     /**
@@ -16832,7 +16959,8 @@ export type GetFinanceMasterdataResponses = {
     };
 };
 
-export type GetFinanceMasterdataResponse = GetFinanceMasterdataResponses[keyof GetFinanceMasterdataResponses];
+export type GetFinanceMasterdataResponse =
+    GetFinanceMasterdataResponses[keyof GetFinanceMasterdataResponses];
 
 export type PostFinanceReportsTurnoverData = {
     body: {
@@ -17124,7 +17252,8 @@ export type GetFinanceTaxratesResponses = {
     };
 };
 
-export type GetFinanceTaxratesResponse = GetFinanceTaxratesResponses[keyof GetFinanceTaxratesResponses];
+export type GetFinanceTaxratesResponse =
+    GetFinanceTaxratesResponses[keyof GetFinanceTaxratesResponses];
 
 export type PostFinanceTaxratesData = {
     /**
@@ -17158,7 +17287,8 @@ export type PostFinanceTaxratesResponses = {
     };
 };
 
-export type PostFinanceTaxratesResponse = PostFinanceTaxratesResponses[keyof PostFinanceTaxratesResponses];
+export type PostFinanceTaxratesResponse =
+    PostFinanceTaxratesResponses[keyof PostFinanceTaxratesResponses];
 
 export type DeleteFinanceTaxratesIdData = {
     body?: never;
@@ -17222,7 +17352,8 @@ export type DeleteFinanceTaxratesIdErrors = {
     };
 };
 
-export type DeleteFinanceTaxratesIdError = DeleteFinanceTaxratesIdErrors[keyof DeleteFinanceTaxratesIdErrors];
+export type DeleteFinanceTaxratesIdError =
+    DeleteFinanceTaxratesIdErrors[keyof DeleteFinanceTaxratesIdErrors];
 
 export type DeleteFinanceTaxratesIdResponses = {
     /**
@@ -17231,7 +17362,8 @@ export type DeleteFinanceTaxratesIdResponses = {
     204: void;
 };
 
-export type DeleteFinanceTaxratesIdResponse = DeleteFinanceTaxratesIdResponses[keyof DeleteFinanceTaxratesIdResponses];
+export type DeleteFinanceTaxratesIdResponse =
+    DeleteFinanceTaxratesIdResponses[keyof DeleteFinanceTaxratesIdResponses];
 
 export type GetFinanceTaxratesIdData = {
     body?: never;
@@ -17260,7 +17392,8 @@ export type GetFinanceTaxratesIdErrors = {
     404: unknown;
 };
 
-export type GetFinanceTaxratesIdError = GetFinanceTaxratesIdErrors[keyof GetFinanceTaxratesIdErrors];
+export type GetFinanceTaxratesIdError =
+    GetFinanceTaxratesIdErrors[keyof GetFinanceTaxratesIdErrors];
 
 export type GetFinanceTaxratesIdResponses = {
     /**
@@ -17271,7 +17404,8 @@ export type GetFinanceTaxratesIdResponses = {
     };
 };
 
-export type GetFinanceTaxratesIdResponse = GetFinanceTaxratesIdResponses[keyof GetFinanceTaxratesIdResponses];
+export type GetFinanceTaxratesIdResponse =
+    GetFinanceTaxratesIdResponses[keyof GetFinanceTaxratesIdResponses];
 
 export type PutFinanceTaxratesIdData = {
     /**
@@ -17303,7 +17437,8 @@ export type PutFinanceTaxratesIdErrors = {
     404: unknown;
 };
 
-export type PutFinanceTaxratesIdError = PutFinanceTaxratesIdErrors[keyof PutFinanceTaxratesIdErrors];
+export type PutFinanceTaxratesIdError =
+    PutFinanceTaxratesIdErrors[keyof PutFinanceTaxratesIdErrors];
 
 export type PutFinanceTaxratesIdResponses = {
     /**
@@ -17314,7 +17449,8 @@ export type PutFinanceTaxratesIdResponses = {
     };
 };
 
-export type PutFinanceTaxratesIdResponse = PutFinanceTaxratesIdResponses[keyof PutFinanceTaxratesIdResponses];
+export type PutFinanceTaxratesIdResponse =
+    PutFinanceTaxratesIdResponses[keyof PutFinanceTaxratesIdResponses];
 
 export type GetFinanceTaxtypesData = {
     body?: never;
@@ -17345,7 +17481,8 @@ export type GetFinanceTaxtypesResponses = {
     };
 };
 
-export type GetFinanceTaxtypesResponse = GetFinanceTaxtypesResponses[keyof GetFinanceTaxtypesResponses];
+export type GetFinanceTaxtypesResponse =
+    GetFinanceTaxtypesResponses[keyof GetFinanceTaxtypesResponses];
 
 export type PostFinanceTaxtypesData = {
     /**
@@ -17379,7 +17516,8 @@ export type PostFinanceTaxtypesResponses = {
     };
 };
 
-export type PostFinanceTaxtypesResponse = PostFinanceTaxtypesResponses[keyof PostFinanceTaxtypesResponses];
+export type PostFinanceTaxtypesResponse =
+    PostFinanceTaxtypesResponses[keyof PostFinanceTaxtypesResponses];
 
 export type DeleteFinanceTaxtypesIdData = {
     body?: never;
@@ -17443,7 +17581,8 @@ export type DeleteFinanceTaxtypesIdErrors = {
     };
 };
 
-export type DeleteFinanceTaxtypesIdError = DeleteFinanceTaxtypesIdErrors[keyof DeleteFinanceTaxtypesIdErrors];
+export type DeleteFinanceTaxtypesIdError =
+    DeleteFinanceTaxtypesIdErrors[keyof DeleteFinanceTaxtypesIdErrors];
 
 export type DeleteFinanceTaxtypesIdResponses = {
     /**
@@ -17452,7 +17591,8 @@ export type DeleteFinanceTaxtypesIdResponses = {
     204: void;
 };
 
-export type DeleteFinanceTaxtypesIdResponse = DeleteFinanceTaxtypesIdResponses[keyof DeleteFinanceTaxtypesIdResponses];
+export type DeleteFinanceTaxtypesIdResponse =
+    DeleteFinanceTaxtypesIdResponses[keyof DeleteFinanceTaxtypesIdResponses];
 
 export type GetFinanceTaxtypesIdData = {
     body?: never;
@@ -17481,7 +17621,8 @@ export type GetFinanceTaxtypesIdErrors = {
     404: unknown;
 };
 
-export type GetFinanceTaxtypesIdError = GetFinanceTaxtypesIdErrors[keyof GetFinanceTaxtypesIdErrors];
+export type GetFinanceTaxtypesIdError =
+    GetFinanceTaxtypesIdErrors[keyof GetFinanceTaxtypesIdErrors];
 
 export type GetFinanceTaxtypesIdResponses = {
     /**
@@ -17492,7 +17633,8 @@ export type GetFinanceTaxtypesIdResponses = {
     };
 };
 
-export type GetFinanceTaxtypesIdResponse = GetFinanceTaxtypesIdResponses[keyof GetFinanceTaxtypesIdResponses];
+export type GetFinanceTaxtypesIdResponse =
+    GetFinanceTaxtypesIdResponses[keyof GetFinanceTaxtypesIdResponses];
 
 export type PutFinanceTaxtypesIdData = {
     /**
@@ -17524,7 +17666,8 @@ export type PutFinanceTaxtypesIdErrors = {
     404: unknown;
 };
 
-export type PutFinanceTaxtypesIdError = PutFinanceTaxtypesIdErrors[keyof PutFinanceTaxtypesIdErrors];
+export type PutFinanceTaxtypesIdError =
+    PutFinanceTaxtypesIdErrors[keyof PutFinanceTaxtypesIdErrors];
 
 export type PutFinanceTaxtypesIdResponses = {
     /**
@@ -17535,7 +17678,8 @@ export type PutFinanceTaxtypesIdResponses = {
     };
 };
 
-export type PutFinanceTaxtypesIdResponse = PutFinanceTaxtypesIdResponses[keyof PutFinanceTaxtypesIdResponses];
+export type PutFinanceTaxtypesIdResponse =
+    PutFinanceTaxtypesIdResponses[keyof PutFinanceTaxtypesIdResponses];
 
 export type GetFinanceTemplatesData = {
     body?: never;
@@ -17571,7 +17715,8 @@ export type GetFinanceTemplatesResponses = {
     };
 };
 
-export type GetFinanceTemplatesResponse = GetFinanceTemplatesResponses[keyof GetFinanceTemplatesResponses];
+export type GetFinanceTemplatesResponse =
+    GetFinanceTemplatesResponses[keyof GetFinanceTemplatesResponses];
 
 export type GetFinanceTemplatesExportData = {
     body?: never;
@@ -17600,7 +17745,8 @@ export type GetFinanceTemplatesExportErrors = {
     404: unknown;
 };
 
-export type GetFinanceTemplatesExportError = GetFinanceTemplatesExportErrors[keyof GetFinanceTemplatesExportErrors];
+export type GetFinanceTemplatesExportError =
+    GetFinanceTemplatesExportErrors[keyof GetFinanceTemplatesExportErrors];
 
 export type GetFinanceTemplatesExportResponses = {
     /**
@@ -17641,7 +17787,8 @@ export type PostFinanceTemplatesIdErrors = {
     404: unknown;
 };
 
-export type PostFinanceTemplatesIdError = PostFinanceTemplatesIdErrors[keyof PostFinanceTemplatesIdErrors];
+export type PostFinanceTemplatesIdError =
+    PostFinanceTemplatesIdErrors[keyof PostFinanceTemplatesIdErrors];
 
 export type PostFinanceTemplatesIdResponses = {
     /**
@@ -17650,7 +17797,8 @@ export type PostFinanceTemplatesIdResponses = {
     204: void;
 };
 
-export type PostFinanceTemplatesIdResponse = PostFinanceTemplatesIdResponses[keyof PostFinanceTemplatesIdResponses];
+export type PostFinanceTemplatesIdResponse =
+    PostFinanceTemplatesIdResponses[keyof PostFinanceTemplatesIdResponses];
 
 export type GetFinanceTransactionpurposesData = {
     body?: never;
@@ -17956,7 +18104,8 @@ export type GetFinanceTransactionsErrors = {
     403: unknown;
 };
 
-export type GetFinanceTransactionsError = GetFinanceTransactionsErrors[keyof GetFinanceTransactionsErrors];
+export type GetFinanceTransactionsError =
+    GetFinanceTransactionsErrors[keyof GetFinanceTransactionsErrors];
 
 export type GetFinanceTransactionsResponses = {
     /**
@@ -17968,7 +18117,8 @@ export type GetFinanceTransactionsResponses = {
     };
 };
 
-export type GetFinanceTransactionsResponse = GetFinanceTransactionsResponses[keyof GetFinanceTransactionsResponses];
+export type GetFinanceTransactionsResponse =
+    GetFinanceTransactionsResponses[keyof GetFinanceTransactionsResponses];
 
 export type PatchFinanceTransactionsData = {
     /**
@@ -18108,7 +18258,8 @@ export type PostFinanceTransactionsResponses = {
     };
 };
 
-export type PostFinanceTransactionsResponse = PostFinanceTransactionsResponses[keyof PostFinanceTransactionsResponses];
+export type PostFinanceTransactionsResponse =
+    PostFinanceTransactionsResponses[keyof PostFinanceTransactionsResponses];
 
 export type PostFinanceTransactionsBulkcreateData = {
     body?: never;
@@ -18376,7 +18527,8 @@ export type GetFinanceTransactionsIdErrors = {
     404: unknown;
 };
 
-export type GetFinanceTransactionsIdError = GetFinanceTransactionsIdErrors[keyof GetFinanceTransactionsIdErrors];
+export type GetFinanceTransactionsIdError =
+    GetFinanceTransactionsIdErrors[keyof GetFinanceTransactionsIdErrors];
 
 export type GetFinanceTransactionsIdResponses = {
     /**
@@ -18425,7 +18577,8 @@ export type PutFinanceTransactionsIdErrors = {
     404: unknown;
 };
 
-export type PutFinanceTransactionsIdError = PutFinanceTransactionsIdErrors[keyof PutFinanceTransactionsIdErrors];
+export type PutFinanceTransactionsIdError =
+    PutFinanceTransactionsIdErrors[keyof PutFinanceTransactionsIdErrors];
 
 export type PutFinanceTransactionsIdResponses = {
     /**
@@ -18556,7 +18709,8 @@ export type DeleteFollowupsFollowUpIdErrors = {
     404: unknown;
 };
 
-export type DeleteFollowupsFollowUpIdError = DeleteFollowupsFollowUpIdErrors[keyof DeleteFollowupsFollowUpIdErrors];
+export type DeleteFollowupsFollowUpIdError =
+    DeleteFollowupsFollowUpIdErrors[keyof DeleteFollowupsFollowUpIdErrors];
 
 export type DeleteFollowupsFollowUpIdResponses = {
     /**
@@ -18595,7 +18749,8 @@ export type GetFollowupsFollowUpIdErrors = {
     404: unknown;
 };
 
-export type GetFollowupsFollowUpIdError = GetFollowupsFollowUpIdErrors[keyof GetFollowupsFollowUpIdErrors];
+export type GetFollowupsFollowUpIdError =
+    GetFollowupsFollowUpIdErrors[keyof GetFollowupsFollowUpIdErrors];
 
 export type GetFollowupsFollowUpIdResponses = {
     /**
@@ -18606,7 +18761,8 @@ export type GetFollowupsFollowUpIdResponses = {
     };
 };
 
-export type GetFollowupsFollowUpIdResponse = GetFollowupsFollowUpIdResponses[keyof GetFollowupsFollowUpIdResponses];
+export type GetFollowupsFollowUpIdResponse =
+    GetFollowupsFollowUpIdResponses[keyof GetFollowupsFollowUpIdResponses];
 
 export type PutFollowupsFollowUpIdData = {
     body: FollowUpCreate;
@@ -18635,7 +18791,8 @@ export type PutFollowupsFollowUpIdErrors = {
     404: unknown;
 };
 
-export type PutFollowupsFollowUpIdError = PutFollowupsFollowUpIdErrors[keyof PutFollowupsFollowUpIdErrors];
+export type PutFollowupsFollowUpIdError =
+    PutFollowupsFollowUpIdErrors[keyof PutFollowupsFollowUpIdErrors];
 
 export type PutFollowupsFollowUpIdResponses = {
     /**
@@ -18646,7 +18803,8 @@ export type PutFollowupsFollowUpIdResponses = {
     };
 };
 
-export type PutFollowupsFollowUpIdResponse = PutFollowupsFollowUpIdResponses[keyof PutFollowupsFollowUpIdResponses];
+export type PutFollowupsFollowUpIdResponse =
+    PutFollowupsFollowUpIdResponses[keyof PutFollowupsFollowUpIdResponses];
 
 export type PostFollowupsFollowUpIdCompleteData = {
     body?: {
@@ -19105,7 +19263,8 @@ export type GetGroupAgegroupsResponses = {
     };
 };
 
-export type GetGroupAgegroupsResponse = GetGroupAgegroupsResponses[keyof GetGroupAgegroupsResponses];
+export type GetGroupAgegroupsResponse =
+    GetGroupAgegroupsResponses[keyof GetGroupAgegroupsResponses];
 
 export type PostGroupAgegroupsData = {
     body: AgeGroupCreate;
@@ -19136,7 +19295,8 @@ export type PostGroupAgegroupsResponses = {
     };
 };
 
-export type PostGroupAgegroupsResponse = PostGroupAgegroupsResponses[keyof PostGroupAgegroupsResponses];
+export type PostGroupAgegroupsResponse =
+    PostGroupAgegroupsResponses[keyof PostGroupAgegroupsResponses];
 
 export type DeleteGroupAgegroupsAgeGroupIdData = {
     body?: never;
@@ -19301,7 +19461,8 @@ export type GetGroupGroupcategoriesErrors = {
     403: unknown;
 };
 
-export type GetGroupGroupcategoriesError = GetGroupGroupcategoriesErrors[keyof GetGroupGroupcategoriesErrors];
+export type GetGroupGroupcategoriesError =
+    GetGroupGroupcategoriesErrors[keyof GetGroupGroupcategoriesErrors];
 
 export type GetGroupGroupcategoriesResponses = {
     /**
@@ -19313,7 +19474,8 @@ export type GetGroupGroupcategoriesResponses = {
     };
 };
 
-export type GetGroupGroupcategoriesResponse = GetGroupGroupcategoriesResponses[keyof GetGroupGroupcategoriesResponses];
+export type GetGroupGroupcategoriesResponse =
+    GetGroupGroupcategoriesResponses[keyof GetGroupGroupcategoriesResponses];
 
 export type PostGroupGroupcategoriesData = {
     body: GroupCategoryCreate;
@@ -19333,7 +19495,8 @@ export type PostGroupGroupcategoriesErrors = {
     403: unknown;
 };
 
-export type PostGroupGroupcategoriesError = PostGroupGroupcategoriesErrors[keyof PostGroupGroupcategoriesErrors];
+export type PostGroupGroupcategoriesError =
+    PostGroupGroupcategoriesErrors[keyof PostGroupGroupcategoriesErrors];
 
 export type PostGroupGroupcategoriesResponses = {
     /**
@@ -19522,7 +19685,8 @@ export type GetGroupGrouptypesResponses = {
     };
 };
 
-export type GetGroupGrouptypesResponse = GetGroupGrouptypesResponses[keyof GetGroupGrouptypesResponses];
+export type GetGroupGrouptypesResponse =
+    GetGroupGrouptypesResponses[keyof GetGroupGrouptypesResponses];
 
 export type PostGroupGrouptypesData = {
     body: GroupTypeCreate;
@@ -19553,7 +19717,8 @@ export type PostGroupGrouptypesResponses = {
     };
 };
 
-export type PostGroupGrouptypesResponse = PostGroupGrouptypesResponses[keyof PostGroupGrouptypesResponses];
+export type PostGroupGrouptypesResponse =
+    PostGroupGrouptypesResponses[keyof PostGroupGrouptypesResponses];
 
 export type DeleteGroupGrouptypesGroupTypeIdData = {
     body?: never;
@@ -19720,7 +19885,8 @@ export type GetGroupMeetingtemplatesErrors = {
     403: unknown;
 };
 
-export type GetGroupMeetingtemplatesError = GetGroupMeetingtemplatesErrors[keyof GetGroupMeetingtemplatesErrors];
+export type GetGroupMeetingtemplatesError =
+    GetGroupMeetingtemplatesErrors[keyof GetGroupMeetingtemplatesErrors];
 
 export type GetGroupMeetingtemplatesResponses = {
     /**
@@ -19753,7 +19919,8 @@ export type PostGroupMeetingtemplatesErrors = {
     403: unknown;
 };
 
-export type PostGroupMeetingtemplatesError = PostGroupMeetingtemplatesErrors[keyof PostGroupMeetingtemplatesErrors];
+export type PostGroupMeetingtemplatesError =
+    PostGroupMeetingtemplatesErrors[keyof PostGroupMeetingtemplatesErrors];
 
 export type PostGroupMeetingtemplatesResponses = {
     /**
@@ -19930,7 +20097,8 @@ export type GetGroupMemberstatusErrors = {
     403: unknown;
 };
 
-export type GetGroupMemberstatusError = GetGroupMemberstatusErrors[keyof GetGroupMemberstatusErrors];
+export type GetGroupMemberstatusError =
+    GetGroupMemberstatusErrors[keyof GetGroupMemberstatusErrors];
 
 export type GetGroupMemberstatusResponses = {
     /**
@@ -19944,7 +20112,8 @@ export type GetGroupMemberstatusResponses = {
     };
 };
 
-export type GetGroupMemberstatusResponse = GetGroupMemberstatusResponses[keyof GetGroupMemberstatusResponses];
+export type GetGroupMemberstatusResponse =
+    GetGroupMemberstatusResponses[keyof GetGroupMemberstatusResponses];
 
 export type GetGroupRolesData = {
     body?: never;
@@ -20070,7 +20239,8 @@ export type DeleteGroupRolesRoleIdErrors = {
     };
 };
 
-export type DeleteGroupRolesRoleIdError = DeleteGroupRolesRoleIdErrors[keyof DeleteGroupRolesRoleIdErrors];
+export type DeleteGroupRolesRoleIdError =
+    DeleteGroupRolesRoleIdErrors[keyof DeleteGroupRolesRoleIdErrors];
 
 export type DeleteGroupRolesRoleIdResponses = {
     /**
@@ -20079,7 +20249,8 @@ export type DeleteGroupRolesRoleIdResponses = {
     204: void;
 };
 
-export type DeleteGroupRolesRoleIdResponse = DeleteGroupRolesRoleIdResponses[keyof DeleteGroupRolesRoleIdResponses];
+export type DeleteGroupRolesRoleIdResponse =
+    DeleteGroupRolesRoleIdResponses[keyof DeleteGroupRolesRoleIdResponses];
 
 export type GetGroupRolesRoleIdData = {
     body?: never;
@@ -20116,7 +20287,8 @@ export type GetGroupRolesRoleIdResponses = {
     };
 };
 
-export type GetGroupRolesRoleIdResponse = GetGroupRolesRoleIdResponses[keyof GetGroupRolesRoleIdResponses];
+export type GetGroupRolesRoleIdResponse =
+    GetGroupRolesRoleIdResponses[keyof GetGroupRolesRoleIdResponses];
 
 export type PutGroupRolesRoleIdData = {
     body: RoleUpdate;
@@ -20151,7 +20323,8 @@ export type PutGroupRolesRoleIdResponses = {
     204: void;
 };
 
-export type PutGroupRolesRoleIdResponse = PutGroupRolesRoleIdResponses[keyof PutGroupRolesRoleIdResponses];
+export type PutGroupRolesRoleIdResponse =
+    PutGroupRolesRoleIdResponses[keyof PutGroupRolesRoleIdResponses];
 
 export type GetGroupTargetgroupsData = {
     body?: never;
@@ -20171,7 +20344,8 @@ export type GetGroupTargetgroupsErrors = {
     403: unknown;
 };
 
-export type GetGroupTargetgroupsError = GetGroupTargetgroupsErrors[keyof GetGroupTargetgroupsErrors];
+export type GetGroupTargetgroupsError =
+    GetGroupTargetgroupsErrors[keyof GetGroupTargetgroupsErrors];
 
 export type GetGroupTargetgroupsResponses = {
     /**
@@ -20183,7 +20357,8 @@ export type GetGroupTargetgroupsResponses = {
     };
 };
 
-export type GetGroupTargetgroupsResponse = GetGroupTargetgroupsResponses[keyof GetGroupTargetgroupsResponses];
+export type GetGroupTargetgroupsResponse =
+    GetGroupTargetgroupsResponses[keyof GetGroupTargetgroupsResponses];
 
 export type PostGroupTargetgroupsData = {
     body: TargetGroupCreate;
@@ -20203,7 +20378,8 @@ export type PostGroupTargetgroupsErrors = {
     403: unknown;
 };
 
-export type PostGroupTargetgroupsError = PostGroupTargetgroupsErrors[keyof PostGroupTargetgroupsErrors];
+export type PostGroupTargetgroupsError =
+    PostGroupTargetgroupsErrors[keyof PostGroupTargetgroupsErrors];
 
 export type PostGroupTargetgroupsResponses = {
     /**
@@ -20214,7 +20390,8 @@ export type PostGroupTargetgroupsResponses = {
     };
 };
 
-export type PostGroupTargetgroupsResponse = PostGroupTargetgroupsResponses[keyof PostGroupTargetgroupsResponses];
+export type PostGroupTargetgroupsResponse =
+    PostGroupTargetgroupsResponses[keyof PostGroupTargetgroupsResponses];
 
 export type DeleteGroupTargetgroupsTargetGroupIdData = {
     body?: never;
@@ -20378,7 +20555,8 @@ export type GetGrouphomepagesResponses = {
     };
 };
 
-export type GetGrouphomepagesResponse = GetGrouphomepagesResponses[keyof GetGrouphomepagesResponses];
+export type GetGrouphomepagesResponse =
+    GetGrouphomepagesResponses[keyof GetGrouphomepagesResponses];
 
 export type GetGrouphomepagesHashData = {
     body?: never;
@@ -20412,7 +20590,8 @@ export type GetGrouphomepagesHashResponses = {
     };
 };
 
-export type GetGrouphomepagesHashResponse = GetGrouphomepagesHashResponses[keyof GetGrouphomepagesHashResponses];
+export type GetGrouphomepagesHashResponse =
+    GetGrouphomepagesHashResponses[keyof GetGrouphomepagesHashResponses];
 
 export type GetGroupsData = {
     body?: never;
@@ -20779,7 +20958,8 @@ export type GetGroupsHierarchiesErrors = {
     403: unknown;
 };
 
-export type GetGroupsHierarchiesError = GetGroupsHierarchiesErrors[keyof GetGroupsHierarchiesErrors];
+export type GetGroupsHierarchiesError =
+    GetGroupsHierarchiesErrors[keyof GetGroupsHierarchiesErrors];
 
 export type GetGroupsHierarchiesResponses = {
     /**
@@ -20790,7 +20970,8 @@ export type GetGroupsHierarchiesResponses = {
     };
 };
 
-export type GetGroupsHierarchiesResponse = GetGroupsHierarchiesResponses[keyof GetGroupsHierarchiesResponses];
+export type GetGroupsHierarchiesResponse =
+    GetGroupsHierarchiesResponses[keyof GetGroupsHierarchiesResponses];
 
 export type GetGroupsIdsData = {
     body?: never;
@@ -21008,7 +21189,8 @@ export type DeleteGroupsGroupIdResponses = {
     204: void;
 };
 
-export type DeleteGroupsGroupIdResponse = DeleteGroupsGroupIdResponses[keyof DeleteGroupsGroupIdResponses];
+export type DeleteGroupsGroupIdResponse =
+    DeleteGroupsGroupIdResponses[keyof DeleteGroupsGroupIdResponses];
 
 export type GetGroupsGroupIdData = {
     body?: never;
@@ -21159,7 +21341,8 @@ export type GetGroupsAbsencesResponses = {
     };
 };
 
-export type GetGroupsAbsencesResponse = GetGroupsAbsencesResponses[keyof GetGroupsAbsencesResponses];
+export type GetGroupsAbsencesResponse =
+    GetGroupsAbsencesResponses[keyof GetGroupsAbsencesResponses];
 
 export type PostGroupsIdChatData = {
     body: StartStopChat;
@@ -21348,7 +21531,8 @@ export type GetGroupsGroupIdChildrenErrors = {
     404: unknown;
 };
 
-export type GetGroupsGroupIdChildrenError = GetGroupsGroupIdChildrenErrors[keyof GetGroupsGroupIdChildrenErrors];
+export type GetGroupsGroupIdChildrenError =
+    GetGroupsGroupIdChildrenErrors[keyof GetGroupsGroupIdChildrenErrors];
 
 export type GetGroupsGroupIdChildrenResponses = {
     /**
@@ -21471,7 +21655,8 @@ export type PostGroupsIdDuplicateResponses = {
     };
 };
 
-export type PostGroupsIdDuplicateResponse = PostGroupsIdDuplicateResponses[keyof PostGroupsIdDuplicateResponses];
+export type PostGroupsIdDuplicateResponse =
+    PostGroupsIdDuplicateResponses[keyof PostGroupsIdDuplicateResponses];
 
 export type GetGroupsIdEmailsData = {
     body?: never;
@@ -21514,7 +21699,8 @@ export type GetGroupsIdEmailsResponses = {
     };
 };
 
-export type GetGroupsIdEmailsResponse = GetGroupsIdEmailsResponses[keyof GetGroupsIdEmailsResponses];
+export type GetGroupsIdEmailsResponse =
+    GetGroupsIdEmailsResponses[keyof GetGroupsIdEmailsResponses];
 
 export type PostGroupsIdEmailsData = {
     body: {
@@ -21572,7 +21758,8 @@ export type PostGroupsIdEmailsResponses = {
     };
 };
 
-export type PostGroupsIdEmailsResponse = PostGroupsIdEmailsResponses[keyof PostGroupsIdEmailsResponses];
+export type PostGroupsIdEmailsResponse =
+    PostGroupsIdEmailsResponses[keyof PostGroupsIdEmailsResponses];
 
 export type DeleteGroupsIdEmailsIdData = {
     body?: never;
@@ -21613,7 +21800,8 @@ export type DeleteGroupsIdEmailsIdResponses = {
     204: void;
 };
 
-export type DeleteGroupsIdEmailsIdResponse = DeleteGroupsIdEmailsIdResponses[keyof DeleteGroupsIdEmailsIdResponses];
+export type DeleteGroupsIdEmailsIdResponse =
+    DeleteGroupsIdEmailsIdResponses[keyof DeleteGroupsIdEmailsIdResponses];
 
 export type GetGroupsIdEmailsIdData = {
     body?: never;
@@ -21656,7 +21844,8 @@ export type GetGroupsIdEmailsIdResponses = {
     };
 };
 
-export type GetGroupsIdEmailsIdResponse = GetGroupsIdEmailsIdResponses[keyof GetGroupsIdEmailsIdResponses];
+export type GetGroupsIdEmailsIdResponse =
+    GetGroupsIdEmailsIdResponses[keyof GetGroupsIdEmailsIdResponses];
 
 export type PutGroupsIdEmailsIdData = {
     body: {
@@ -21955,7 +22144,8 @@ export type GetGroupsIdMeetingsResponses = {
     };
 };
 
-export type GetGroupsIdMeetingsResponse = GetGroupsIdMeetingsResponses[keyof GetGroupsIdMeetingsResponses];
+export type GetGroupsIdMeetingsResponse =
+    GetGroupsIdMeetingsResponses[keyof GetGroupsIdMeetingsResponses];
 
 export type PostGroupsIdMeetingsData = {
     body: {
@@ -21989,7 +22179,8 @@ export type PostGroupsIdMeetingsErrors = {
     403: unknown;
 };
 
-export type PostGroupsIdMeetingsError = PostGroupsIdMeetingsErrors[keyof PostGroupsIdMeetingsErrors];
+export type PostGroupsIdMeetingsError =
+    PostGroupsIdMeetingsErrors[keyof PostGroupsIdMeetingsErrors];
 
 export type PostGroupsIdMeetingsResponses = {
     /**
@@ -22000,7 +22191,8 @@ export type PostGroupsIdMeetingsResponses = {
     };
 };
 
-export type PostGroupsIdMeetingsResponse = PostGroupsIdMeetingsResponses[keyof PostGroupsIdMeetingsResponses];
+export type PostGroupsIdMeetingsResponse =
+    PostGroupsIdMeetingsResponses[keyof PostGroupsIdMeetingsResponses];
 
 export type GetGroupsGroupIdMeetingsExportData = {
     body?: never;
@@ -22530,7 +22722,8 @@ export type GetGroupsIdMembersResponses = {
     };
 };
 
-export type GetGroupsIdMembersResponse = GetGroupsIdMembersResponses[keyof GetGroupsIdMembersResponses];
+export type GetGroupsIdMembersResponse =
+    GetGroupsIdMembersResponses[keyof GetGroupsIdMembersResponses];
 
 export type GetGroupsGroupIdMembersExportData = {
     body?: never;
@@ -22595,7 +22788,8 @@ export type PostGroupsIdMembersExportErrors = {
     404: unknown;
 };
 
-export type PostGroupsIdMembersExportError = PostGroupsIdMembersExportErrors[keyof PostGroupsIdMembersExportErrors];
+export type PostGroupsIdMembersExportError =
+    PostGroupsIdMembersExportErrors[keyof PostGroupsIdMembersExportErrors];
 
 export type GetGroupsGroupIdMembersHistoryData = {
     body?: never;
@@ -23376,7 +23570,8 @@ export type GetGroupsGroupIdParentsErrors = {
     404: unknown;
 };
 
-export type GetGroupsGroupIdParentsError = GetGroupsGroupIdParentsErrors[keyof GetGroupsGroupIdParentsErrors];
+export type GetGroupsGroupIdParentsError =
+    GetGroupsGroupIdParentsErrors[keyof GetGroupsGroupIdParentsErrors];
 
 export type GetGroupsGroupIdParentsResponses = {
     /**
@@ -23396,7 +23591,8 @@ export type GetGroupsGroupIdParentsResponses = {
     };
 };
 
-export type GetGroupsGroupIdParentsResponse = GetGroupsGroupIdParentsResponses[keyof GetGroupsGroupIdParentsResponses];
+export type GetGroupsGroupIdParentsResponse =
+    GetGroupsGroupIdParentsResponses[keyof GetGroupsGroupIdParentsResponses];
 
 export type DeleteGroupsGroupIdParentsParentGroupIdData = {
     body?: never;
@@ -23474,7 +23670,8 @@ export type GetGroupsIdPlacesResponses = {
     };
 };
 
-export type GetGroupsIdPlacesResponse = GetGroupsIdPlacesResponses[keyof GetGroupsIdPlacesResponses];
+export type GetGroupsIdPlacesResponse =
+    GetGroupsIdPlacesResponses[keyof GetGroupsIdPlacesResponses];
 
 export type PostGroupsGroupIdPlacesData = {
     body: PlaceCreate;
@@ -23503,7 +23700,8 @@ export type PostGroupsGroupIdPlacesErrors = {
     404: unknown;
 };
 
-export type PostGroupsGroupIdPlacesError = PostGroupsGroupIdPlacesErrors[keyof PostGroupsGroupIdPlacesErrors];
+export type PostGroupsGroupIdPlacesError =
+    PostGroupsGroupIdPlacesErrors[keyof PostGroupsGroupIdPlacesErrors];
 
 export type PostGroupsGroupIdPlacesResponses = {
     /**
@@ -23514,7 +23712,8 @@ export type PostGroupsGroupIdPlacesResponses = {
     };
 };
 
-export type PostGroupsGroupIdPlacesResponse = PostGroupsGroupIdPlacesResponses[keyof PostGroupsGroupIdPlacesResponses];
+export type PostGroupsGroupIdPlacesResponse =
+    PostGroupsGroupIdPlacesResponses[keyof PostGroupsGroupIdPlacesResponses];
 
 export type DeleteGroupsGroupIdPlacesPlaceIdData = {
     body?: never;
@@ -23666,7 +23865,8 @@ export type GetGroupsIdQrcodecheckinErrors = {
     404: unknown;
 };
 
-export type GetGroupsIdQrcodecheckinError = GetGroupsIdQrcodecheckinErrors[keyof GetGroupsIdQrcodecheckinErrors];
+export type GetGroupsIdQrcodecheckinError =
+    GetGroupsIdQrcodecheckinErrors[keyof GetGroupsIdQrcodecheckinErrors];
 
 export type GetGroupsIdQrcodecheckinResponses = {
     /**
@@ -23887,7 +24087,8 @@ export type GetGroupsIdStatisticsErrors = {
     403: unknown;
 };
 
-export type GetGroupsIdStatisticsError = GetGroupsIdStatisticsErrors[keyof GetGroupsIdStatisticsErrors];
+export type GetGroupsIdStatisticsError =
+    GetGroupsIdStatisticsErrors[keyof GetGroupsIdStatisticsErrors];
 
 export type GetGroupsIdStatisticsResponses = {
     /**
@@ -23898,7 +24099,8 @@ export type GetGroupsIdStatisticsResponses = {
     };
 };
 
-export type GetGroupsIdStatisticsResponse = GetGroupsIdStatisticsResponses[keyof GetGroupsIdStatisticsResponses];
+export type GetGroupsIdStatisticsResponse =
+    GetGroupsIdStatisticsResponses[keyof GetGroupsIdStatisticsResponses];
 
 export type GetGroupsGroupIdTagsData = {
     body?: never;
@@ -23927,7 +24129,8 @@ export type GetGroupsGroupIdTagsResponses = {
     };
 };
 
-export type GetGroupsGroupIdTagsResponse = GetGroupsGroupIdTagsResponses[keyof GetGroupsGroupIdTagsResponses];
+export type GetGroupsGroupIdTagsResponse =
+    GetGroupsGroupIdTagsResponses[keyof GetGroupsGroupIdTagsResponses];
 
 export type GetHtmltemplatesData = {
     body?: never;
@@ -23979,7 +24182,8 @@ export type PostHtmltemplatesResponses = {
     };
 };
 
-export type PostHtmltemplatesResponse = PostHtmltemplatesResponses[keyof PostHtmltemplatesResponses];
+export type PostHtmltemplatesResponse =
+    PostHtmltemplatesResponses[keyof PostHtmltemplatesResponses];
 
 export type DeleteHtmltemplatesData = {
     body?: never;
@@ -24004,7 +24208,8 @@ export type DeleteHtmltemplatesResponses = {
     204: void;
 };
 
-export type DeleteHtmltemplatesResponse = DeleteHtmltemplatesResponses[keyof DeleteHtmltemplatesResponses];
+export type DeleteHtmltemplatesResponse =
+    DeleteHtmltemplatesResponses[keyof DeleteHtmltemplatesResponses];
 
 export type GetHtmltemplatesIdData = {
     body?: never;
@@ -24031,7 +24236,8 @@ export type GetHtmltemplatesIdResponses = {
     };
 };
 
-export type GetHtmltemplatesIdResponse = GetHtmltemplatesIdResponses[keyof GetHtmltemplatesIdResponses];
+export type GetHtmltemplatesIdResponse =
+    GetHtmltemplatesIdResponses[keyof GetHtmltemplatesIdResponses];
 
 export type PatchHtmltemplatesData = {
     body: {
@@ -24063,7 +24269,8 @@ export type PatchHtmltemplatesResponses = {
     };
 };
 
-export type PatchHtmltemplatesResponse = PatchHtmltemplatesResponses[keyof PatchHtmltemplatesResponses];
+export type PatchHtmltemplatesResponse =
+    PatchHtmltemplatesResponses[keyof PatchHtmltemplatesResponses];
 
 export type GetHtmltemplatesIdExportData = {
     body?: never;
@@ -24118,7 +24325,8 @@ export type GetHtmltemplatesIdHtmlResponses = {
     };
 };
 
-export type GetHtmltemplatesIdHtmlResponse = GetHtmltemplatesIdHtmlResponses[keyof GetHtmltemplatesIdHtmlResponses];
+export type GetHtmltemplatesIdHtmlResponse =
+    GetHtmltemplatesIdHtmlResponses[keyof GetHtmltemplatesIdHtmlResponses];
 
 export type GetHtmltemplatesIdMjmlData = {
     body?: never;
@@ -24145,7 +24353,8 @@ export type GetHtmltemplatesIdMjmlResponses = {
     };
 };
 
-export type GetHtmltemplatesIdMjmlResponse = GetHtmltemplatesIdMjmlResponses[keyof GetHtmltemplatesIdMjmlResponses];
+export type GetHtmltemplatesIdMjmlResponse =
+    GetHtmltemplatesIdMjmlResponses[keyof GetHtmltemplatesIdMjmlResponses];
 
 export type PutImagesIdOptionsData = {
     body: {
@@ -24179,7 +24388,8 @@ export type PutImagesIdOptionsResponses = {
     };
 };
 
-export type PutImagesIdOptionsResponse = PutImagesIdOptionsResponses[keyof PutImagesIdOptionsResponses];
+export type PutImagesIdOptionsResponse =
+    PutImagesIdOptionsResponses[keyof PutImagesIdOptionsResponses];
 
 export type GetInfoData = {
     body?: never;
@@ -24606,7 +24816,8 @@ export type GetLogsStatisticsLoginResponses = {
     };
 };
 
-export type GetLogsStatisticsLoginResponse = GetLogsStatisticsLoginResponses[keyof GetLogsStatisticsLoginResponses];
+export type GetLogsStatisticsLoginResponse =
+    GetLogsStatisticsLoginResponses[keyof GetLogsStatisticsLoginResponses];
 
 export type GetLogsIdData = {
     body?: never;
@@ -24692,7 +24903,8 @@ export type PostMarkdownCheckResponses = {
     };
 };
 
-export type PostMarkdownCheckResponse = PostMarkdownCheckResponses[keyof PostMarkdownCheckResponses];
+export type PostMarkdownCheckResponse =
+    PostMarkdownCheckResponses[keyof PostMarkdownCheckResponses];
 
 export type PostMarkdownConvertData = {
     body: MarkdownRequest;
@@ -24725,7 +24937,8 @@ export type PostMarkdownConvertResponses = {
     200: Config;
 };
 
-export type PostMarkdownConvertResponse = PostMarkdownConvertResponses[keyof PostMarkdownConvertResponses];
+export type PostMarkdownConvertResponse =
+    PostMarkdownConvertResponses[keyof PostMarkdownConvertResponses];
 
 export type GetMasterdataPersonData = {
     body?: never;
@@ -25100,7 +25313,8 @@ export type DeleteNotesNoteIdResponses = {
     204: void;
 };
 
-export type DeleteNotesNoteIdResponse = DeleteNotesNoteIdResponses[keyof DeleteNotesNoteIdResponses];
+export type DeleteNotesNoteIdResponse =
+    DeleteNotesNoteIdResponses[keyof DeleteNotesNoteIdResponses];
 
 export type PostNpsData = {
     /**
@@ -25262,7 +25476,8 @@ export type GetPermissionsGlobalResponses = {
     };
 };
 
-export type GetPermissionsGlobalResponse = GetPermissionsGlobalResponses[keyof GetPermissionsGlobalResponses];
+export type GetPermissionsGlobalResponse =
+    GetPermissionsGlobalResponses[keyof GetPermissionsGlobalResponses];
 
 export type GetPermissionsInternalGroupsData = {
     body?: never;
@@ -25434,7 +25649,8 @@ export type GetPersonMasterdataResponses = {
     };
 };
 
-export type GetPersonMasterdataResponse = GetPersonMasterdataResponses[keyof GetPersonMasterdataResponses];
+export type GetPersonMasterdataResponse =
+    GetPersonMasterdataResponses[keyof GetPersonMasterdataResponses];
 
 export type GetPersonsData = {
     body?: never;
@@ -25709,7 +25925,8 @@ export type GetPersonsBirthdaysResponses = {
     };
 };
 
-export type GetPersonsBirthdaysResponse = GetPersonsBirthdaysResponses[keyof GetPersonsBirthdaysResponses];
+export type GetPersonsBirthdaysResponse =
+    GetPersonsBirthdaysResponses[keyof GetPersonsBirthdaysResponses];
 
 export type GetPersonsDuplicatesData = {
     body?: never;
@@ -25738,7 +25955,8 @@ export type GetPersonsDuplicatesResponses = {
     };
 };
 
-export type GetPersonsDuplicatesResponse = GetPersonsDuplicatesResponses[keyof GetPersonsDuplicatesResponses];
+export type GetPersonsDuplicatesResponse =
+    GetPersonsDuplicatesResponses[keyof GetPersonsDuplicatesResponses];
 
 export type PostPersonsExportData = {
     body?: never;
@@ -25794,7 +26012,8 @@ export type PostPersonsPropertiesResponses = {
     };
 };
 
-export type PostPersonsPropertiesResponse = PostPersonsPropertiesResponses[keyof PostPersonsPropertiesResponses];
+export type PostPersonsPropertiesResponse =
+    PostPersonsPropertiesResponses[keyof PostPersonsPropertiesResponses];
 
 export type GetPersonsRelationshipsData = {
     body?: never;
@@ -25810,7 +26029,8 @@ export type GetPersonsRelationshipsErrors = {
     401: string;
 };
 
-export type GetPersonsRelationshipsError = GetPersonsRelationshipsErrors[keyof GetPersonsRelationshipsErrors];
+export type GetPersonsRelationshipsError =
+    GetPersonsRelationshipsErrors[keyof GetPersonsRelationshipsErrors];
 
 export type GetPersonsRelationshipsResponses = {
     /**
@@ -25849,7 +26069,8 @@ export type GetPersonsRelationshipsResponses = {
     };
 };
 
-export type GetPersonsRelationshipsResponse = GetPersonsRelationshipsResponses[keyof GetPersonsRelationshipsResponses];
+export type GetPersonsRelationshipsResponse =
+    GetPersonsRelationshipsResponses[keyof GetPersonsRelationshipsResponses];
 
 export type GetPersonsSearchOldData = {
     body?: never;
@@ -26092,7 +26313,8 @@ export type GetPersonsAbsencesResponses = {
     };
 };
 
-export type GetPersonsAbsencesResponse = GetPersonsAbsencesResponses[keyof GetPersonsAbsencesResponses];
+export type GetPersonsAbsencesResponse =
+    GetPersonsAbsencesResponses[keyof GetPersonsAbsencesResponses];
 
 export type PostPersonsAbsencesData = {
     /**
@@ -26134,7 +26356,8 @@ export type PostPersonsAbsencesResponses = {
     };
 };
 
-export type PostPersonsAbsencesResponse = PostPersonsAbsencesResponses[keyof PostPersonsAbsencesResponses];
+export type PostPersonsAbsencesResponse =
+    PostPersonsAbsencesResponses[keyof PostPersonsAbsencesResponses];
 
 export type DeletePersonsAbsenceData = {
     body?: never;
@@ -26170,7 +26393,8 @@ export type DeletePersonsAbsenceResponses = {
     204: void;
 };
 
-export type DeletePersonsAbsenceResponse = DeletePersonsAbsenceResponses[keyof DeletePersonsAbsenceResponses];
+export type DeletePersonsAbsenceResponse =
+    DeletePersonsAbsenceResponses[keyof DeletePersonsAbsenceResponses];
 
 export type GetPersonsAbsenceData = {
     body?: never;
@@ -26212,7 +26436,8 @@ export type GetPersonsAbsenceResponses = {
     };
 };
 
-export type GetPersonsAbsenceResponse = GetPersonsAbsenceResponses[keyof GetPersonsAbsenceResponses];
+export type GetPersonsAbsenceResponse =
+    GetPersonsAbsenceResponses[keyof GetPersonsAbsenceResponses];
 
 export type PutPersonsAbsenceData = {
     /**
@@ -26274,7 +26499,8 @@ export type PutPersonsAbsenceResponses = {
     };
 };
 
-export type PutPersonsAbsenceResponse = PutPersonsAbsenceResponses[keyof PutPersonsAbsenceResponses];
+export type PutPersonsAbsenceResponse =
+    PutPersonsAbsenceResponses[keyof PutPersonsAbsenceResponses];
 
 export type PostPersonsPersonIdArchiveData = {
     body: {
@@ -26326,7 +26552,8 @@ export type GetPersonsPersonIdDevicesErrors = {
     403: unknown;
 };
 
-export type GetPersonsPersonIdDevicesError = GetPersonsPersonIdDevicesErrors[keyof GetPersonsPersonIdDevicesErrors];
+export type GetPersonsPersonIdDevicesError =
+    GetPersonsPersonIdDevicesErrors[keyof GetPersonsPersonIdDevicesErrors];
 
 export type GetPersonsPersonIdDevicesResponses = {
     /**
@@ -26508,7 +26735,8 @@ export type GetPersonsIdEventsResponses = {
     };
 };
 
-export type GetPersonsIdEventsResponse = GetPersonsIdEventsResponses[keyof GetPersonsIdEventsResponses];
+export type GetPersonsIdEventsResponse =
+    GetPersonsIdEventsResponses[keyof GetPersonsIdEventsResponses];
 
 export type GetPersonsIdEventsIdServicesData = {
     body?: never;
@@ -26930,7 +27158,8 @@ export type GetPersonsIdGroupsResponses = {
     };
 };
 
-export type GetPersonsIdGroupsResponse = GetPersonsIdGroupsResponses[keyof GetPersonsIdGroupsResponses];
+export type GetPersonsIdGroupsResponse =
+    GetPersonsIdGroupsResponses[keyof GetPersonsIdGroupsResponses];
 
 export type PostPersonsIdInviteData = {
     body?: never;
@@ -26975,7 +27204,8 @@ export type PostPersonsIdInviteResponses = {
     204: void;
 };
 
-export type PostPersonsIdInviteResponse = PostPersonsIdInviteResponses[keyof PostPersonsIdInviteResponses];
+export type PostPersonsIdInviteResponse =
+    PostPersonsIdInviteResponses[keyof PostPersonsIdInviteResponses];
 
 export type GetPersonsIdLoginstringData = {
     body?: never;
@@ -27001,7 +27231,8 @@ export type GetPersonsIdLoginstringErrors = {
     404: unknown;
 };
 
-export type GetPersonsIdLoginstringError = GetPersonsIdLoginstringErrors[keyof GetPersonsIdLoginstringErrors];
+export type GetPersonsIdLoginstringError =
+    GetPersonsIdLoginstringErrors[keyof GetPersonsIdLoginstringErrors];
 
 export type GetPersonsIdLoginstringResponses = {
     /**
@@ -27013,7 +27244,8 @@ export type GetPersonsIdLoginstringResponses = {
     };
 };
 
-export type GetPersonsIdLoginstringResponse = GetPersonsIdLoginstringResponses[keyof GetPersonsIdLoginstringResponses];
+export type GetPersonsIdLoginstringResponse =
+    GetPersonsIdLoginstringResponses[keyof GetPersonsIdLoginstringResponses];
 
 export type DeletePersonsIdLogintokenData = {
     body?: never;
@@ -27042,7 +27274,8 @@ export type DeletePersonsIdLogintokenErrors = {
     404: unknown;
 };
 
-export type DeletePersonsIdLogintokenError = DeletePersonsIdLogintokenErrors[keyof DeletePersonsIdLogintokenErrors];
+export type DeletePersonsIdLogintokenError =
+    DeletePersonsIdLogintokenErrors[keyof DeletePersonsIdLogintokenErrors];
 
 export type DeletePersonsIdLogintokenResponses = {
     /**
@@ -27097,7 +27330,8 @@ export type GetPersonsIdLogintokenResponses = {
     };
 };
 
-export type GetPersonsIdLogintokenResponse = GetPersonsIdLogintokenResponses[keyof GetPersonsIdLogintokenResponses];
+export type GetPersonsIdLogintokenResponse =
+    GetPersonsIdLogintokenResponses[keyof GetPersonsIdLogintokenResponses];
 
 export type GetPersonsPersonidMergeDuplicateidData = {
     body?: never;
@@ -27194,7 +27428,8 @@ export type PutPersonsIdPasswordErrors = {
     404: unknown;
 };
 
-export type PutPersonsIdPasswordError = PutPersonsIdPasswordErrors[keyof PutPersonsIdPasswordErrors];
+export type PutPersonsIdPasswordError =
+    PutPersonsIdPasswordErrors[keyof PutPersonsIdPasswordErrors];
 
 export type GetPersonsPersonIdPostsData = {
     body?: never;
@@ -27233,7 +27468,8 @@ export type GetPersonsPersonIdPostsErrors = {
     401: string;
 };
 
-export type GetPersonsPersonIdPostsError = GetPersonsPersonIdPostsErrors[keyof GetPersonsPersonIdPostsErrors];
+export type GetPersonsPersonIdPostsError =
+    GetPersonsPersonIdPostsErrors[keyof GetPersonsPersonIdPostsErrors];
 
 export type GetPersonsPersonIdPostsResponses = {
     /**
@@ -27244,7 +27480,8 @@ export type GetPersonsPersonIdPostsResponses = {
     };
 };
 
-export type GetPersonsPersonIdPostsResponse = GetPersonsPersonIdPostsResponses[keyof GetPersonsPersonIdPostsResponses];
+export type GetPersonsPersonIdPostsResponse =
+    GetPersonsPersonIdPostsResponses[keyof GetPersonsPersonIdPostsResponses];
 
 export type GetPersonsPersonIdPoststatisticsData = {
     body?: never;
@@ -27344,7 +27581,8 @@ export type GetPersonsIdPrivacypolicyErrors = {
     404: unknown;
 };
 
-export type GetPersonsIdPrivacypolicyError = GetPersonsIdPrivacypolicyErrors[keyof GetPersonsIdPrivacypolicyErrors];
+export type GetPersonsIdPrivacypolicyError =
+    GetPersonsIdPrivacypolicyErrors[keyof GetPersonsIdPrivacypolicyErrors];
 
 export type GetPersonsIdPrivacypolicyResponses = {
     /**
@@ -27385,7 +27623,8 @@ export type PutPersonsIdPrivacypolicyErrors = {
     404: unknown;
 };
 
-export type PutPersonsIdPrivacypolicyError = PutPersonsIdPrivacypolicyErrors[keyof PutPersonsIdPrivacypolicyErrors];
+export type PutPersonsIdPrivacypolicyError =
+    PutPersonsIdPrivacypolicyErrors[keyof PutPersonsIdPrivacypolicyErrors];
 
 export type GetPersonsIdRelationshipsData = {
     body?: never;
@@ -27668,7 +27907,8 @@ export type GetPersonsIdSettingsErrors = {
     403: unknown;
 };
 
-export type GetPersonsIdSettingsError = GetPersonsIdSettingsErrors[keyof GetPersonsIdSettingsErrors];
+export type GetPersonsIdSettingsError =
+    GetPersonsIdSettingsErrors[keyof GetPersonsIdSettingsErrors];
 
 export type GetPersonsIdSettingsResponses = {
     /**
@@ -27679,7 +27919,8 @@ export type GetPersonsIdSettingsResponses = {
     };
 };
 
-export type GetPersonsIdSettingsResponse = GetPersonsIdSettingsResponses[keyof GetPersonsIdSettingsResponses];
+export type GetPersonsIdSettingsResponse =
+    GetPersonsIdSettingsResponses[keyof GetPersonsIdSettingsResponses];
 
 export type DeletePersonsIdSettingsTwofactorData = {
     body?: never;
@@ -27898,7 +28139,8 @@ export type GetPersonsIdSettingsModuleErrors = {
     403: unknown;
 };
 
-export type GetPersonsIdSettingsModuleError = GetPersonsIdSettingsModuleErrors[keyof GetPersonsIdSettingsModuleErrors];
+export type GetPersonsIdSettingsModuleError =
+    GetPersonsIdSettingsModuleErrors[keyof GetPersonsIdSettingsModuleErrors];
 
 export type GetPersonsIdSettingsModuleResponses = {
     /**
@@ -28305,7 +28547,8 @@ export type PutPostReportsAnswerErrors = {
     403: unknown;
 };
 
-export type PutPostReportsAnswerError = PutPostReportsAnswerErrors[keyof PutPostReportsAnswerErrors];
+export type PutPostReportsAnswerError =
+    PutPostReportsAnswerErrors[keyof PutPostReportsAnswerErrors];
 
 export type PutPostReportsAnswerResponses = {
     /**
@@ -28314,7 +28557,8 @@ export type PutPostReportsAnswerResponses = {
     204: void;
 };
 
-export type PutPostReportsAnswerResponse = PutPostReportsAnswerResponses[keyof PutPostReportsAnswerResponses];
+export type PutPostReportsAnswerResponse =
+    PutPostReportsAnswerResponses[keyof PutPostReportsAnswerResponses];
 
 export type GetPostSearchData = {
     body?: never;
@@ -28564,7 +28808,8 @@ export type DeletePostsPostIdResponses = {
     204: void;
 };
 
-export type DeletePostsPostIdResponse = DeletePostsPostIdResponses[keyof DeletePostsPostIdResponses];
+export type DeletePostsPostIdResponse =
+    DeletePostsPostIdResponses[keyof DeletePostsPostIdResponses];
 
 export type GetPostsPostIdData = {
     body?: never;
@@ -28682,7 +28927,8 @@ export type GetPostsPostIdCommentsErrors = {
     404: unknown;
 };
 
-export type GetPostsPostIdCommentsError = GetPostsPostIdCommentsErrors[keyof GetPostsPostIdCommentsErrors];
+export type GetPostsPostIdCommentsError =
+    GetPostsPostIdCommentsErrors[keyof GetPostsPostIdCommentsErrors];
 
 export type GetPostsPostIdCommentsResponses = {
     /**
@@ -28693,7 +28939,8 @@ export type GetPostsPostIdCommentsResponses = {
     };
 };
 
-export type GetPostsPostIdCommentsResponse = GetPostsPostIdCommentsResponses[keyof GetPostsPostIdCommentsResponses];
+export type GetPostsPostIdCommentsResponse =
+    GetPostsPostIdCommentsResponses[keyof GetPostsPostIdCommentsResponses];
 
 export type PostPostsPostIdCommentsData = {
     body: PostCommentCreate;
@@ -28722,7 +28969,8 @@ export type PostPostsPostIdCommentsErrors = {
     404: unknown;
 };
 
-export type PostPostsPostIdCommentsError = PostPostsPostIdCommentsErrors[keyof PostPostsPostIdCommentsErrors];
+export type PostPostsPostIdCommentsError =
+    PostPostsPostIdCommentsErrors[keyof PostPostsPostIdCommentsErrors];
 
 export type PostPostsPostIdCommentsResponses = {
     /**
@@ -28733,7 +28981,8 @@ export type PostPostsPostIdCommentsResponses = {
     };
 };
 
-export type PostPostsPostIdCommentsResponse = PostPostsPostIdCommentsResponses[keyof PostPostsPostIdCommentsResponses];
+export type PostPostsPostIdCommentsResponse =
+    PostPostsPostIdCommentsResponses[keyof PostPostsPostIdCommentsResponses];
 
 export type DeletePostsPostIdCommentsCommentIdData = {
     body?: never;
@@ -28806,7 +29055,8 @@ export type PutPostsPostIdExpireResponses = {
     204: void;
 };
 
-export type PutPostsPostIdExpireResponse = PutPostsPostIdExpireResponses[keyof PutPostsPostIdExpireResponses];
+export type PutPostsPostIdExpireResponse =
+    PutPostsPostIdExpireResponses[keyof PutPostsPostIdExpireResponses];
 
 export type PutPostsPostIdHiddenDomainTypeData = {
     body?: never;
@@ -28869,7 +29119,8 @@ export type GetPostsPostIdReactionsErrors = {
     404: unknown;
 };
 
-export type GetPostsPostIdReactionsError = GetPostsPostIdReactionsErrors[keyof GetPostsPostIdReactionsErrors];
+export type GetPostsPostIdReactionsError =
+    GetPostsPostIdReactionsErrors[keyof GetPostsPostIdReactionsErrors];
 
 export type GetPostsPostIdReactionsResponses = {
     /**
@@ -28880,7 +29131,8 @@ export type GetPostsPostIdReactionsResponses = {
     };
 };
 
-export type GetPostsPostIdReactionsResponse = GetPostsPostIdReactionsResponses[keyof GetPostsPostIdReactionsResponses];
+export type GetPostsPostIdReactionsResponse =
+    GetPostsPostIdReactionsResponses[keyof GetPostsPostIdReactionsResponses];
 
 export type DeletePostsPostIdReactionsEmojiPersonsPersonIdData = {
     body?: never;
@@ -29082,7 +29334,8 @@ export type GetProfilesChurchResponses = {
     };
 };
 
-export type GetProfilesChurchResponse = GetProfilesChurchResponses[keyof GetProfilesChurchResponses];
+export type GetProfilesChurchResponse =
+    GetProfilesChurchResponses[keyof GetProfilesChurchResponses];
 
 export type PutProfilesChurchData = {
     body: ProfileUpdate;
@@ -29100,7 +29353,8 @@ export type PutProfilesChurchResponses = {
     };
 };
 
-export type PutProfilesChurchResponse = PutProfilesChurchResponses[keyof PutProfilesChurchResponses];
+export type PutProfilesChurchResponse =
+    PutProfilesChurchResponses[keyof PutProfilesChurchResponses];
 
 export type GetProfilesSlugcheckSlugData = {
     body?: never;
@@ -29209,7 +29463,8 @@ export type GetPublicgroupsIdResponses = {
     };
 };
 
-export type GetPublicgroupsIdResponse = GetPublicgroupsIdResponses[keyof GetPublicgroupsIdResponses];
+export type GetPublicgroupsIdResponse =
+    GetPublicgroupsIdResponses[keyof GetPublicgroupsIdResponses];
 
 export type GetPublicgroupsGroupIdFormData = {
     body?: never;
@@ -29529,7 +29784,8 @@ export type GetPublicgroupsIdHashResponses = {
     200: PublicGroup;
 };
 
-export type GetPublicgroupsIdHashResponse = GetPublicgroupsIdHashResponses[keyof GetPublicgroupsIdHashResponses];
+export type GetPublicgroupsIdHashResponse =
+    GetPublicgroupsIdHashResponses[keyof GetPublicgroupsIdHashResponses];
 
 export type PostQueuesQueueData = {
     body?: never;
@@ -29607,7 +29863,8 @@ export type GetRegistrationconfigIdResponses = {
     };
 };
 
-export type GetRegistrationconfigIdResponse = GetRegistrationconfigIdResponses[keyof GetRegistrationconfigIdResponses];
+export type GetRegistrationconfigIdResponse =
+    GetRegistrationconfigIdResponses[keyof GetRegistrationconfigIdResponses];
 
 export type PatchRegistrationconfigIdData = {
     body?: never;
@@ -29653,7 +29910,8 @@ export type PostRegistrationsResponses = {
     204: void;
 };
 
-export type PostRegistrationsResponse = PostRegistrationsResponses[keyof PostRegistrationsResponses];
+export type PostRegistrationsResponse =
+    PostRegistrationsResponses[keyof PostRegistrationsResponses];
 
 export type DeleteRegistrationsGuidData = {
     body?: never;
@@ -29674,7 +29932,8 @@ export type DeleteRegistrationsGuidResponses = {
     204: void;
 };
 
-export type DeleteRegistrationsGuidResponse = DeleteRegistrationsGuidResponses[keyof DeleteRegistrationsGuidResponses];
+export type DeleteRegistrationsGuidResponse =
+    DeleteRegistrationsGuidResponses[keyof DeleteRegistrationsGuidResponses];
 
 export type PostRegistrationsGuidConfirmData = {
     body?: never;
@@ -29776,7 +30035,8 @@ export type PostResetPasswordResponses = {
     };
 };
 
-export type PostResetPasswordResponse = PostResetPasswordResponses[keyof PostResetPasswordResponses];
+export type PostResetPasswordResponse =
+    PostResetPasswordResponses[keyof PostResetPasswordResponses];
 
 export type GetResourceMasterdataData = {
     body?: never;
@@ -29794,7 +30054,8 @@ export type GetResourceMasterdataResponses = {
     };
 };
 
-export type GetResourceMasterdataResponse = GetResourceMasterdataResponses[keyof GetResourceMasterdataResponses];
+export type GetResourceMasterdataResponse =
+    GetResourceMasterdataResponses[keyof GetResourceMasterdataResponses];
 
 export type GetResourcesData = {
     body?: never;
@@ -29917,7 +30178,8 @@ export type DeleteResourcesResourceIdErrors = {
     };
 };
 
-export type DeleteResourcesResourceIdError = DeleteResourcesResourceIdErrors[keyof DeleteResourcesResourceIdErrors];
+export type DeleteResourcesResourceIdError =
+    DeleteResourcesResourceIdErrors[keyof DeleteResourcesResourceIdErrors];
 
 export type DeleteResourcesResourceIdResponses = {
     /**
@@ -29953,7 +30215,8 @@ export type GetResourcesResourceIdErrors = {
     404: unknown;
 };
 
-export type GetResourcesResourceIdError = GetResourcesResourceIdErrors[keyof GetResourcesResourceIdErrors];
+export type GetResourcesResourceIdError =
+    GetResourcesResourceIdErrors[keyof GetResourcesResourceIdErrors];
 
 export type GetResourcesResourceIdResponses = {
     /**
@@ -29964,7 +30227,8 @@ export type GetResourcesResourceIdResponses = {
     };
 };
 
-export type GetResourcesResourceIdResponse = GetResourcesResourceIdResponses[keyof GetResourcesResourceIdResponses];
+export type GetResourcesResourceIdResponse =
+    GetResourcesResourceIdResponses[keyof GetResourcesResourceIdResponses];
 
 export type PutResourcesResourceIdData = {
     body: ResourceCreate;
@@ -29990,7 +30254,8 @@ export type PutResourcesResourceIdErrors = {
     404: unknown;
 };
 
-export type PutResourcesResourceIdError = PutResourcesResourceIdErrors[keyof PutResourcesResourceIdErrors];
+export type PutResourcesResourceIdError =
+    PutResourcesResourceIdErrors[keyof PutResourcesResourceIdErrors];
 
 export type PutResourcesResourceIdResponses = {
     /**
@@ -30001,7 +30266,8 @@ export type PutResourcesResourceIdResponses = {
     };
 };
 
-export type PutResourcesResourceIdResponse = PutResourcesResourceIdResponses[keyof PutResourcesResourceIdResponses];
+export type PutResourcesResourceIdResponse =
+    PutResourcesResourceIdResponses[keyof PutResourcesResourceIdResponses];
 
 export type GetResourcesResourceIdStatisticsData = {
     body?: never;
@@ -30103,7 +30369,8 @@ export type PostResourcetypesResponses = {
     };
 };
 
-export type PostResourcetypesResponse = PostResourcetypesResponses[keyof PostResourcetypesResponses];
+export type PostResourcetypesResponse =
+    PostResourcetypesResponses[keyof PostResourcetypesResponses];
 
 export type DeleteResourcetypesResourceTypeIdData = {
     body?: never;
@@ -30323,7 +30590,8 @@ export type PostRoutinesExecuteResponses = {
     204: void;
 };
 
-export type PostRoutinesExecuteResponse = PostRoutinesExecuteResponses[keyof PostRoutinesExecuteResponses];
+export type PostRoutinesExecuteResponse =
+    PostRoutinesExecuteResponses[keyof PostRoutinesExecuteResponses];
 
 export type DeleteRoutinesRoutineIdData = {
     body?: never;
@@ -30352,7 +30620,8 @@ export type DeleteRoutinesRoutineIdErrors = {
     404: unknown;
 };
 
-export type DeleteRoutinesRoutineIdError = DeleteRoutinesRoutineIdErrors[keyof DeleteRoutinesRoutineIdErrors];
+export type DeleteRoutinesRoutineIdError =
+    DeleteRoutinesRoutineIdErrors[keyof DeleteRoutinesRoutineIdErrors];
 
 export type DeleteRoutinesRoutineIdResponses = {
     /**
@@ -30361,7 +30630,8 @@ export type DeleteRoutinesRoutineIdResponses = {
     204: void;
 };
 
-export type DeleteRoutinesRoutineIdResponse = DeleteRoutinesRoutineIdResponses[keyof DeleteRoutinesRoutineIdResponses];
+export type DeleteRoutinesRoutineIdResponse =
+    DeleteRoutinesRoutineIdResponses[keyof DeleteRoutinesRoutineIdResponses];
 
 export type GetRoutinesRoutineIdData = {
     body?: never;
@@ -30390,7 +30660,8 @@ export type GetRoutinesRoutineIdErrors = {
     404: unknown;
 };
 
-export type GetRoutinesRoutineIdError = GetRoutinesRoutineIdErrors[keyof GetRoutinesRoutineIdErrors];
+export type GetRoutinesRoutineIdError =
+    GetRoutinesRoutineIdErrors[keyof GetRoutinesRoutineIdErrors];
 
 export type GetRoutinesRoutineIdResponses = {
     /**
@@ -30401,7 +30672,8 @@ export type GetRoutinesRoutineIdResponses = {
     };
 };
 
-export type GetRoutinesRoutineIdResponse = GetRoutinesRoutineIdResponses[keyof GetRoutinesRoutineIdResponses];
+export type GetRoutinesRoutineIdResponse =
+    GetRoutinesRoutineIdResponses[keyof GetRoutinesRoutineIdResponses];
 
 export type PatchRoutinesRoutineIdData = {
     body: RoutineUpdate;
@@ -30432,7 +30704,8 @@ export type PatchRoutinesRoutineIdErrors = {
     404: unknown;
 };
 
-export type PatchRoutinesRoutineIdError = PatchRoutinesRoutineIdErrors[keyof PatchRoutinesRoutineIdErrors];
+export type PatchRoutinesRoutineIdError =
+    PatchRoutinesRoutineIdErrors[keyof PatchRoutinesRoutineIdErrors];
 
 export type PatchRoutinesRoutineIdResponses = {
     /**
@@ -30443,7 +30716,8 @@ export type PatchRoutinesRoutineIdResponses = {
     };
 };
 
-export type PatchRoutinesRoutineIdResponse = PatchRoutinesRoutineIdResponses[keyof PatchRoutinesRoutineIdResponses];
+export type PatchRoutinesRoutineIdResponse =
+    PatchRoutinesRoutineIdResponses[keyof PatchRoutinesRoutineIdResponses];
 
 export type GetRoutinesRoutineIdRunsData = {
     body?: never;
@@ -30478,7 +30752,8 @@ export type GetRoutinesRoutineIdRunsErrors = {
     404: unknown;
 };
 
-export type GetRoutinesRoutineIdRunsError = GetRoutinesRoutineIdRunsErrors[keyof GetRoutinesRoutineIdRunsErrors];
+export type GetRoutinesRoutineIdRunsError =
+    GetRoutinesRoutineIdRunsErrors[keyof GetRoutinesRoutineIdRunsErrors];
 
 export type GetRoutinesRoutineIdRunsResponses = {
     /**
@@ -30696,7 +30971,8 @@ export type GetSecuritylevelsResponses = {
     };
 };
 
-export type GetSecuritylevelsResponse = GetSecuritylevelsResponses[keyof GetSecuritylevelsResponses];
+export type GetSecuritylevelsResponse =
+    GetSecuritylevelsResponses[keyof GetSecuritylevelsResponses];
 
 export type DeleteSecuritylevelsIdData = {
     body?: never;
@@ -30728,7 +31004,8 @@ export type DeleteSecuritylevelsIdResponses = {
     204: void;
 };
 
-export type DeleteSecuritylevelsIdResponse = DeleteSecuritylevelsIdResponses[keyof DeleteSecuritylevelsIdResponses];
+export type DeleteSecuritylevelsIdResponse =
+    DeleteSecuritylevelsIdResponses[keyof DeleteSecuritylevelsIdResponses];
 
 export type GetSecuritylevelsIdData = {
     body?: never;
@@ -30801,7 +31078,8 @@ export type PatchSecuritylevelsIdResponses = {
     };
 };
 
-export type PatchSecuritylevelsIdResponse = PatchSecuritylevelsIdResponses[keyof PatchSecuritylevelsIdResponses];
+export type PatchSecuritylevelsIdResponse =
+    PatchSecuritylevelsIdResponses[keyof PatchSecuritylevelsIdResponses];
 
 export type PostSecuritylevelsIdData = {
     body: {
@@ -30835,7 +31113,8 @@ export type PostSecuritylevelsIdResponses = {
     };
 };
 
-export type PostSecuritylevelsIdResponse = PostSecuritylevelsIdResponses[keyof PostSecuritylevelsIdResponses];
+export type PostSecuritylevelsIdResponse =
+    PostSecuritylevelsIdResponses[keyof PostSecuritylevelsIdResponses];
 
 export type GetServicegroupsData = {
     body?: never;
@@ -30874,7 +31153,8 @@ export type GetServicegroupsIdResponses = {
     };
 };
 
-export type GetServicegroupsIdResponse = GetServicegroupsIdResponses[keyof GetServicegroupsIdResponses];
+export type GetServicegroupsIdResponse =
+    GetServicegroupsIdResponses[keyof GetServicegroupsIdResponses];
 
 export type GetServicesData = {
     body?: never;
@@ -31091,7 +31371,8 @@ export type DeleteSongsSongIdResponses = {
     204: void;
 };
 
-export type DeleteSongsSongIdResponse = DeleteSongsSongIdResponses[keyof DeleteSongsSongIdResponses];
+export type DeleteSongsSongIdResponse =
+    DeleteSongsSongIdResponses[keyof DeleteSongsSongIdResponses];
 
 export type GetSongsSongIdData = {
     body?: never;
@@ -31213,7 +31494,8 @@ export type GetSongsSongIdArrangementsErrors = {
     404: unknown;
 };
 
-export type GetSongsSongIdArrangementsError = GetSongsSongIdArrangementsErrors[keyof GetSongsSongIdArrangementsErrors];
+export type GetSongsSongIdArrangementsError =
+    GetSongsSongIdArrangementsErrors[keyof GetSongsSongIdArrangementsErrors];
 
 export type GetSongsSongIdArrangementsResponses = {
     /**
@@ -31678,7 +31960,8 @@ export type GetSubscriptionsPersonIdErrors = {
     403: unknown;
 };
 
-export type GetSubscriptionsPersonIdError = GetSubscriptionsPersonIdErrors[keyof GetSubscriptionsPersonIdErrors];
+export type GetSubscriptionsPersonIdError =
+    GetSubscriptionsPersonIdErrors[keyof GetSubscriptionsPersonIdErrors];
 
 export type GetSubscriptionsPersonIdResponses = {
     /**
@@ -31699,7 +31982,13 @@ export type GetSubscriptionsPersonIdSubjectData = {
          * ID of person
          */
         personId: number;
-        subject: 'post' | 'post_summary' | 'group' | 'public_channel' | 'meetingrequests' | 'servicerequests';
+        subject:
+            | 'post'
+            | 'post_summary'
+            | 'group'
+            | 'public_channel'
+            | 'meetingrequests'
+            | 'servicerequests';
     };
     query?: never;
     url: '/subscriptions/{personId}/{subject}';
@@ -31738,7 +32027,13 @@ export type DeleteSubscriptionsPersonIdSubjectSubjectIdentifierData = {
          * ID of person
          */
         personId: number;
-        subject: 'post' | 'post_summary' | 'group' | 'public_channel' | 'meetingrequests' | 'servicerequests';
+        subject:
+            | 'post'
+            | 'post_summary'
+            | 'group'
+            | 'public_channel'
+            | 'meetingrequests'
+            | 'servicerequests';
         subjectIdentifier: string;
     };
     query?: never;
@@ -31776,7 +32071,13 @@ export type GetSubscriptionsPersonIdSubjectSubjectIdentifierData = {
          * ID of person
          */
         personId: number;
-        subject: 'post' | 'post_summary' | 'group' | 'public_channel' | 'meetingrequests' | 'servicerequests';
+        subject:
+            | 'post'
+            | 'post_summary'
+            | 'group'
+            | 'public_channel'
+            | 'meetingrequests'
+            | 'servicerequests';
         subjectIdentifier: string;
     };
     query?: never;
@@ -31816,7 +32117,13 @@ export type PutSubscriptionsPersonIdSubjectSubjectIdentifierData = {
          * ID of person
          */
         personId: number;
-        subject: 'post' | 'post_summary' | 'group' | 'public_channel' | 'meetingrequests' | 'servicerequests';
+        subject:
+            | 'post'
+            | 'post_summary'
+            | 'group'
+            | 'public_channel'
+            | 'meetingrequests'
+            | 'servicerequests';
         subjectIdentifier: string;
     };
     query?: never;
@@ -31935,7 +32242,8 @@ export type GetSyncAdaptersProxyErrors = {
     404: unknown;
 };
 
-export type GetSyncAdaptersProxyError = GetSyncAdaptersProxyErrors[keyof GetSyncAdaptersProxyErrors];
+export type GetSyncAdaptersProxyError =
+    GetSyncAdaptersProxyErrors[keyof GetSyncAdaptersProxyErrors];
 
 export type GetSyncAdaptersProxyResponses = {
     /**
@@ -31948,7 +32256,8 @@ export type GetSyncAdaptersProxyResponses = {
     };
 };
 
-export type GetSyncAdaptersProxyResponse = GetSyncAdaptersProxyResponses[keyof GetSyncAdaptersProxyResponses];
+export type GetSyncAdaptersProxyResponse =
+    GetSyncAdaptersProxyResponses[keyof GetSyncAdaptersProxyResponses];
 
 export type DeleteSyncAdaptersIdData = {
     body?: never;
@@ -32007,7 +32316,8 @@ export type DeleteSyncAdaptersIdErrors = {
     };
 };
 
-export type DeleteSyncAdaptersIdError = DeleteSyncAdaptersIdErrors[keyof DeleteSyncAdaptersIdErrors];
+export type DeleteSyncAdaptersIdError =
+    DeleteSyncAdaptersIdErrors[keyof DeleteSyncAdaptersIdErrors];
 
 export type DeleteSyncAdaptersIdResponses = {
     /**
@@ -32016,7 +32326,8 @@ export type DeleteSyncAdaptersIdResponses = {
     204: void;
 };
 
-export type DeleteSyncAdaptersIdResponse = DeleteSyncAdaptersIdResponses[keyof DeleteSyncAdaptersIdResponses];
+export type DeleteSyncAdaptersIdResponse =
+    DeleteSyncAdaptersIdResponses[keyof DeleteSyncAdaptersIdResponses];
 
 export type GetSyncAdaptersIdData = {
     body?: never;
@@ -32056,7 +32367,8 @@ export type GetSyncAdaptersIdResponses = {
     };
 };
 
-export type GetSyncAdaptersIdResponse = GetSyncAdaptersIdResponses[keyof GetSyncAdaptersIdResponses];
+export type GetSyncAdaptersIdResponse =
+    GetSyncAdaptersIdResponses[keyof GetSyncAdaptersIdResponses];
 
 export type PutSyncAdaptersIdData = {
     /**
@@ -32099,7 +32411,8 @@ export type PutSyncAdaptersIdResponses = {
     };
 };
 
-export type PutSyncAdaptersIdResponse = PutSyncAdaptersIdResponses[keyof PutSyncAdaptersIdResponses];
+export type PutSyncAdaptersIdResponse =
+    PutSyncAdaptersIdResponses[keyof PutSyncAdaptersIdResponses];
 
 export type GetSyncConflictsData = {
     body?: never;
@@ -32109,7 +32422,12 @@ export type GetSyncConflictsData = {
          * Filter Response by Conflict Type
          */
         'types[]'?: Array<
-            'create' | 'update' | 'duplicate in CT' | 'link and update' | 'delete or create' | 'duplicate in source'
+            | 'create'
+            | 'update'
+            | 'duplicate in CT'
+            | 'link and update'
+            | 'delete or create'
+            | 'duplicate in source'
         >;
         /**
          * Filter Response by Domain Types of Related Entity Mappings
@@ -32163,7 +32481,13 @@ export type PostSyncConflictsData = {
         /**
          * Type of Conflict
          */
-        type: 'create' | 'update' | 'duplicate in CT' | 'link and update' | 'delete or create' | 'duplicate in source';
+        type:
+            | 'create'
+            | 'update'
+            | 'duplicate in CT'
+            | 'link and update'
+            | 'delete or create'
+            | 'duplicate in source';
     };
     path?: never;
     query?: never;
@@ -32194,7 +32518,8 @@ export type PostSyncConflictsResponses = {
     };
 };
 
-export type PostSyncConflictsResponse = PostSyncConflictsResponses[keyof PostSyncConflictsResponses];
+export type PostSyncConflictsResponse =
+    PostSyncConflictsResponses[keyof PostSyncConflictsResponses];
 
 export type DeleteSyncConflictsIdData = {
     body?: never;
@@ -32215,7 +32540,8 @@ export type DeleteSyncConflictsIdResponses = {
     204: void;
 };
 
-export type DeleteSyncConflictsIdResponse = DeleteSyncConflictsIdResponses[keyof DeleteSyncConflictsIdResponses];
+export type DeleteSyncConflictsIdResponse =
+    DeleteSyncConflictsIdResponses[keyof DeleteSyncConflictsIdResponses];
 
 export type GetSyncConflictsIdData = {
     body?: never;
@@ -32253,7 +32579,8 @@ export type GetSyncConflictsIdResponses = {
     };
 };
 
-export type GetSyncConflictsIdResponse = GetSyncConflictsIdResponses[keyof GetSyncConflictsIdResponses];
+export type GetSyncConflictsIdResponse =
+    GetSyncConflictsIdResponses[keyof GetSyncConflictsIdResponses];
 
 export type PutSyncConflictsIdData = {
     body: {
@@ -32272,7 +32599,13 @@ export type PutSyncConflictsIdData = {
         /**
          * Type of Conflict
          */
-        type: 'create' | 'update' | 'duplicate in CT' | 'link an dupdate' | 'delete or create' | 'duplicate in source';
+        type:
+            | 'create'
+            | 'update'
+            | 'duplicate in CT'
+            | 'link an dupdate'
+            | 'delete or create'
+            | 'duplicate in source';
     };
     path: {
         /**
@@ -32312,7 +32645,8 @@ export type PutSyncConflictsIdResponses = {
     };
 };
 
-export type PutSyncConflictsIdResponse = PutSyncConflictsIdResponses[keyof PutSyncConflictsIdResponses];
+export type PutSyncConflictsIdResponse =
+    PutSyncConflictsIdResponses[keyof PutSyncConflictsIdResponses];
 
 export type GetSyncEntitymappingsData = {
     body?: never;
@@ -32363,7 +32697,8 @@ export type GetSyncEntitymappingsResponses = {
     };
 };
 
-export type GetSyncEntitymappingsResponse = GetSyncEntitymappingsResponses[keyof GetSyncEntitymappingsResponses];
+export type GetSyncEntitymappingsResponse =
+    GetSyncEntitymappingsResponses[keyof GetSyncEntitymappingsResponses];
 
 export type PostSyncEntitymappingsData = {
     /**
@@ -32413,7 +32748,8 @@ export type PostSyncEntitymappingsResponses = {
     };
 };
 
-export type PostSyncEntitymappingsResponse = PostSyncEntitymappingsResponses[keyof PostSyncEntitymappingsResponses];
+export type PostSyncEntitymappingsResponse =
+    PostSyncEntitymappingsResponses[keyof PostSyncEntitymappingsResponses];
 
 export type DeleteSyncEntitymappingsIdData = {
     body?: never;
@@ -32486,7 +32822,8 @@ export type GetSyncEntitymappingsIdResponses = {
     200: SyncEntityMapping;
 };
 
-export type GetSyncEntitymappingsIdResponse = GetSyncEntitymappingsIdResponses[keyof GetSyncEntitymappingsIdResponses];
+export type GetSyncEntitymappingsIdResponse =
+    GetSyncEntitymappingsIdResponses[keyof GetSyncEntitymappingsIdResponses];
 
 export type PutSyncEntitymappingsIdData = {
     body: {
@@ -32553,7 +32890,8 @@ export type PutSyncEntitymappingsIdResponses = {
     };
 };
 
-export type PutSyncEntitymappingsIdResponse = PutSyncEntitymappingsIdResponses[keyof PutSyncEntitymappingsIdResponses];
+export type PutSyncEntitymappingsIdResponse =
+    PutSyncEntitymappingsIdResponses[keyof PutSyncEntitymappingsIdResponses];
 
 export type GetSyncExecutionsData = {
     body?: never;
@@ -32650,7 +32988,8 @@ export type GetSyncExecutionsResponses = {
     };
 };
 
-export type GetSyncExecutionsResponse = GetSyncExecutionsResponses[keyof GetSyncExecutionsResponses];
+export type GetSyncExecutionsResponse =
+    GetSyncExecutionsResponses[keyof GetSyncExecutionsResponses];
 
 export type GetSyncExternalsystemsData = {
     body?: never;
@@ -32669,7 +33008,8 @@ export type GetSyncExternalsystemsResponses = {
     };
 };
 
-export type GetSyncExternalsystemsResponse = GetSyncExternalsystemsResponses[keyof GetSyncExternalsystemsResponses];
+export type GetSyncExternalsystemsResponse =
+    GetSyncExternalsystemsResponses[keyof GetSyncExternalsystemsResponses];
 
 export type PostSyncExternalsystemsData = {
     body: ExternalSystem;
@@ -32687,7 +33027,8 @@ export type PostSyncExternalsystemsResponses = {
     };
 };
 
-export type PostSyncExternalsystemsResponse = PostSyncExternalsystemsResponses[keyof PostSyncExternalsystemsResponses];
+export type PostSyncExternalsystemsResponse =
+    PostSyncExternalsystemsResponses[keyof PostSyncExternalsystemsResponses];
 
 export type DeleteSyncExternalsystemsIdFieldmappingsDomainTypeData = {
     body?: never;
@@ -33490,7 +33831,8 @@ export type GetSyncJobconfigsResponses = {
     };
 };
 
-export type GetSyncJobconfigsResponse = GetSyncJobconfigsResponses[keyof GetSyncJobconfigsResponses];
+export type GetSyncJobconfigsResponse =
+    GetSyncJobconfigsResponses[keyof GetSyncJobconfigsResponses];
 
 export type GetSyncLogsData = {
     body?: never;
@@ -33589,7 +33931,15 @@ export type PostSyncLogsData = {
             executionId: string | null;
             isDryRun?: boolean;
             jobId: number;
-            level: 'debug' | 'info' | 'notice' | 'warning' | 'error' | 'critical' | 'alert' | 'emergency';
+            level:
+                | 'debug'
+                | 'info'
+                | 'notice'
+                | 'warning'
+                | 'error'
+                | 'critical'
+                | 'alert'
+                | 'emergency';
             /**
              * Translation Key
              */
@@ -33654,7 +34004,8 @@ export type GetTagsDomainTypeResponses = {
     };
 };
 
-export type GetTagsDomainTypeResponse = GetTagsDomainTypeResponses[keyof GetTagsDomainTypeResponses];
+export type GetTagsDomainTypeResponse =
+    GetTagsDomainTypeResponses[keyof GetTagsDomainTypeResponses];
 
 export type PostTagsDomainTypeData = {
     body: TagUpdate;
@@ -33690,7 +34041,8 @@ export type PostTagsDomainTypeResponses = {
     };
 };
 
-export type PostTagsDomainTypeResponse = PostTagsDomainTypeResponses[keyof PostTagsDomainTypeResponses];
+export type PostTagsDomainTypeResponse =
+    PostTagsDomainTypeResponses[keyof PostTagsDomainTypeResponses];
 
 export type GetTagsDomainTypeDomainIdData = {
     body?: never;
@@ -33723,7 +34075,8 @@ export type GetTagsDomainTypeDomainIdErrors = {
     404: unknown;
 };
 
-export type GetTagsDomainTypeDomainIdError = GetTagsDomainTypeDomainIdErrors[keyof GetTagsDomainTypeDomainIdErrors];
+export type GetTagsDomainTypeDomainIdError =
+    GetTagsDomainTypeDomainIdErrors[keyof GetTagsDomainTypeDomainIdErrors];
 
 export type GetTagsDomainTypeDomainIdResponses = {
     /**
@@ -33767,7 +34120,8 @@ export type PostTagsDomainTypeDomainIdErrors = {
     403: unknown;
 };
 
-export type PostTagsDomainTypeDomainIdError = PostTagsDomainTypeDomainIdErrors[keyof PostTagsDomainTypeDomainIdErrors];
+export type PostTagsDomainTypeDomainIdError =
+    PostTagsDomainTypeDomainIdErrors[keyof PostTagsDomainTypeDomainIdErrors];
 
 export type PostTagsDomainTypeDomainIdResponses = {
     /**
@@ -34026,7 +34380,8 @@ export type GetTranslationsKeysbytextErrors = {
     403: unknown;
 };
 
-export type GetTranslationsKeysbytextError = GetTranslationsKeysbytextErrors[keyof GetTranslationsKeysbytextErrors];
+export type GetTranslationsKeysbytextError =
+    GetTranslationsKeysbytextErrors[keyof GetTranslationsKeysbytextErrors];
 
 export type GetTranslationsKeysbytextResponses = {
     /**
@@ -34063,7 +34418,8 @@ export type DeleteTranslationsIdErrors = {
     403: unknown;
 };
 
-export type DeleteTranslationsIdError = DeleteTranslationsIdErrors[keyof DeleteTranslationsIdErrors];
+export type DeleteTranslationsIdError =
+    DeleteTranslationsIdErrors[keyof DeleteTranslationsIdErrors];
 
 export type DeleteTranslationsIdResponses = {
     /**
@@ -34072,7 +34428,8 @@ export type DeleteTranslationsIdResponses = {
     204: void;
 };
 
-export type DeleteTranslationsIdResponse = DeleteTranslationsIdResponses[keyof DeleteTranslationsIdResponses];
+export type DeleteTranslationsIdResponse =
+    DeleteTranslationsIdResponses[keyof DeleteTranslationsIdResponses];
 
 export type PutTranslationsIdData = {
     body: TranslationKey;
@@ -34106,7 +34463,8 @@ export type PutTranslationsIdResponses = {
     204: void;
 };
 
-export type PutTranslationsIdResponse = PutTranslationsIdResponses[keyof PutTranslationsIdResponses];
+export type PutTranslationsIdResponse =
+    PutTranslationsIdResponses[keyof PutTranslationsIdResponses];
 
 export type DeleteTranslationsIdLanguagesIdData = {
     body?: never;
@@ -34246,7 +34604,8 @@ export type DeleteWebsiteDataResponses = {
     204: void;
 };
 
-export type DeleteWebsiteDataResponse = DeleteWebsiteDataResponses[keyof DeleteWebsiteDataResponses];
+export type DeleteWebsiteDataResponse =
+    DeleteWebsiteDataResponses[keyof DeleteWebsiteDataResponses];
 
 export type GetWebsiteStarttestData = {
     body?: never;
@@ -34374,7 +34733,8 @@ export type GetWikiCategoriesResponses = {
     };
 };
 
-export type GetWikiCategoriesResponse = GetWikiCategoriesResponses[keyof GetWikiCategoriesResponses];
+export type GetWikiCategoriesResponse =
+    GetWikiCategoriesResponses[keyof GetWikiCategoriesResponses];
 
 export type PostWikiCategoriesData = {
     body?: never;
@@ -34409,7 +34769,8 @@ export type PostWikiCategoriesResponses = {
     };
 };
 
-export type PostWikiCategoriesResponse = PostWikiCategoriesResponses[keyof PostWikiCategoriesResponses];
+export type PostWikiCategoriesResponse =
+    PostWikiCategoriesResponses[keyof PostWikiCategoriesResponses];
 
 export type PutWikiCategoriesIdData = {
     body?: never;
@@ -34449,7 +34810,8 @@ export type PutWikiCategoriesIdResponses = {
     };
 };
 
-export type PutWikiCategoriesIdResponse = PutWikiCategoriesIdResponses[keyof PutWikiCategoriesIdResponses];
+export type PutWikiCategoriesIdResponse =
+    PutWikiCategoriesIdResponses[keyof PutWikiCategoriesIdResponses];
 
 export type GetWikiCategoriesIdPagesData = {
     body?: never;

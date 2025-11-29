@@ -69,7 +69,6 @@ interface SettingsBackup {
     version: number;
 }
 
-
 const MAX_BACKUPS = 5;
 const CURRENT_SCHEMA_VERSION = 2; // Bumped from 1 to 2 for HR/Manager Dashboard feature
 
@@ -87,7 +86,7 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
         workWeekDays: [1, 2, 3, 4, 5], // Default: Monday to Friday
         language: 'auto', // Default: auto-detect from browser
         schemaVersion: CURRENT_SCHEMA_VERSION,
-        lastModified: Date.now()
+        lastModified: Date.now(),
     };
 
     // UI State
@@ -123,7 +122,7 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
         defaultHoursPerDay: 8,
         defaultHoursPerWeek: 40,
         excelImportEnabled: false,
-        workWeekDays: [1, 2, 3, 4, 5]
+        workWeekDays: [1, 2, 3, 4, 5],
     };
 
     let originalGroupSettings: {
@@ -133,7 +132,7 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
     } = {
         employeeGroupId: undefined,
         volunteerGroupId: undefined,
-        userHoursConfig: undefined
+        userHoursConfig: undefined,
     };
 
     let originalManagerSettings: {
@@ -141,7 +140,7 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
         managerAssignments?: ManagerAssignment[];
     } = {
         managerGroupId: undefined,
-        managerAssignments: undefined
+        managerAssignments: undefined,
     };
 
     // Browser warning for unsaved changes
@@ -196,14 +195,16 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
             console.log('[Admin] Language settings:', {
                 savedLanguage: settings.language,
                 autoDetected: detectBrowserLanguage(),
-                finalLanguage: languageToUse
+                finalLanguage: languageToUse,
             });
             await initI18n(languageToUse as Language);
 
             // Load work categories and backups
             await Promise.all([
                 loadWorkCategories(),
-                (async () => { backupsList = await getBackups(); })()
+                (async () => {
+                    backupsList = await getBackups();
+                })(),
             ]);
 
             // Auto-load employees if employee group ID is configured
@@ -263,7 +264,12 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                 moduleId!
             );
 
-            const categoriesToRemove = ['Office Work', 'Pastoral Care', 'Event Preparation', 'Administration'];
+            const categoriesToRemove = [
+                'Office Work',
+                'Pastoral Care',
+                'Event Preparation',
+                'Administration',
+            ];
             let removedCount = 0;
 
             for (const value of values) {
@@ -276,17 +282,24 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                                 kvStoreId,
                                 moduleId!
                             );
-                            console.log(`[TimeTracker Admin] Removed old default category: ${value.name} (ID: ${kvStoreId})`);
+                            console.log(
+                                `[TimeTracker Admin] Removed old default category: ${value.name} (ID: ${kvStoreId})`
+                            );
                             removedCount++;
                         } catch (deleteError) {
-                            console.error(`[TimeTracker Admin] Failed to delete ${value.name}:`, deleteError);
+                            console.error(
+                                `[TimeTracker Admin] Failed to delete ${value.name}:`,
+                                deleteError
+                            );
                         }
                     }
                 }
             }
 
             if (removedCount > 0) {
-                console.log(`[TimeTracker Admin] Cleanup complete. Removed ${removedCount} old default categories.`);
+                console.log(
+                    `[TimeTracker Admin] Cleanup complete. Removed ${removedCount} old default categories.`
+                );
             }
         } catch (error) {
             console.error('[TimeTracker Admin] Failed to remove old categories:', error);
@@ -297,13 +310,14 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
     async function loadWorkCategories(): Promise<void> {
         try {
             // Call API directly to get raw values (we need the unparsed "value" field)
-            const rawValues: Array<{ id: number; dataCategoryId: number; value: string }> =
-                await (churchtoolsClient as any).get(
-                    `/custommodules/${moduleId}/customdatacategories/${workCategoriesCategory!.id}/customdatavalues`
-                );
+            const rawValues: Array<{ id: number; dataCategoryId: number; value: string }> = await (
+                churchtoolsClient as any
+            ).get(
+                `/custommodules/${moduleId}/customdatacategories/${workCategoriesCategory!.id}/customdatavalues`
+            );
 
             // Parse each value and preserve both string ID and numeric kvStoreId
-            workCategories = rawValues.map(rawVal => {
+            workCategories = rawValues.map((rawVal) => {
                 const kvStoreId = rawVal.id; // Numeric KV-Store ID
                 const parsedCategory = JSON.parse(rawVal.value) as WorkCategory;
 
@@ -311,7 +325,7 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                     id: parsedCategory.id, // String ID from stored data
                     name: parsedCategory.name,
                     color: parsedCategory.color,
-                    kvStoreId: kvStoreId // Numeric KV-Store ID for updates/deletes
+                    kvStoreId: kvStoreId, // Numeric KV-Store ID for updates/deletes
                 };
             });
 
@@ -325,10 +339,7 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
     // Load settings
     async function loadSettings(): Promise<void> {
         try {
-            const values = await getCustomDataValues<Settings>(
-                settingsCategory!.id,
-                moduleId!
-            );
+            const values = await getCustomDataValues<Settings>(settingsCategory!.id, moduleId!);
 
             if (values.length > 0) {
                 settings = values[0];
@@ -354,18 +365,22 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                 defaultHoursPerDay: settings.defaultHoursPerDay,
                 defaultHoursPerWeek: settings.defaultHoursPerWeek,
                 excelImportEnabled: settings.excelImportEnabled,
-                workWeekDays: settings.workWeekDays ? [...settings.workWeekDays] : [1, 2, 3, 4, 5]
+                workWeekDays: settings.workWeekDays ? [...settings.workWeekDays] : [1, 2, 3, 4, 5],
             };
 
             originalGroupSettings = {
                 employeeGroupId: settings.employeeGroupId,
                 volunteerGroupId: settings.volunteerGroupId,
-                userHoursConfig: settings.userHoursConfig ? JSON.parse(JSON.stringify(settings.userHoursConfig)) : undefined
+                userHoursConfig: settings.userHoursConfig
+                    ? JSON.parse(JSON.stringify(settings.userHoursConfig))
+                    : undefined,
             };
 
             originalManagerSettings = {
                 managerGroupId: settings.managerGroupId,
-                managerAssignments: settings.managerAssignments ? JSON.parse(JSON.stringify(settings.managerAssignments)) : undefined
+                managerAssignments: settings.managerAssignments
+                    ? JSON.parse(JSON.stringify(settings.managerAssignments))
+                    : undefined,
             };
         } catch (error) {
             console.error('[TimeTracker Admin] Failed to load settings:', error);
@@ -374,18 +389,36 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
 
     // Validate settings integrity
     function validateSettings(settingsToValidate: Settings): { isValid: boolean; error?: string } {
-        if (!settingsToValidate) return { isValid: false, error: t('ct.extension.timetracker.admin.validation.settingsNull') };
+        if (!settingsToValidate)
+            return {
+                isValid: false,
+                error: t('ct.extension.timetracker.admin.validation.settingsNull'),
+            };
 
         // Check required fields
-        if (typeof settingsToValidate.defaultHoursPerDay !== 'number') return { isValid: false, error: t('ct.extension.timetracker.admin.validation.hoursPerDayInvalid') };
-        if (typeof settingsToValidate.defaultHoursPerWeek !== 'number') return { isValid: false, error: t('ct.extension.timetracker.admin.validation.hoursPerWeekInvalid') };
+        if (typeof settingsToValidate.defaultHoursPerDay !== 'number')
+            return {
+                isValid: false,
+                error: t('ct.extension.timetracker.admin.validation.hoursPerDayInvalid'),
+            };
+        if (typeof settingsToValidate.defaultHoursPerWeek !== 'number')
+            return {
+                isValid: false,
+                error: t('ct.extension.timetracker.admin.validation.hoursPerWeekInvalid'),
+            };
 
         // Check integrity of optional fields if they exist
-        if (settingsToValidate.employeeGroupId !== undefined && typeof settingsToValidate.employeeGroupId !== 'number') {
+        if (
+            settingsToValidate.employeeGroupId !== undefined &&
+            typeof settingsToValidate.employeeGroupId !== 'number'
+        ) {
             return { isValid: false, error: 'employeeGroupId must be a number' };
         }
 
-        if (settingsToValidate.userHoursConfig && !Array.isArray(settingsToValidate.userHoursConfig)) {
+        if (
+            settingsToValidate.userHoursConfig &&
+            !Array.isArray(settingsToValidate.userHoursConfig)
+        ) {
             return { isValid: false, error: 'userHoursConfig must be an array' };
         }
 
@@ -409,7 +442,7 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                 timestamp: Date.now(),
                 settings: JSON.parse(JSON.stringify(currentSettings)), // Deep copy
                 summary,
-                version: currentSettings.schemaVersion || 1
+                version: currentSettings.schemaVersion || 1,
             };
 
             // Save new backup
@@ -469,7 +502,10 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
             }
 
             // We use saveSettings to restore, which will create a NEW backup of the current state before restoring!
-            await saveSettings(backupToRestore.settings, `Restored from backup ${new Date(backupToRestore.timestamp).toLocaleString()}`);
+            await saveSettings(
+                backupToRestore.settings,
+                `Restored from backup ${new Date(backupToRestore.timestamp).toLocaleString()}`
+            );
 
             alert(t('ct.extension.timetracker.admin.backupRestored'));
 
@@ -478,14 +514,23 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
             render();
         } catch (e) {
             console.error('[TimeTracker Admin] Restore failed:', e);
-            alert(t('ct.extension.timetracker.admin.backupRestoreFailed') + ': ' + (e instanceof Error ? e.message : 'Unknown error'));
+            alert(
+                t('ct.extension.timetracker.admin.backupRestoreFailed') +
+                    ': ' +
+                    (e instanceof Error ? e.message : 'Unknown error')
+            );
         }
     }
 
     // Save settings with validation and backup
     async function saveSettings(newSettings: Settings, changeSummary?: string): Promise<void> {
         // Use default summary if not provided
-        const summary = changeSummary || t('ct.extension.timetracker.admin.settingsUpdated').replace('{version}', (newSettings.schemaVersion || 1).toString());
+        const summary =
+            changeSummary ||
+            t('ct.extension.timetracker.admin.settingsUpdated').replace(
+                '{version}',
+                (newSettings.schemaVersion || 1).toString()
+            );
 
         // 1. Validate
         const validation = validateSettings(newSettings);
@@ -503,21 +548,14 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
             newSettings.lastModified = Date.now();
             newSettings.schemaVersion = CURRENT_SCHEMA_VERSION;
 
-            const values = await getCustomDataValues<Settings>(
-                settingsCategory!.id,
-                moduleId!
-            );
+            const values = await getCustomDataValues<Settings>(settingsCategory!.id, moduleId!);
 
             if (values.length > 0) {
                 const settingId = (values[0] as any).id;
-                await updateCustomDataValue(
-                    settingsCategory!.id,
-                    settingId,
-                    {
-                        dataCategoryId: settingsCategory!.id,
-                        value: JSON.stringify(newSettings),
-                    }
-                );
+                await updateCustomDataValue(settingsCategory!.id, settingId, {
+                    dataCategoryId: settingsCategory!.id,
+                    value: JSON.stringify(newSettings),
+                });
             } else {
                 await createCustomDataValue(
                     {
@@ -531,8 +569,6 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
             // Update local state
             settings = newSettings;
             // Note: Dirty flags reset in calling functions
-
-
         } catch (error) {
             console.error('[TimeTracker Admin] Failed to save settings:', error);
             throw error;
@@ -546,58 +582,74 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
             render();
 
             // Get members of the group from ChurchTools API
-            const groupMembers = await churchtoolsClient.get(`/groups/${groupId}/members`) as any[];
+            const groupMembers = (await churchtoolsClient.get(
+                `/groups/${groupId}/members`
+            )) as any[];
 
             // Extract user IDs from current group
-            const currentGroupUserIds = new Set(groupMembers.map((member: { personId?: number; id?: number }) => member.personId || member.id));
+            const currentGroupUserIds = new Set(
+                groupMembers.map(
+                    (member: { personId?: number; id?: number }) => member.personId || member.id
+                )
+            );
 
             // Build employee list from current group members
-            employeesList = groupMembers.map((member: {
-                personId?: number;
-                id?: number;
-                person?: { domainAttributes?: { firstName?: string; lastName?: string } };
-                firstName?: string;
-                lastName?: string;
-                vorname?: string;
-                nachname?: string;
-                name?: string;
-            }) => {
-                let firstName = '';
-                let lastName = '';
+            employeesList = groupMembers
+                .map(
+                    (member: {
+                        personId?: number;
+                        id?: number;
+                        person?: { domainAttributes?: { firstName?: string; lastName?: string } };
+                        firstName?: string;
+                        lastName?: string;
+                        vorname?: string;
+                        nachname?: string;
+                        name?: string;
+                    }) => {
+                        let firstName = '';
+                        let lastName = '';
 
-                // Names are in person.domainAttributes (ChurchTools API structure)
-                if (member.person?.domainAttributes) {
-                    firstName = member.person.domainAttributes.firstName || '';
-                    lastName = member.person.domainAttributes.lastName || '';
-                }
+                        // Names are in person.domainAttributes (ChurchTools API structure)
+                        if (member.person?.domainAttributes) {
+                            firstName = member.person.domainAttributes.firstName || '';
+                            lastName = member.person.domainAttributes.lastName || '';
+                        }
 
-                // Fallback to member properties directly (if API structure changes)
-                if (!firstName && !lastName) {
-                    firstName = member.firstName || member.vorname || '';
-                    lastName = member.lastName || member.nachname || member.name || '';
-                }
+                        // Fallback to member properties directly (if API structure changes)
+                        if (!firstName && !lastName) {
+                            firstName = member.firstName || member.vorname || '';
+                            lastName = member.lastName || member.nachname || member.name || '';
+                        }
 
-                const userName = (firstName && lastName)
-                    ? `${firstName} ${lastName}`
-                    : (firstName || lastName || `User ${member.personId || member.id}`);
+                        const userName =
+                            firstName && lastName
+                                ? `${firstName} ${lastName}`
+                                : firstName || lastName || `User ${member.personId || member.id}`;
 
-                return {
-                    userId: member.personId || member.id || 0,
-                    userName,
-                    firstName: firstName || '',
-                    lastName: lastName || ''
-                };
-            }).sort((a: { firstName: string; lastName: string }, b: { firstName: string; lastName: string }) => {
-                // Sort by first name, then last name
-                if (a.firstName !== b.firstName) {
-                    return a.firstName.localeCompare(b.firstName);
-                }
-                return a.lastName.localeCompare(b.lastName);
-            });
+                        return {
+                            userId: member.personId || member.id || 0,
+                            userName,
+                            firstName: firstName || '',
+                            lastName: lastName || '',
+                        };
+                    }
+                )
+                .sort(
+                    (
+                        a: { firstName: string; lastName: string },
+                        b: { firstName: string; lastName: string }
+                    ) => {
+                        // Sort by first name, then last name
+                        if (a.firstName !== b.firstName) {
+                            return a.firstName.localeCompare(b.firstName);
+                        }
+                        return a.lastName.localeCompare(b.lastName);
+                    }
+                );
 
             // Update isActive status in existing userHoursConfig
             if (settings.userHoursConfig) {
-                settings.userHoursConfig.forEach(config => {
+                settings.userHoursConfig.forEach((config) => {
                     if (currentGroupUserIds.has(config.userId)) {
                         // User is in group - mark as active (re-mapping)
                         config.isActive = true;
@@ -608,11 +660,14 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                 });
 
                 // Add inactive users to employeesList so they can be displayed/deleted
-                settings.userHoursConfig.forEach(config => {
-                    if (!config.isActive && !employeesList.find(e => e.userId === config.userId)) {
+                settings.userHoursConfig.forEach((config) => {
+                    if (
+                        !config.isActive &&
+                        !employeesList.find((e) => e.userId === config.userId)
+                    ) {
                         employeesList.push({
                             userId: config.userId,
-                            userName: config.userName
+                            userName: config.userName,
                         });
                     }
                 });
@@ -642,43 +697,52 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
             render();
 
             // Get members of the group from ChurchTools API
-            const groupMembers = await churchtoolsClient.get(`/groups/${groupId}/members`) as any[];
+            const groupMembers = (await churchtoolsClient.get(
+                `/groups/${groupId}/members`
+            )) as any[];
 
             // Build manager list from group members
-            managersList = groupMembers.map((member: {
-                personId?: number;
-                id?: number;
-                person?: { domainAttributes?: { firstName?: string; lastName?: string } };
-                firstName?: string;
-                lastName?: string;
-                vorname?: string;
-                nachname?: string;
-                name?: string;
-            }) => {
-                let firstName = '';
-                let lastName = '';
+            managersList = groupMembers
+                .map(
+                    (member: {
+                        personId?: number;
+                        id?: number;
+                        person?: { domainAttributes?: { firstName?: string; lastName?: string } };
+                        firstName?: string;
+                        lastName?: string;
+                        vorname?: string;
+                        nachname?: string;
+                        name?: string;
+                    }) => {
+                        let firstName = '';
+                        let lastName = '';
 
-                // Names are in person.domainAttributes (ChurchTools API structure)
-                if (member.person?.domainAttributes) {
-                    firstName = member.person.domainAttributes.firstName || '';
-                    lastName = member.person.domainAttributes.lastName || '';
-                }
+                        // Names are in person.domainAttributes (ChurchTools API structure)
+                        if (member.person?.domainAttributes) {
+                            firstName = member.person.domainAttributes.firstName || '';
+                            lastName = member.person.domainAttributes.lastName || '';
+                        }
 
-                // Fallback to member properties directly (if API structure changes)
-                if (!firstName && !lastName) {
-                    firstName = member.firstName || member.vorname || '';
-                    lastName = member.lastName || member.nachname || member.name || '';
-                }
+                        // Fallback to member properties directly (if API structure changes)
+                        if (!firstName && !lastName) {
+                            firstName = member.firstName || member.vorname || '';
+                            lastName = member.lastName || member.nachname || member.name || '';
+                        }
 
-                const userName = (firstName && lastName)
-                    ? `${firstName} ${lastName}`
-                    : (firstName || lastName || `User ${member.personId || member.id}`);
+                        const userName =
+                            firstName && lastName
+                                ? `${firstName} ${lastName}`
+                                : firstName || lastName || `User ${member.personId || member.id}`;
 
-                return {
-                    userId: member.personId || member.id || 0,
-                    userName
-                };
-            }).sort((a: { userName: string }, b: { userName: string }) => a.userName.localeCompare(b.userName));
+                        return {
+                            userId: member.personId || member.id || 0,
+                            userName,
+                        };
+                    }
+                )
+                .sort((a: { userName: string }, b: { userName: string }) =>
+                    a.userName.localeCompare(b.userName)
+                );
 
             loadingManagers = false;
             render();
@@ -748,7 +812,7 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                 moduleId!
             );
 
-            return timeEntries.filter(entry => entry.categoryId === categoryId).length;
+            return timeEntries.filter((entry) => entry.categoryId === categoryId).length;
         } catch (error) {
             console.error('[TimeTracker Admin] Failed to count entries:', error);
             return 0;
@@ -756,18 +820,22 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
     }
 
     // Reassign all time entries from one category to another
-    async function reassignTimeEntries(fromCategoryId: string, toCategoryId: string): Promise<void> {
+    async function reassignTimeEntries(
+        fromCategoryId: string,
+        toCategoryId: string
+    ): Promise<void> {
         try {
             const timeEntriesCategory = await getCustomDataCategory<object>('timeentries');
             if (!timeEntriesCategory) return;
 
             // Get raw values to access kvStoreId
-            const rawValues: Array<{ id: number; dataCategoryId: number; value: string }> =
-                await (churchtoolsClient as any).get(
-                    `/custommodules/${moduleId}/customdatacategories/${timeEntriesCategory.id}/customdatavalues`
-                );
+            const rawValues: Array<{ id: number; dataCategoryId: number; value: string }> = await (
+                churchtoolsClient as any
+            ).get(
+                `/custommodules/${moduleId}/customdatacategories/${timeEntriesCategory.id}/customdatavalues`
+            );
 
-            const toCategory = workCategories.find(c => c.id === toCategoryId);
+            const toCategory = workCategories.find((c) => c.id === toCategoryId);
             if (!toCategory) {
                 throw new Error('Replacement category not found');
             }
@@ -793,7 +861,9 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                 }
             }
 
-            console.log(`[TimeTracker Admin] Reassigned ${updatedCount} entries from ${fromCategoryId} to ${toCategoryId}`);
+            console.log(
+                `[TimeTracker Admin] Reassigned ${updatedCount} entries from ${fromCategoryId} to ${toCategoryId}`
+            );
         } catch (error) {
             console.error('[TimeTracker Admin] Failed to reassign entries:', error);
             throw error;
@@ -815,7 +885,7 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                 // Show dialog to select replacement category
                 categoryToDelete = category;
                 showDeleteDialog = true;
-                replacementCategoryId = workCategories.find(c => c.id !== categoryId)?.id || '';
+                replacementCategoryId = workCategories.find((c) => c.id !== categoryId)?.id || '';
                 render();
             } else {
                 // No entries using this category, delete immediately
@@ -916,8 +986,10 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
         if (!hoursPerDayInput || !hoursPerWeekInput || !excelImportToggle) return false;
 
         // Check simple values
-        if (parseFloat(hoursPerDayInput.value) !== originalGeneralSettings.defaultHoursPerDay) return true;
-        if (parseFloat(hoursPerWeekInput.value) !== originalGeneralSettings.defaultHoursPerWeek) return true;
+        if (parseFloat(hoursPerDayInput.value) !== originalGeneralSettings.defaultHoursPerDay)
+            return true;
+        if (parseFloat(hoursPerWeekInput.value) !== originalGeneralSettings.defaultHoursPerWeek)
+            return true;
         if (excelImportToggle.checked !== originalGeneralSettings.excelImportEnabled) return true;
 
         // Check work week days
@@ -929,20 +1001,33 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
         });
 
         if (currentWorkWeekDays.length !== originalGeneralSettings.workWeekDays.length) return true;
-        if (!currentWorkWeekDays.every((day, idx) => day === originalGeneralSettings.workWeekDays[idx])) return true;
+        if (
+            !currentWorkWeekDays.every(
+                (day, idx) => day === originalGeneralSettings.workWeekDays[idx]
+            )
+        )
+            return true;
 
         return false;
     }
 
     function checkGroupChanges(): boolean {
-        const employeeGroupIdInput = element.querySelector('#employee-group-id') as HTMLInputElement;
-        const volunteerGroupIdInput = element.querySelector('#volunteer-group-id') as HTMLInputElement;
+        const employeeGroupIdInput = element.querySelector(
+            '#employee-group-id'
+        ) as HTMLInputElement;
+        const volunteerGroupIdInput = element.querySelector(
+            '#volunteer-group-id'
+        ) as HTMLInputElement;
 
         if (!employeeGroupIdInput || !volunteerGroupIdInput) return false;
 
         // Check group IDs
-        const currentEmployeeGroupId = employeeGroupIdInput.value ? parseInt(employeeGroupIdInput.value) : undefined;
-        const currentVolunteerGroupId = volunteerGroupIdInput.value ? parseInt(volunteerGroupIdInput.value) : undefined;
+        const currentEmployeeGroupId = employeeGroupIdInput.value
+            ? parseInt(employeeGroupIdInput.value)
+            : undefined;
+        const currentVolunteerGroupId = volunteerGroupIdInput.value
+            ? parseInt(volunteerGroupIdInput.value)
+            : undefined;
 
         if (currentEmployeeGroupId !== originalGroupSettings.employeeGroupId) return true;
         if (currentVolunteerGroupId !== originalGroupSettings.volunteerGroupId) return true;
@@ -950,28 +1035,36 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
         // Check user hours configs
         const currentUserConfigs: UserHoursConfig[] = [];
         employeesList.forEach((emp) => {
-            const dayInput = element.querySelector(`.employee-hours-day[data-user-id="${emp.userId}"]`) as HTMLInputElement;
-            const weekInput = element.querySelector(`.employee-hours-week[data-user-id="${emp.userId}"]`) as HTMLInputElement;
+            const dayInput = element.querySelector(
+                `.employee-hours-day[data-user-id="${emp.userId}"]`
+            ) as HTMLInputElement;
+            const weekInput = element.querySelector(
+                `.employee-hours-week[data-user-id="${emp.userId}"]`
+            ) as HTMLInputElement;
 
             if (dayInput && weekInput) {
-                const hoursPerDay = parseFloat(dayInput.value) || originalGeneralSettings.defaultHoursPerDay;
-                const hoursPerWeek = parseFloat(weekInput.value) || originalGeneralSettings.defaultHoursPerWeek;
+                const hoursPerDay =
+                    parseFloat(dayInput.value) || originalGeneralSettings.defaultHoursPerDay;
+                const hoursPerWeek =
+                    parseFloat(weekInput.value) || originalGeneralSettings.defaultHoursPerWeek;
 
                 // Check work week days for this user
                 const workWeekDays: number[] = [];
-                element.querySelectorAll(`.user-work-week-checkbox[data-user-id="${emp.userId}"]`).forEach((checkbox) => {
-                    const day = parseInt((checkbox as HTMLInputElement).dataset.day!);
-                    if ((checkbox as HTMLInputElement).checked) {
-                        workWeekDays.push(day);
-                    }
-                });
+                element
+                    .querySelectorAll(`.user-work-week-checkbox[data-user-id="${emp.userId}"]`)
+                    .forEach((checkbox) => {
+                        const day = parseInt((checkbox as HTMLInputElement).dataset.day!);
+                        if ((checkbox as HTMLInputElement).checked) {
+                            workWeekDays.push(day);
+                        }
+                    });
 
                 currentUserConfigs.push({
                     userId: emp.userId,
                     userName: emp.userName,
                     hoursPerDay,
                     hoursPerWeek,
-                    workWeekDays: workWeekDays.length > 0 ? workWeekDays : undefined
+                    workWeekDays: workWeekDays.length > 0 ? workWeekDays : undefined,
                 });
             }
         });
@@ -981,7 +1074,7 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
         if (currentUserConfigs.length !== originalConfigs.length) return true;
 
         for (const current of currentUserConfigs) {
-            const original = originalConfigs.find(c => c.userId === current.userId);
+            const original = originalConfigs.find((c) => c.userId === current.userId);
             if (!original) return true;
             if (current.hoursPerDay !== original.hoursPerDay) return true;
             if (current.hoursPerWeek !== original.hoursPerWeek) return true;
@@ -1001,14 +1094,18 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
         // Check if manager group ID changed
         const managerGroupIdInput = element.querySelector('#manager-group-id') as HTMLInputElement;
         if (managerGroupIdInput) {
-            const currentManagerGroupId = managerGroupIdInput.value ? parseInt(managerGroupIdInput.value) : undefined;
+            const currentManagerGroupId = managerGroupIdInput.value
+                ? parseInt(managerGroupIdInput.value)
+                : undefined;
             if (currentManagerGroupId !== originalManagerSettings.managerGroupId) {
                 return true;
             }
         }
 
         // Read current checkbox states (live from DOM)
-        const checkboxes = element.querySelectorAll('.manager-employee-checkbox') as NodeListOf<HTMLInputElement>;
+        const checkboxes = element.querySelectorAll(
+            '.manager-employee-checkbox'
+        ) as NodeListOf<HTMLInputElement>;
         if (checkboxes.length === 0) {
             // No checkboxes yet, compare with original
             return (originalManagerSettings.managerAssignments || []).length > 0;
@@ -1016,7 +1113,7 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
 
         // Build current assignments from checkbox states
         const currentAssignmentsMap = new Map<number, Set<number>>();
-        checkboxes.forEach(checkbox => {
+        checkboxes.forEach((checkbox) => {
             const managerId = parseInt(checkbox.dataset.managerId || '0');
             const employeeId = parseInt(checkbox.dataset.employeeId || '0');
 
@@ -1034,7 +1131,7 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
             currentAssignments.push({
                 managerId,
                 managerName: '', // Name not important for comparison
-                employeeIds: Array.from(employeeIds).sort()
+                employeeIds: Array.from(employeeIds).sort(),
             });
         });
 
@@ -1047,7 +1144,7 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
 
         // Check each assignment for changes
         for (const current of currentAssignments) {
-            const original = originalAssignments.find(a => a.managerId === current.managerId);
+            const original = originalAssignments.find((a) => a.managerId === current.managerId);
             if (!original) return true;
 
             // Check if employee lists are different
@@ -1060,7 +1157,7 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
 
         // Check if any original assignments are missing in current
         for (const original of originalAssignments) {
-            const current = currentAssignments.find(a => a.managerId === original.managerId);
+            const current = currentAssignments.find((a) => a.managerId === original.managerId);
             if (!current) return true;
         }
 
@@ -1076,13 +1173,16 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
 
         const saveGroupBtn = element.querySelector('#save-group-settings-btn') as HTMLButtonElement;
         const saveGeneralBtn = element.querySelector('#save-settings-btn') as HTMLButtonElement;
-        const saveManagerBtn = element.querySelector('#save-manager-assignments-btn') as HTMLButtonElement;
+        const saveManagerBtn = element.querySelector(
+            '#save-manager-assignments-btn'
+        ) as HTMLButtonElement;
 
         const updateButton = (btn: HTMLButtonElement, label: string, isDirty: boolean) => {
             if (!btn) return;
 
             if (isDirty) {
-                btn.style.cssText = 'width: 100%; display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 0.75rem 1.5rem; background: #dc3545 !important; color: white !important; border: none !important; border-radius: 4px !important; cursor: pointer !important; font-size: 1rem !important; font-weight: 600 !important; transition: background 0.2s !important; animation: pulse 2s ease-in-out infinite;';
+                btn.style.cssText =
+                    'width: 100%; display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 0.75rem 1.5rem; background: #dc3545 !important; color: white !important; border: none !important; border-radius: 4px !important; cursor: pointer !important; font-size: 1rem !important; font-weight: 600 !important; transition: background 0.2s !important; animation: pulse 2s ease-in-out infinite;';
                 btn.innerHTML = `
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
@@ -1092,7 +1192,8 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                     Save ${label} (Unsaved Changes!)
                 `;
             } else {
-                btn.style.cssText = 'width: 100%; display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 0.75rem 1.5rem; background: #28a745 !important; color: white !important; border: none !important; border-radius: 4px !important; cursor: pointer !important; font-size: 1rem !important; font-weight: 600 !important; transition: background 0.2s !important;';
+                btn.style.cssText =
+                    'width: 100%; display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 0.75rem 1.5rem; background: #28a745 !important; color: white !important; border: none !important; border-radius: 4px !important; cursor: pointer !important; font-size: 1rem !important; font-weight: 600 !important; transition: background 0.2s !important;';
                 btn.innerHTML = `
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M5 13l4 4L19 7"></path>
@@ -1103,8 +1204,10 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
         };
 
         if (saveGroupBtn) updateButton(saveGroupBtn, 'Group Settings', hasUnsavedGroupChanges);
-        if (saveGeneralBtn) updateButton(saveGeneralBtn, 'General Settings', hasUnsavedGeneralChanges);
-        if (saveManagerBtn) updateButton(saveManagerBtn, 'Manager Assignments', hasUnsavedManagerChanges);
+        if (saveGeneralBtn)
+            updateButton(saveGeneralBtn, 'General Settings', hasUnsavedGeneralChanges);
+        if (saveManagerBtn)
+            updateButton(saveManagerBtn, 'Manager Assignments', hasUnsavedManagerChanges);
     }
 
     function renderBackupsSection(): string {
@@ -1117,10 +1220,11 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
             `;
         }
 
-        const backupsHtml = backupsList.map(backup => {
-            const date = new Date(backup.timestamp).toLocaleString();
-            const id = (backup as any).id; // KV Store ID
-            return `
+        const backupsHtml = backupsList
+            .map((backup) => {
+                const date = new Date(backup.timestamp).toLocaleString();
+                const id = (backup as any).id; // KV Store ID
+                return `
                 <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.75rem; border-bottom: 1px solid #eee;">
                     <div>
                         <div style="font-weight: 600; color: #333;">${date}</div>
@@ -1131,7 +1235,8 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                     </button>
                 </div>
             `;
-        }).join('');
+            })
+            .join('');
 
         return `
             <div style="margin-top: 3rem; border-top: 1px solid #eee; padding-top: 2rem;">
@@ -1162,8 +1267,9 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                     </div>
                 </div>
 
-                ${isLoading
-                ? `
+                ${
+                    isLoading
+                        ? `
                     <div style="max-width: 1200px; margin: 0 auto; text-align: center; padding: 3rem;">
                         <div style="margin-bottom: 1rem; display: flex; justify-content: center;">
                             <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#007bff" stroke-width="2" style="animation: spin 1s linear infinite;">
@@ -1179,20 +1285,20 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                         <p>Loading settings...</p>
                     </div>
                 `
-                : errorMessage
-                    ? `
+                        : errorMessage
+                          ? `
                     <div style="padding: 1.5rem; background: #fee; border: 1px solid #fcc; border-radius: 8px; color: #c00; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
                         <strong>Error:</strong> ${errorMessage}
                     </div>
                 `
-                    : `
+                          : `
                     ${renderGeneralSettings()}
                     ${renderGroupManagement()}
                     ${renderManagerAssignments()}
                     ${renderWorkCategories()}
                     ${renderBackupsSection()}
                 `
-            }
+                }
             </div>
         `;
 
@@ -1273,17 +1379,41 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
 
                     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 0.75rem;">
                         ${[
-                // Array indices: 0=Sun, 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri, 6=Sat
-                { day: 0, label: t('ct.extension.timetracker.common.weekDaysFull.sun') },
-                { day: 1, label: t('ct.extension.timetracker.common.weekDaysFull.mon') },
-                { day: 2, label: t('ct.extension.timetracker.common.weekDaysFull.tue') },
-                { day: 3, label: t('ct.extension.timetracker.common.weekDaysFull.wed') },
-                { day: 4, label: t('ct.extension.timetracker.common.weekDaysFull.thu') },
-                { day: 5, label: t('ct.extension.timetracker.common.weekDaysFull.fri') },
-                { day: 6, label: t('ct.extension.timetracker.common.weekDaysFull.sat') }
-            ].map(({ day, label }) => {
-                const isChecked = (settings.workWeekDays || [1, 2, 3, 4, 5]).includes(day);
-                return `
+                            // Array indices: 0=Sun, 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri, 6=Sat
+                            {
+                                day: 0,
+                                label: t('ct.extension.timetracker.common.weekDaysFull.sun'),
+                            },
+                            {
+                                day: 1,
+                                label: t('ct.extension.timetracker.common.weekDaysFull.mon'),
+                            },
+                            {
+                                day: 2,
+                                label: t('ct.extension.timetracker.common.weekDaysFull.tue'),
+                            },
+                            {
+                                day: 3,
+                                label: t('ct.extension.timetracker.common.weekDaysFull.wed'),
+                            },
+                            {
+                                day: 4,
+                                label: t('ct.extension.timetracker.common.weekDaysFull.thu'),
+                            },
+                            {
+                                day: 5,
+                                label: t('ct.extension.timetracker.common.weekDaysFull.fri'),
+                            },
+                            {
+                                day: 6,
+                                label: t('ct.extension.timetracker.common.weekDaysFull.sat'),
+                            },
+                        ]
+                            .map(({ day, label }) => {
+                                const isChecked = (
+                                    settings.workWeekDays || [1, 2, 3, 4, 5]
+                                ).includes(day);
+                                return `
                                 <label style="display: flex; align-items: center; gap: 0.5rem; padding: 0.75rem; background: ${isChecked ? '#e7f3ff' : '#f8f9fa'}; border: 1px solid ${isChecked ? '#007bff' : '#dee2e6'}; border-radius: 4px; cursor: pointer; transition: all 0.2s;">
                                     <input
                                         type="checkbox"
@@ -1295,7 +1425,8 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                                     <span style="font-weight: ${isChecked ? '600' : '400'}; color: ${isChecked ? '#007bff' : '#333'}; font-size: 0.9rem;">${label}</span>
                                 </label>
                             `;
-            }).join('')}
+                            })
+                            .join('')}
                     </div>
                 </div>
 
@@ -1405,7 +1536,9 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                         ${t('ct.extension.timetracker.admin.individualSettingsHelp')}
                     </p>
 
-                    ${employeesList.length > 0 ? `
+                    ${
+                        employeesList.length > 0
+                            ? `
                         <!-- Employees Table -->
                         <div style="background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 6px; padding: 1rem;">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin: 0 0 1rem 0;">
@@ -1418,7 +1551,9 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                                     style="padding: 0.5rem; background: ${!settings.employeeGroupId || loadingEmployees ? '#6c757d' : '#17a2b8'}; color: white; border: none; border-radius: 4px; cursor: ${!settings.employeeGroupId || loadingEmployees ? 'not-allowed' : 'pointer'}; display: inline-flex; align-items: center; gap: 0.5rem;"
                                     title="${loadingEmployees ? 'Loading...' : 'Refresh employees from ChurchTools'}"
                                 >
-                                    ${loadingEmployees ? `
+                                    ${
+                                        loadingEmployees
+                                            ? `
                                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation: spin 1s linear infinite;">
                                             <style>
                                                 @keyframes spin {
@@ -1428,13 +1563,15 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                                             </style>
                                             <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
                                         </svg>
-                                    ` : `
+                                    `
+                                            : `
                                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                             <polyline points="23 4 23 10 17 10"></polyline>
                                             <polyline points="1 20 1 14 7 14"></polyline>
                                             <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
                                         </svg>
-                                    `}
+                                    `
+                                    }
                                 </button>
                             </div>
 
@@ -1451,27 +1588,39 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        ${employeesList.map(emp => {
-            const existingConfig = settings.userHoursConfig?.find(c => c.userId === emp.userId);
-            const hoursPerDay = existingConfig?.hoursPerDay || settings.defaultHoursPerDay;
-            const hoursPerWeek = existingConfig?.hoursPerWeek || settings.defaultHoursPerWeek;
-            const isActive = existingConfig?.isActive !== false;
+                                        ${employeesList
+                                            .map((emp) => {
+                                                const existingConfig =
+                                                    settings.userHoursConfig?.find(
+                                                        (c) => c.userId === emp.userId
+                                                    );
+                                                const hoursPerDay =
+                                                    existingConfig?.hoursPerDay ||
+                                                    settings.defaultHoursPerDay;
+                                                const hoursPerWeek =
+                                                    existingConfig?.hoursPerWeek ||
+                                                    settings.defaultHoursPerWeek;
+                                                const isActive = existingConfig?.isActive !== false;
 
-            return `
+                                                return `
                                                 <tr style="border-bottom: 1px solid #dee2e6; ${!isActive ? 'background: #fff3cd;' : ''}">
                                                     <td style="padding: 0.75rem; color: #333;">
                                                         ${emp.userName} <span style="color: #999; font-size: 0.85rem;">(${emp.userId})</span>
                                                     </td>
                                                     <td style="padding: 0.75rem;">
-                                                        ${isActive ? `
+                                                        ${
+                                                            isActive
+                                                                ? `
                                                             <span style="background: #d4edda; color: #155724; padding: 0.25rem 0.5rem; border-radius: 3px; font-size: 0.75rem; font-weight: 600; border: 1px solid #c3e6cb; white-space: nowrap;">
                                                                 ✓ ${t('ct.extension.timetracker.admin.active')}
                                                             </span>
-                                                        ` : `
+                                                        `
+                                                                : `
                                                             <span style="background: #fff3cd; color: #856404; padding: 0.25rem 0.5rem; border-radius: 3px; font-size: 0.75rem; font-weight: 600; border: 1px solid #ffeaa7;">
                                                                 ⚠ ${t('ct.extension.timetracker.admin.removed')}
                                                             </span>
-                                                        `}
+                                                        `
+                                                        }
                                                     </td>
                                                     <td style="padding: 0.75rem;">
                                                         <input
@@ -1504,26 +1653,62 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                                                     <td style="padding: 0.75rem;">
                                                         <div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px;">
                                                             ${[
-                    t('ct.extension.timetracker.common.weekDays.sun'),
-                    t('ct.extension.timetracker.common.weekDays.mon'),
-                    t('ct.extension.timetracker.common.weekDays.tue'),
-                    t('ct.extension.timetracker.common.weekDays.wed'),
-                    t('ct.extension.timetracker.common.weekDays.thu'),
-                    t('ct.extension.timetracker.common.weekDays.fri'),
-                    t('ct.extension.timetracker.common.weekDays.sat')
-                ].map((day, index) => {
-                    const workWeek = existingConfig?.workWeekDays || settings.workWeekDays || [1, 2, 3, 4, 5];
-                    const isChecked = workWeek.includes(index);
-                    return `
-                                                                <label style="display: flex; align-items: center; justify-content: center; cursor: ${isActive ? 'pointer' : 'not-allowed'}; opacity: ${isActive ? '1' : '0.5'};" title="${[
-                            t('ct.extension.timetracker.common.weekDaysFull.sun'),
-                            t('ct.extension.timetracker.common.weekDaysFull.mon'),
-                            t('ct.extension.timetracker.common.weekDaysFull.tue'),
-                            t('ct.extension.timetracker.common.weekDaysFull.wed'),
-                            t('ct.extension.timetracker.common.weekDaysFull.thu'),
-                            t('ct.extension.timetracker.common.weekDaysFull.fri'),
-                            t('ct.extension.timetracker.common.weekDaysFull.sat')
-                        ][index]}">
+                                                                t(
+                                                                    'ct.extension.timetracker.common.weekDays.sun'
+                                                                ),
+                                                                t(
+                                                                    'ct.extension.timetracker.common.weekDays.mon'
+                                                                ),
+                                                                t(
+                                                                    'ct.extension.timetracker.common.weekDays.tue'
+                                                                ),
+                                                                t(
+                                                                    'ct.extension.timetracker.common.weekDays.wed'
+                                                                ),
+                                                                t(
+                                                                    'ct.extension.timetracker.common.weekDays.thu'
+                                                                ),
+                                                                t(
+                                                                    'ct.extension.timetracker.common.weekDays.fri'
+                                                                ),
+                                                                t(
+                                                                    'ct.extension.timetracker.common.weekDays.sat'
+                                                                ),
+                                                            ]
+                                                                .map((day, index) => {
+                                                                    const workWeek =
+                                                                        existingConfig?.workWeekDays ||
+                                                                            settings.workWeekDays || [
+                                                                                1, 2, 3, 4, 5,
+                                                                            ];
+                                                                    const isChecked =
+                                                                        workWeek.includes(index);
+                                                                    return `
+                                                                <label style="display: flex; align-items: center; justify-content: center; cursor: ${isActive ? 'pointer' : 'not-allowed'}; opacity: ${isActive ? '1' : '0.5'};" title="${
+                                                                    [
+                                                                        t(
+                                                                            'ct.extension.timetracker.common.weekDaysFull.sun'
+                                                                        ),
+                                                                        t(
+                                                                            'ct.extension.timetracker.common.weekDaysFull.mon'
+                                                                        ),
+                                                                        t(
+                                                                            'ct.extension.timetracker.common.weekDaysFull.tue'
+                                                                        ),
+                                                                        t(
+                                                                            'ct.extension.timetracker.common.weekDaysFull.wed'
+                                                                        ),
+                                                                        t(
+                                                                            'ct.extension.timetracker.common.weekDaysFull.thu'
+                                                                        ),
+                                                                        t(
+                                                                            'ct.extension.timetracker.common.weekDaysFull.fri'
+                                                                        ),
+                                                                        t(
+                                                                            'ct.extension.timetracker.common.weekDaysFull.sat'
+                                                                        ),
+                                                                    ][index]
+                                                                }">
                                                                     <input
                                                                         type="checkbox"
                                                                         class="user-work-week-checkbox"
@@ -1536,11 +1721,14 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                                                                     <span style="font-size: 0.7rem; margin-left: 2px; color: ${isActive ? '#333' : '#999'}; user-select: none;">${day}</span>
                                                                 </label>
                 `;
-                }).join('')}
+                                                                })
+                                                                .join('')}
                                                         </div>
                                                     </td>
                                                     <td style="padding: 0.75rem; text-align: center;">
-                                                        ${!isActive ? `
+                                                        ${
+                                                            !isActive
+                                                                ? `
                                                             <button
                                                                 class="delete-employee-btn"
                                                                 data-user-id="${emp.userId}"
@@ -1554,22 +1742,29 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                                                                 </svg>
                                                                 ${t('ct.extension.timetracker.common.delete')}
                                                             </button>
-                                                        ` : `
+                                                        `
+                                                                : `
                                                             <span style="color: #999; font-size: 0.85rem; font-style: italic;">-</span>
-                                                        `}
+                                                        `
+                                                        }
                                                     </td>
                                                 </tr>
                                             `;
-        }).join('')}
+                                            })
+                                            .join('')}
                                     </tbody>
                                 </table>
                             </div>
                         </div>
-                    ` : (!loadingEmployees && settings.employeeGroupId ? `
+                    `
+                            : !loadingEmployees && settings.employeeGroupId
+                              ? `
                         <p style="color: #666; font-style: italic; background: #f8f9fa; padding: 1rem; border-radius: 4px; border-left: 3px solid #6c757d;">
                             ${t('ct.extension.timetracker.admin.clickLoadEmployees')}
                         </p>
-                    ` : '')}
+                    `
+                              : ''
+                    }
                 </div>
 
                 <button
@@ -1630,7 +1825,9 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                     <small style="color: #666; font-size: 0.85rem;">Enter the ChurchTools group ID for managers, then click "Load Managers"</small>
                 </div>
 
-                ${loadingManagers ? `
+                ${
+                    loadingManagers
+                        ? `
                     <div style="text-align: center; padding: 2rem; color: #666;">
                         <div style="display: inline-block;">
                             <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#007bff" stroke-width="2" style="animation: spin 1s linear infinite;">
@@ -1639,21 +1836,27 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                         </div>
                         <p style="margin-top: 1rem;">Loading managers...</p>
                     </div>
-                ` : (managersList.length > 0 ? `
+                `
+                        : managersList.length > 0
+                          ? `
                     <div style="background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 6px; padding: 1rem; margin-bottom: 1rem;">
                         <h3 style="margin: 0 0 1rem 0; font-size: 1.1rem; color: #333;">Manager Assignments (${managersList.length} managers)</h3>
                         
-                        ${managersList.map(manager => {
-            const assignment = settings.managerAssignments?.find(a => a.managerId === manager.userId);
-            const assignedIds = assignment?.employeeIds || [];
+                        ${managersList
+                            .map((manager) => {
+                                const assignment = settings.managerAssignments?.find(
+                                    (a) => a.managerId === manager.userId
+                                );
+                                const assignedIds = assignment?.employeeIds || [];
 
-            return `
+                                return `
                                 <div style="background: white; border: 1px solid #dee2e6; border-radius: 4px; padding: 1rem; margin-bottom: 0.75rem;">
                                     <h4 style="margin: 0 0 0.75rem 0; font-size: 1rem; color: #495057;">${manager.userName}</h4>
                                     <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 0.5rem;">
-                                        ${employeesList.map(emp => {
-                const isChecked = assignedIds.includes(emp.userId);
-                return `
+                                        ${employeesList
+                                            .map((emp) => {
+                                                const isChecked = assignedIds.includes(emp.userId);
+                                                return `
                                                 <label style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem; border-radius: 3px; cursor: pointer; hover: background: #f8f9fa;">
                                                     <input
                                                         type="checkbox"
@@ -1666,11 +1869,13 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                                                     <span style="font-size: 0.9rem;">${emp.userName}</span>
                                                 </label>
                                             `;
-            }).join('')}
+                                            })
+                                            .join('')}
                                     </div>
                                 </div>
                             `;
-        }).join('')}
+                            })
+                            .join('')}
                     </div>
 
                     <!-- Status Message -->
@@ -1687,11 +1892,15 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                         </svg>
                         Save Manager Assignments
                     </button>
-                ` : (settings.managerGroupId ? `
+                `
+                          : settings.managerGroupId
+                            ? `
                     <div style="text-align: center; padding: 2rem; color: #666; background: #f8f9fa; border-radius: 4px;">
                         <p>Click "Load Managers" to load managers from group ${settings.managerGroupId}</p>
                     </div>
-                ` : ''))}
+                `
+                            : ''
+                }
             </div>
         `;
     }
@@ -1719,28 +1928,35 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                     </button>
                 </div>
 
-                ${showAddCategory || editingCategory
-                ? `
+                ${
+                    showAddCategory || editingCategory
+                        ? `
                     <!-- Category Form -->
                     <div style="background: #f8f9fa; border: 2px solid ${editingCategory ? '#ffc107' : '#28a745'}; border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem;">
                         <h3 style="margin: 0 0 1rem 0; color: #333; display: flex; align-items: center; gap: 0.5rem;">
-                            ${editingCategory ? `
+                            ${
+                                editingCategory
+                                    ? `
                                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                     <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
                                     <path d="M18.5 2.5a2.121 2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
                                 </svg>
                                 ${t('ct.extension.timetracker.admin.editCategory')}
-                            ` : `
+                            `
+                                    : `
                                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                     <line x1="12" y1="5" x2="12" y2="19"></line>
                                     <line x1="5" y1="12" x2="19" y2="12"></line>
                                 </svg>
                                 ${t('ct.extension.timetracker.admin.addCategory')}
-                            `}
+                            `
+                            }
                         </h3>
 
                         <div style="display: grid; gap: 1rem; margin-bottom: 1rem;">
-                            ${editingCategory ? `
+                            ${
+                                editingCategory
+                                    ? `
                             <div>
                                 <label style="display: block; margin-bottom: 0.5rem; color: #333; font-weight: 600;">
                                     ${t('ct.extension.timetracker.admin.categoryId')}
@@ -1754,7 +1970,9 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                                 />
                                 <small style="color: #666; font-size: 0.85rem;">${t('ct.extension.timetracker.admin.idCannotBeChanged')}</small>
                             </div>
-                            ` : ''}
+                            `
+                                    : ''
+                            }
 
                             <div>
                                 <label style="display: block; margin-bottom: 0.5rem; color: #333; font-weight: 600;">
@@ -1815,11 +2033,12 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                         <div id="category-form-status" style="margin-top: 1rem; padding: 0.75rem; border-radius: 4px; display: none;"></div>
                     </div>
                 `
-                : ''
-            }
+                        : ''
+                }
 
-                ${showDeleteDialog && categoryToDelete
-                ? `
+                ${
+                    showDeleteDialog && categoryToDelete
+                        ? `
                     <!-- Delete Confirmation Dialog -->
                     <div style="background: #fff3cd; border: 2px solid #ffc107; border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem;">
                         <h3 style="margin: 0 0 1rem 0; color: #856404; display: flex; align-items: center; gap: 0.5rem;">
@@ -1849,9 +2068,12 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                                 style="width: 100%; padding: 0.75rem; border: 1px solid #ffc107; border-radius: 4px; background: white;"
                             >
                                 ${workCategories
-                    .filter(c => c.id !== categoryToDelete!.id)
-                    .map(c => `<option value="${c.id}" ${c.id === replacementCategoryId ? 'selected' : ''}>${c.name}</option>`)
-                    .join('')}
+                                    .filter((c) => c.id !== categoryToDelete!.id)
+                                    .map(
+                                        (c) =>
+                                            `<option value="${c.id}" ${c.id === replacementCategoryId ? 'selected' : ''}>${c.name}</option>`
+                                    )
+                                    .join('')}
                             </select>
                         </div>
 
@@ -1875,17 +2097,18 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                         </div>
                     </div>
                 `
-                : ''
-            }
+                        : ''
+                }
 
                 <!-- Categories List -->
-                ${workCategories.length === 0
-                ? '<p style="color: #666; text-align: center; padding: 2rem;">No categories defined yet. Click "Add Category" to create one.</p>'
-                : `
+                ${
+                    workCategories.length === 0
+                        ? '<p style="color: #666; text-align: center; padding: 2rem;">No categories defined yet. Click "Add Category" to create one.</p>'
+                        : `
                     <div style="display: grid; gap: 1rem;">
                         ${workCategories
-                    .map(
-                        (category) => `
+                            .map(
+                                (category) => `
                             <div style="display: flex; align-items: center; justify-content: space-between; padding: 1rem; border: 1px solid #dee2e6; border-radius: 6px; background: #f8f9fa;">
                                 <div style="display: flex; align-items: center; gap: 1rem; flex: 1;">
                                     <div style="width: 40px; height: 40px; background: ${category.color}; border-radius: 6px; border: 2px solid #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.1);"></div>
@@ -1920,11 +2143,11 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                                 </div>
                             </div>
                         `
-                    )
-                    .join('')}
+                            )
+                            .join('')}
                     </div>
                 `
-            }
+                }
             </div>
         `;
     }
@@ -1939,11 +2162,17 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
         });
 
         // Group Management
-        const refreshEmployeesBtn = element.querySelector('#refresh-employees-btn') as HTMLButtonElement;
-        const saveGroupSettingsBtn = element.querySelector('#save-group-settings-btn') as HTMLButtonElement;
+        const refreshEmployeesBtn = element.querySelector(
+            '#refresh-employees-btn'
+        ) as HTMLButtonElement;
+        const saveGroupSettingsBtn = element.querySelector(
+            '#save-group-settings-btn'
+        ) as HTMLButtonElement;
 
         refreshEmployeesBtn?.addEventListener('click', async () => {
-            const employeeGroupIdInput = element.querySelector('#employee-group-id') as HTMLInputElement;
+            const employeeGroupIdInput = element.querySelector(
+                '#employee-group-id'
+            ) as HTMLInputElement;
             const groupId = parseInt(employeeGroupIdInput.value);
 
             if (groupId && groupId > 0) {
@@ -1952,34 +2181,38 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
         });
 
         // Delete employee buttons (event delegation)
-        element.querySelectorAll('.delete-employee-btn').forEach(btn => {
+        element.querySelectorAll('.delete-employee-btn').forEach((btn) => {
             btn.addEventListener('click', async (e) => {
                 const target = e.target as HTMLElement;
                 const userId = parseInt(target.getAttribute('data-user-id') || '0');
                 const userName = target.getAttribute('data-user-name') || 'Unknown';
 
-                if (confirm(`Delete employee "${userName}" and all their time tracking data?\n\nThis action cannot be undone!`)) {
+                if (
+                    confirm(
+                        `Delete employee "${userName}" and all their time tracking data?\n\nThis action cannot be undone!`
+                    )
+                ) {
                     await handleDeleteEmployee(userId);
                 }
             });
         });
 
         // Work week checkbox handlers - use smart change detection
-        element.querySelectorAll('.user-work-week-checkbox').forEach(checkbox => {
+        element.querySelectorAll('.user-work-week-checkbox').forEach((checkbox) => {
             checkbox.addEventListener('change', () => {
                 updateSaveButtonState(); // Smart detection checks actual changes
             });
         });
 
         // Hours input handlers - use smart change detection
-        element.querySelectorAll('.employee-hours-day, .employee-hours-week').forEach(input => {
+        element.querySelectorAll('.employee-hours-day, .employee-hours-week').forEach((input) => {
             input.addEventListener('input', () => {
                 updateSaveButtonState(); // Smart detection checks actual changes
             });
         });
 
         // General Settings inputs (hours/day, hours/week) - use smart change detection
-        element.querySelectorAll('#hours-per-day, #hours-per-week').forEach(input => {
+        element.querySelectorAll('#hours-per-day, #hours-per-week').forEach((input) => {
             input.addEventListener('input', () => {
                 updateSaveButtonState(); // Smart detection checks actual changes
             });
@@ -1993,10 +2226,14 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
 
         //  Manager Assignments Handlers
         const loadManagersBtn = element.querySelector('#load-managers-btn') as HTMLButtonElement;
-        const saveManagerAssignmentsBtn = element.querySelector('#save-manager-assignments-btn') as HTMLButtonElement;
+        const saveManagerAssignmentsBtn = element.querySelector(
+            '#save-manager-assignments-btn'
+        ) as HTMLButtonElement;
 
         loadManagersBtn?.addEventListener('click', async () => {
-            const managerGroupIdInput = element.querySelector('#manager-group-id') as HTMLInputElement;
+            const managerGroupIdInput = element.querySelector(
+                '#manager-group-id'
+            ) as HTMLInputElement;
             const groupId = parseInt(managerGroupIdInput.value);
 
             if (groupId && groupId > 0) {
@@ -2011,7 +2248,7 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
         });
 
         // Manager assignment checkboxes - use smart change detection
-        element.querySelectorAll('.manager-employee-checkbox').forEach(checkbox => {
+        element.querySelectorAll('.manager-employee-checkbox').forEach((checkbox) => {
             checkbox.addEventListener('change', () => {
                 updateSaveButtonState(); // Smart detection checks actual changes
             });
@@ -2024,14 +2261,14 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
         });
 
         // Global work week checkboxes - use smart change detection
-        element.querySelectorAll('.work-week-day-checkbox').forEach(checkbox => {
+        element.querySelectorAll('.work-week-day-checkbox').forEach((checkbox) => {
             checkbox.addEventListener('change', () => {
                 updateSaveButtonState(); // Smart detection checks actual changes
             });
         });
 
         // Group ID inputs - use smart change detection
-        element.querySelectorAll('#employee-group-id, #volunteer-group-id').forEach(input => {
+        element.querySelectorAll('#employee-group-id, #volunteer-group-id').forEach((input) => {
             input.addEventListener('input', () => {
                 updateSaveButtonState(); // Smart detection checks actual changes
             });
@@ -2141,7 +2378,9 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
             });
         }
 
-        const replacementCategorySelect = element.querySelector('#replacement-category-select') as HTMLSelectElement;
+        const replacementCategorySelect = element.querySelector(
+            '#replacement-category-select'
+        ) as HTMLSelectElement;
         if (replacementCategorySelect) {
             replacementCategorySelect.addEventListener('change', (e) => {
                 replacementCategoryId = (e.target as HTMLSelectElement).value;
@@ -2149,7 +2388,7 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
         }
 
         // Restore backup handlers
-        element.querySelectorAll('.restore-backup-btn').forEach(btn => {
+        element.querySelectorAll('.restore-backup-btn').forEach((btn) => {
             btn.addEventListener('click', async (e) => {
                 const target = e.target as HTMLElement;
                 const button = target.closest('.restore-backup-btn') as HTMLElement;
@@ -2183,12 +2422,14 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
             saveBtn.innerHTML = saveIconHTML + 'Saving...';
 
             // Collect all manager assignments from checkboxes
-            const checkboxes = element.querySelectorAll('.manager-employee-checkbox') as NodeListOf<HTMLInputElement>;
+            const checkboxes = element.querySelectorAll(
+                '.manager-employee-checkbox'
+            ) as NodeListOf<HTMLInputElement>;
 
             // Build manager assignments map
             const assignmentsMap = new Map<number, Set<number>>();
 
-            checkboxes.forEach(checkbox => {
+            checkboxes.forEach((checkbox) => {
                 const managerId = parseInt(checkbox.dataset.managerId || '0');
                 const employeeId = parseInt(checkbox.dataset.employeeId || '0');
 
@@ -2203,12 +2444,12 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
             // Convert map to ManagerAssignment array
             const managerAssignments: ManagerAssignment[] = [];
             assignmentsMap.forEach((employeeIds, managerId) => {
-                const manager = managersList.find(m => m.userId === managerId);
+                const manager = managersList.find((m) => m.userId === managerId);
                 if (manager) {
                     managerAssignments.push({
                         managerId,
                         managerName: manager.userName,
-                        employeeIds: Array.from(employeeIds)
+                        employeeIds: Array.from(employeeIds),
                     });
                 }
             });
@@ -2220,7 +2461,7 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
             // Update original snapshots after successful save
             originalManagerSettings = {
                 managerGroupId: settings.managerGroupId,
-                managerAssignments: JSON.parse(JSON.stringify(managerAssignments))
+                managerAssignments: JSON.parse(JSON.stringify(managerAssignments)),
             };
 
             // Show success message
@@ -2258,7 +2499,9 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
             statusMessage.style.background = '#f8d7da';
             statusMessage.style.border = '1px solid #f5c6cb';
             statusMessage.style.color = '#721c24';
-            statusMessage.textContent = '✗ Failed to save manager assignments: ' + (error instanceof Error ? error.message : 'Unknown error');
+            statusMessage.textContent =
+                '✗ Failed to save manager assignments: ' +
+                (error instanceof Error ? error.message : 'Unknown error');
 
             // Show ChurchTools toast notification (top-right)
             emit('notification:show', {
@@ -2278,7 +2521,15 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
         const statusMessage = element.querySelector('#settings-status') as HTMLElement;
         const saveBtn = element.querySelector('#save-settings-btn') as HTMLButtonElement;
 
-        if (!hoursPerDayInput || !hoursPerWeekInput || !excelImportToggle || !languageSelect || !statusMessage || !saveBtn) return;
+        if (
+            !hoursPerDayInput ||
+            !hoursPerWeekInput ||
+            !excelImportToggle ||
+            !languageSelect ||
+            !statusMessage ||
+            !saveBtn
+        )
+            return;
 
         const saveIconHTML = `
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -2292,11 +2543,12 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
             saveBtn.disabled = true;
             saveBtn.innerHTML = saveIconHTML + 'Saving...';
 
-
             // Collect work week days from checkboxes
             const workWeekDays: number[] = [];
-            const workWeekCheckboxes = element.querySelectorAll('.work-week-day-checkbox') as NodeListOf<HTMLInputElement>;
-            workWeekCheckboxes.forEach(checkbox => {
+            const workWeekCheckboxes = element.querySelectorAll(
+                '.work-week-day-checkbox'
+            ) as NodeListOf<HTMLInputElement>;
+            workWeekCheckboxes.forEach((checkbox) => {
                 if (checkbox.checked) {
                     const day = parseInt(checkbox.getAttribute('data-day') || '0');
                     workWeekDays.push(day);
@@ -2317,7 +2569,10 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
 
             // Check if language changed - if so, re-initialize i18n and re-render
             if (newSettings.language !== settings.language) {
-                const languageToUse = (newSettings.language || 'auto') === 'auto' ? detectBrowserLanguage() : (newSettings.language || 'de');
+                const languageToUse =
+                    (newSettings.language || 'auto') === 'auto'
+                        ? detectBrowserLanguage()
+                        : newSettings.language || 'de';
                 await initI18n(languageToUse as Language);
                 settings = newSettings; // Update settings before re-render
                 render(); // Re-render entire page with new language
@@ -2329,7 +2584,7 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                 defaultHoursPerDay: newSettings.defaultHoursPerDay,
                 defaultHoursPerWeek: newSettings.defaultHoursPerWeek,
                 excelImportEnabled: newSettings.excelImportEnabled,
-                workWeekDays: [...newSettings.workWeekDays!]
+                workWeekDays: [...newSettings.workWeekDays!],
             };
 
             // Reset dirty state after successful save
@@ -2341,7 +2596,8 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
             statusMessage.style.background = '#d4edda';
             statusMessage.style.border = '1px solid #c3e6cb';
             statusMessage.style.color = '#155724';
-            statusMessage.textContent = '✓ ' + t('ct.extension.timetracker.admin.settingsSavedSuccess');
+            statusMessage.textContent =
+                '✓ ' + t('ct.extension.timetracker.admin.settingsSavedSuccess');
 
             // Emit notification to ChurchTools
             emit('notification:show', {
@@ -2374,11 +2630,13 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
         try {
             // Remove from userHoursConfig
             if (settings.userHoursConfig) {
-                settings.userHoursConfig = settings.userHoursConfig.filter(c => c.userId !== userId);
+                settings.userHoursConfig = settings.userHoursConfig.filter(
+                    (c) => c.userId !== userId
+                );
             }
 
             // Remove from employeesList (UI)
-            employeesList = employeesList.filter(emp => emp.userId !== userId);
+            employeesList = employeesList.filter((emp) => emp.userId !== userId);
 
             // Save updated settings
             await saveSettings(settings);
@@ -2402,8 +2660,12 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
 
     // Handle save group settings
     async function handleSaveGroupSettings() {
-        const employeeGroupIdInput = element.querySelector('#employee-group-id') as HTMLInputElement;
-        const volunteerGroupIdInput = element.querySelector('#volunteer-group-id') as HTMLInputElement;
+        const employeeGroupIdInput = element.querySelector(
+            '#employee-group-id'
+        ) as HTMLInputElement;
+        const volunteerGroupIdInput = element.querySelector(
+            '#volunteer-group-id'
+        ) as HTMLInputElement;
         const statusMessage = element.querySelector('#group-settings-status') as HTMLElement;
         const saveBtn = element.querySelector('#save-group-settings-btn') as HTMLButtonElement;
 
@@ -2422,13 +2684,19 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
             saveBtn.innerHTML = saveIconHTML + 'Saving...';
 
             // Get group IDs (allow empty)
-            const employeeGroupId = employeeGroupIdInput?.value ? parseInt(employeeGroupIdInput.value) : undefined;
-            const volunteerGroupId = volunteerGroupIdInput?.value ? parseInt(volunteerGroupIdInput.value) : undefined;
+            const employeeGroupId = employeeGroupIdInput?.value
+                ? parseInt(employeeGroupIdInput.value)
+                : undefined;
+            const volunteerGroupId = volunteerGroupIdInput?.value
+                ? parseInt(volunteerGroupIdInput.value)
+                : undefined;
 
             // Collect global work week days
             const globalWorkWeekDays: number[] = [];
-            const globalWorkWeekCheckboxes = element.querySelectorAll('.global-work-week-checkbox') as NodeListOf<HTMLInputElement>;
-            globalWorkWeekCheckboxes.forEach(checkbox => {
+            const globalWorkWeekCheckboxes = element.querySelectorAll(
+                '.global-work-week-checkbox'
+            ) as NodeListOf<HTMLInputElement>;
+            globalWorkWeekCheckboxes.forEach((checkbox) => {
                 if (checkbox.checked) {
                     globalWorkWeekDays.push(parseInt(checkbox.getAttribute('data-day') || '0'));
                 }
@@ -2437,8 +2705,12 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
 
             // Collect individual employee hours from table
             const userHoursConfig: UserHoursConfig[] = [];
-            const employeeHoursDayInputs = element.querySelectorAll('.employee-hours-day') as NodeListOf<HTMLInputElement>;
-            const employeeHoursWeekInputs = element.querySelectorAll('.employee-hours-week') as NodeListOf<HTMLInputElement>;
+            const employeeHoursDayInputs = element.querySelectorAll(
+                '.employee-hours-day'
+            ) as NodeListOf<HTMLInputElement>;
+            const employeeHoursWeekInputs = element.querySelectorAll(
+                '.employee-hours-week'
+            ) as NodeListOf<HTMLInputElement>;
 
             employeeHoursDayInputs.forEach((dayInput, index) => {
                 const userId = parseInt(dayInput.dataset.userId || '0');
@@ -2447,13 +2719,15 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
 
                 if (userId > 0) {
                     // Get current userName from employeesList (not from old data-attribute)
-                    const employee = employeesList.find(e => e.userId === userId);
+                    const employee = employeesList.find((e) => e.userId === userId);
                     const userName = employee?.userName || `User ${userId}`;
 
                     // Collect work week days from checkboxes for this user
                     const workWeekDays: number[] = [];
-                    const userCheckboxes = element.querySelectorAll(`.user-work-week-checkbox[data-user-id="${userId}"]`) as NodeListOf<HTMLInputElement>;
-                    userCheckboxes.forEach(checkbox => {
+                    const userCheckboxes = element.querySelectorAll(
+                        `.user-work-week-checkbox[data-user-id="${userId}"]`
+                    ) as NodeListOf<HTMLInputElement>;
+                    userCheckboxes.forEach((checkbox) => {
                         if (checkbox.checked) {
                             const day = parseInt(checkbox.getAttribute('data-day') || '0');
                             workWeekDays.push(day);
@@ -2463,14 +2737,16 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                     workWeekDays.sort((a, b) => a - b);
 
                     // Preserve isActive status from existing config
-                    const existingConfig = settings.userHoursConfig?.find(c => c.userId === userId);
+                    const existingConfig = settings.userHoursConfig?.find(
+                        (c) => c.userId === userId
+                    );
                     userHoursConfig.push({
                         userId,
                         userName,
                         hoursPerDay,
                         hoursPerWeek,
-                        isActive: existingConfig?.isActive !== false,  // Preserve existing isActive status
-                        workWeekDays: workWeekDays.length > 0 ? workWeekDays : undefined // Only set if user has custom work week
+                        isActive: existingConfig?.isActive !== false, // Preserve existing isActive status
+                        workWeekDays: workWeekDays.length > 0 ? workWeekDays : undefined, // Only set if user has custom work week
                     });
                 }
             });
@@ -2481,14 +2757,17 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                 employeeGroupId,
                 volunteerGroupId,
                 userHoursConfig,
-                workWeekDays: globalWorkWeekDays
-            }; await saveSettings(newSettings);
+                workWeekDays: globalWorkWeekDays,
+            };
+            await saveSettings(newSettings);
 
             // Update original snapshots after successful save
             originalGroupSettings = {
                 employeeGroupId: newSettings.employeeGroupId,
                 volunteerGroupId: newSettings.volunteerGroupId,
-                userHoursConfig: newSettings.userHoursConfig ? JSON.parse(JSON.stringify(newSettings.userHoursConfig)) : undefined
+                userHoursConfig: newSettings.userHoursConfig
+                    ? JSON.parse(JSON.stringify(newSettings.userHoursConfig))
+                    : undefined,
             };
 
             // Reset dirty state after successful save
@@ -2623,7 +2902,8 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                 '✗ Failed to save: ' + (error instanceof Error ? error.message : 'Unknown error');
         } finally {
             saveBtn.disabled = false;
-            saveBtn.innerHTML = saveIconHTML + (editingCategory ? 'Update Category' : 'Save Category');
+            saveBtn.innerHTML =
+                saveIconHTML + (editingCategory ? 'Update Category' : 'Save Category');
         }
     }
 
