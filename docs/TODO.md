@@ -450,9 +450,9 @@
 - ⏳ API Documentation (wenn public API)
 
 ### Testing
-- ⏳ Unit Tests (Vitest)
-- ⏳ Integration Tests
-- ⏳ E2E Tests (Playwright)
+- ✅ Unit Tests (Vitest) - 7 tests for i18n.ts, 69.56% coverage
+- ⏳ Integration Tests (expand coverage to kv-store, calculations)
+- ⏳ E2E Tests (Playwright) - deferred for future
 
 ### Code Quality
 - ✅ ESLint Configuration (v9 with flat config, TypeScript support)
