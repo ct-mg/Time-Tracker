@@ -461,21 +461,20 @@
 
 ---
 
-#### Manager Berechtigungen - Klärung & Implementierung
+#### ✅ Manager Berechtigungen - Status Quo (RESOLVED 2025-11-30)
 **Frage:** Kann ein Manager für seine Arbeiter Einträge erstellen oder löschen?
-**Aktueller Status:** ❌ Manager können NICHT für andere Einträge erstellen/löschen
+**User Entscheidung:** ❌ NEIN - Status Quo beibehalten
+**Aktueller Status:** Manager können NICHT für andere Einträge erstellen/löschen/bearbeiten
    - KV-Store ist user-spezifisch (jeder User hat seinen eigenen Store)
-   - Delete/Create Funktionen arbeiten nur mit dem Store des aktuellen Users
-**Status:** Zu klären mit User
-**Aufwand:** Mittel (falls Implementierung gewünscht)
-**Priority:** Hoch
+   - Manager können Einträge nur **ansehen** (via User Attribution Feature)
+   - Delete/Create/Edit Funktionen arbeiten nur mit dem Store des aktuellen Users
+**Status:** ✅ Geklärt - keine Implementierung nötig
+**Priority:** Hoch (erledigt)
 
-**Optionen:**
-1. **Status Quo:** Manager können nur eigene Einträge verwalten, sehen aber die anderer
-2. **Volle Berechtigung:** Manager können Einträge für ihre Mitarbeiter erstellen/bearbeiten/löschen
-   - Erfordert API-Änderungen um auf andere User-Stores zuzugreifen
-   - Permission-Checks einbauen
-3. **Eingeschränkt:** Manager können nur bestimmte Aktionen (z.B. Kategorie ändern, aber nicht löschen)
+**Gewählte Option:**
+1. ✅ **Status Quo:** Manager können nur eigene Einträge verwalten, sehen aber die anderer (via User Attribution Badge)
+
+**Date:** 2025-11-30
 
 ---
 
