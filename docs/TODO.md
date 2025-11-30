@@ -492,25 +492,32 @@
 
 ---
 
-#### Auto-Apply Filter (Remove Filter Button)
+#### ✅ Auto-Apply Filter (COMPLETED 2025-11-30)
 **Problem:** User muss "Filter anwenden" Button klicken
 **Feature:** Filter automatisch bei jeder Änderung anwenden
-**Status:** Geplant
+**Status:** ✅ Implementiert
 **Aufwand:** Klein
 **Priority:** Hoch
 
-**Anforderungen:**
-- Filter-Button entfernen
-- Bei Datum-Änderung: Sofort filtern
-- Bei Category-Änderung: Sofort filtern
-- Bei Textfeld (Search): Delay von ~300-500ms nach letztem Keystroke (debounce)
+**Implementation:**
+- ✅ "Apply Filters" Button entfernt
+- ✅ Filter-Inputs mit auto-apply Event Listeners ausgestattet
+- ✅ Bei Datum-Änderung: Sofort filtern (change event)
+- ✅ Bei Category-Änderung: Sofort filtern (change event)
+- ✅ Bei User-Änderung (Manager): Sofort filtern (change event)
+- ✅ Bei Textfeld (Search): 300ms Debounce nach letztem Keystroke (input event)
   - Verhindert zu viele Re-Renders beim Tippen
   - Erst filtern wenn User zu Ende getippt hat
 
-**Implementation:**
+**Technical Details:**
 - Event Listener direkt auf Inputs statt auf Button
-- Debounce-Funktion für Text-Inputs
-- Cache-Invalidierung bleibt gleich
+- Debounce-Funktion für Text-Inputs (300ms)
+- Cache-Invalidierung und virtual scroll reset bleiben gleich
+- Gemeinsame `autoApplyFilters()` Funktion für Code-Reuse
+
+**Git Commit:** `9f58e2e` - feat: implement auto-apply filters
+**Branch:** feature/auto-apply-filters (merged to develop)
+**Date:** 2025-11-30
 
 ---
 
