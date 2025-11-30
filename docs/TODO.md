@@ -440,17 +440,24 @@
 
 ### Neue Features - Hohe Priorität
 
-#### User Attribution für Manager
+#### ✅ User Attribution für Manager (COMPLETED 2025-11-30)
 **Problem:** Manager sehen Zeiteinträge mehrerer Mitarbeiter, aber es ist nicht ersichtlich, wem welcher Eintrag gehört
 **Feature:** Anzeige des Benutzernamens bei jedem Zeiteintrag wenn Manager mehrere Personen sieht
-**Status:** Geplant
+**Status:** ✅ Implementiert
 **Aufwand:** Klein-Mittel
 **Priority:** Hoch
 
-**Anforderungen:**
-- Bei jedem Zeiteintrag in der Liste soll der Benutzername angezeigt werden
-- Nur sichtbar für Manager die mehr als nur ihre eigenen Einträge sehen
-- Ggf. als zusätzliche Spalte oder Badge am Eintrag
+**Implementierung:**
+- ✅ `getUserNameFromId()` Helper-Funktion in main.ts
+- ✅ User Badge in "Type" Spalte neben Manual/Break Badges
+- ✅ Conditional Display: `isManager && userList.length > 1 && entry.userId !== user?.id`
+- ✅ Styled mit light blue Badge (#e8f4f8 background, #0066cc text)
+- ✅ Translations für DE ("Benutzer") und EN ("User")
+- ✅ User Icon (Person Silhouette) für visuelle Klarheit
+
+**Git Commit:** `79b558b` - feat: add user attribution for managers  
+**Branch:** feature/user-attribution (merged to develop)  
+**Date:** 2025-11-30
 
 ---
 
