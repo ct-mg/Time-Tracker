@@ -8,9 +8,9 @@
 
 ## Aktueller Status
 
-**Letztes Update:** 2025-11-28
-**Aktuelle Phase:** Phase 4 - Advanced Features (HR/Manager Dashboard) ⏳ IN PROGRESS
-**Nächste Phase:** Phase 5 - Polish & Testing
+**Letztes Update:** 2025-11-29
+**Aktuelle Phase:** Phase 5 - Polish & Testing
+**Nächste Phase:** Kontinuierliche Verbesserungen
 
 ---
 
@@ -259,18 +259,45 @@
 
 ### 🔴 Priorität: Hoch
 
-#### Performance-Optimierung bei vielen Einträgen
-**Problem:** Bei >1000 Einträgen wird Rendering langsam
-**Lösung:** Virtual Scrolling für Time Entries Tabelle
-**Status:** Offen
-**Aufwand:** Mittel (Library: react-virtual oder custom)
+#### Collapsible Button Toggle Verbesserung ✅ COMPLETED
+**Problem:** Offene Buttons (z.B. "Add Time Entry", "Add Absence") schließen nicht beim erneuten Klick
+**Lösung:** Toggle-Verhalten implementiert - Button schließt Dialog wenn bereits offen  
+**Status:** ✅ Completed (2025-11-29)
+**Implementation:** Changed `showAddManualEntry = true` to `= !showAddManualEntry`
+
+---
+
+#### CSV Export Success Toast ✅ COMPLETED
+**Problem:** Nach CSV/Excel Export gibt es keine visuelle Bestätigung
+**Lösung:** Success Toast rechts oben nach erfolgreichem Export
+**Status:** ✅ Completed (2025-11-29)
+**Implementation:** Added `notification:show` event after XLSX.writeFile
+
+---
+
+#### ✅ Performance-Optimierung bei vielen Einträgen (COMPLETED 2025-11-29)
+**Problem:** Bei >1000 Einträgen wird Rendering langsam  
+**Lösung:** Virtual Scrolling für Time Entries Tabelle  
+**Status:** ✅ Implementiert
+**Aufwand:** Mittel (Custom Implementation)  
 **User Impact:** Hoch
 
 **Implementierungs-Schritte:**
-1. Benchmark: Messen ab wie vielen Einträgen es langsam wird
-2. Library Evaluation (react-virtual, react-window)
-3. Integration in Time Entries Tabelle
-4. Testing mit 1000+, 5000+, 10000+ Einträgen
+1. ✅ Custom Virtual Scrolling Lösung (kein zusätzliches Library)
+2. ✅ Aktiviert ab 100+ Einträgen
+3. ✅ Integration in Time Entries Tabelle mit Week/Day Grouping
+4. ✅ Debounced Scroll Events (150ms)
+5. ✅ Scroll Position Restoration nach Re-render
+6. ✅ Filter Integration (Reset Scroll bei Filter-Änderung)
+
+**Technische Details:**
+- Rendering Window: Sichtbare Einträge + 10 Buffer oben/unten
+- Container Height: 600px max
+- Estimated Row Height: 80px
+- Aktivierungsschwelle: 100 Einträge
+- Performance Target: 60fps Scrolling, <500ms Init für 5000 Einträge
+
+**Git Commit:** Virtual scrolling performance optimization
 
 ---
 
@@ -289,18 +316,60 @@
 
 ### 🟡 Priorität: Mittel
 
-#### Bulk Edit für Time Entries
+#### Bulk Edit für Time Entries ⏳ IN PROGRESS
 **Use Case:** User hat 10 Einträge mit falscher Kategorie
-**Feature:** Multi-Select + Kategorie-Änderung für mehrere Einträge
-**Status:** Offen
+**Feature:** Multi-Select + Bulk Delete + Kategorie-Änderung für mehrere Einträge
+**Status:** In Progress (Branch: feature/bulk-edit)
 **Aufwand:** Mittel
 
 **Implementierungs-Schritte:**
-1. Checkbox für jeden Eintrag
-2. "Select All" Toggle
-3. Bulk-Action Bar mit Kategorie-Dropdown
-4. "Update Selected" Button
-5. Confirmation Dialog mit Anzahl
+1. ✅ Checkbox für jeden Eintrag
+2. ✅ "Select All" Toggle
+3. ✅ Bulk-Action Bar mit Kategorie-Dropdown
+4. ✅ "Update Selected" Button
+5. ⏳ Bulk Delete Button + Confirmation Dialog
+6. ⏳ Testing
+
+---
+
+#### Time Filter Presets
+**Use Case:** User möchte schnell Zeiträume filtern ohne Datum manuell einzugeben
+**Feature:** Vordefinierte Zeitfilter für Time Entries
+**Status:** Geplant (Separate Branch)
+**Aufwand:** Klein
+**Priority:** Mittel
+
+**Gewünschte Filter:**
+- Dieser Monat
+- Letzter Monat
+- Dieses Jahr
+- Letztes Jahr
+- Letzte 365 Tage
+- Letzte 30 Tage
+
+**Location:** Time Entries Filter Sektion
+
+---
+
+#### UI/UX Verbesserungen - Dialoge
+**Problem:** Inkonsistenzen bei Dialog-Verhalten und Buttons
+**Status:** Geplant (Separate Branch)
+**Aufwand:** Klein
+**Priority:** Mittel
+
+**Issues:**
+1. **Toggle-Konflikt:** Öffnet man "Manuelle Einträge" während "Massenimport" offen ist, bleibt Massenimport offen
+   - Erwartet: Massenimport sollte sich schließen
+   - Wichtig: Eingegebene Daten müssen erhalten bleiben (falls versehentlich geschlossen)
+   
+2. **Button Inkonsistenz:** 
+   - Massenimport: Hat "X" zum Schließen
+   - Manuelle Einträge: Hat "Abbruch" Button
+   - Gewünscht: Überall "Abbruch" Button statt "X"
+
+3. **Fehlende Übersetzung:**
+   - "Manual Entries" zeigt sich auf Englisch auch wenn Deutsch ausgewählt
+   - Fehlender Key: `ct.extension.timetracker.bulkEntry.title`
 
 ---
 
@@ -365,7 +434,96 @@
 - Template löschen
 
 **Status:** Offen
+**Aufwand:** Klein
+
+---
+
+### Neue Features - Hohe Priorität
+
+#### ✅ User Attribution für Manager (COMPLETED 2025-11-30)
+**Problem:** Manager sehen Zeiteinträge mehrerer Mitarbeiter, aber es ist nicht ersichtlich, wem welcher Eintrag gehört
+**Feature:** Anzeige des Benutzernamens bei jedem Zeiteintrag wenn Manager mehrere Personen sieht
+**Status:** ✅ Implementiert
+**Aufwand:** Klein-Mittel
+**Priority:** Hoch
+
+**Implementierung:**
+- ✅ `getUserNameFromId()` Helper-Funktion in main.ts
+- ✅ User Badge in "Type" Spalte neben Manual/Break Badges
+- ✅ Conditional Display: `isManager && userList.length > 1 && entry.userId !== user?.id`
+- ✅ Styled mit light blue Badge (#e8f4f8 background, #0066cc text)
+- ✅ Translations für DE ("Benutzer") und EN ("User")
+- ✅ User Icon (Person Silhouette) für visuelle Klarheit
+
+**Git Commit:** `79b558b` - feat: add user attribution for managers  
+**Branch:** feature/user-attribution (merged to develop)  
+**Date:** 2025-11-30
+
+---
+
+#### ✅ Manager Berechtigungen - Status Quo (RESOLVED 2025-11-30)
+**Frage:** Kann ein Manager für seine Arbeiter Einträge erstellen oder löschen?
+**User Entscheidung:** ❌ NEIN - Status Quo beibehalten
+**Aktueller Status:** Manager können NICHT für andere Einträge erstellen/löschen/bearbeiten
+   - KV-Store ist user-spezifisch (jeder User hat seinen eigenen Store)
+   - Manager können Einträge nur **ansehen** (via User Attribution Feature)
+   - Delete/Create/Edit Funktionen arbeiten nur mit dem Store des aktuellen Users
+**Status:** ✅ Geklärt - keine Implementierung nötig
+**Priority:** Hoch (erledigt)
+
+**Gewählte Option:**
+1. ✅ **Status Quo:** Manager können nur eigene Einträge verwalten, sehen aber die anderer (via User Attribution Badge)
+
+**Date:** 2025-11-30
+
+---
+
+#### Admin Activity Log
+**Feature:** Log-System für Admin zur Nachverfolgung von Änderungen
+**Status:** Geplant
 **Aufwand:** Mittel
+**Priority:** Hoch
+
+**Anforderungen:**
+- Log aller wichtigen Aktionen (Create, Update, Delete von Einträgen)
+- Timestamp, User, Action, Affected Data
+- Nur für Admin einsehbar
+- Ggf. als separater Tab im Admin Panel
+- Optional: Export-Funktion für Logs
+
+**Technische Details:**
+- Speicherung in KV-Store (eigene Category "activityLog")
+- Log-Einträge bei allen CRUD-Operationen erstellen
+- UI im Admin Panel zum Anzeigen/Filtern von Logs
+
+---
+
+#### ✅ Auto-Apply Filter (COMPLETED 2025-11-30)
+**Problem:** User muss "Filter anwenden" Button klicken
+**Feature:** Filter automatisch bei jeder Änderung anwenden
+**Status:** ✅ Implementiert
+**Aufwand:** Klein
+**Priority:** Hoch
+
+**Implementation:**
+- ✅ "Apply Filters" Button entfernt
+- ✅ Filter-Inputs mit auto-apply Event Listeners ausgestattet
+- ✅ Bei Datum-Änderung: Sofort filtern (change event)
+- ✅ Bei Category-Änderung: Sofort filtern (change event)
+- ✅ Bei User-Änderung (Manager): Sofort filtern (change event)
+- ✅ Bei Textfeld (Search): 300ms Debounce nach letztem Keystroke (input event)
+  - Verhindert zu viele Re-Renders beim Tippen
+  - Erst filtern wenn User zu Ende getippt hat
+
+**Technical Details:**
+- Event Listener direkt auf Inputs statt auf Button
+- Debounce-Funktion für Text-Inputs (300ms)
+- Cache-Invalidierung und virtual scroll reset bleiben gleich
+- Gemeinsame `autoApplyFilters()` Funktion für Code-Reuse
+
+**Git Commit:** `9f58e2e` - feat: implement auto-apply filters
+**Branch:** feature/auto-apply-filters (merged to develop)
+**Date:** 2025-11-30
 
 ---
 
@@ -450,8 +608,10 @@
 - ⏳ API Documentation (wenn public API)
 
 ### Testing
-- ✅ Unit Tests (Vitest) - 7 tests for i18n.ts, 69.56% coverage
-- ⏳ Integration Tests (expand coverage to kv-store, calculations)
+- ✅ Unit Tests (Vitest) - 20 tests total, 10 passing (50%)
+  - i18n.ts: 7/7 tests, 69.56% coverage ✅
+  - kv-store.ts: 3/13 tests passing ⚠️ (mocking complexity)
+- ⏳ Integration Tests (future - complex API mocking needed)
 - ⏳ E2E Tests (Playwright) - deferred for future
 
 ### Code Quality

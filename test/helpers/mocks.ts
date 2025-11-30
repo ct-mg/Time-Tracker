@@ -45,3 +45,42 @@ export function mockApiError(message: string) {
     mockChurchtoolsClient.get.mockRejectedValue(error);
     mockChurchtoolsClient.post.mockRejectedValue(error);
 }
+
+/**
+ * Mock getCustomDataValues - successful GET of data values
+ */
+export function mockGetCustomDataValues(data: any[]) {
+    mockChurchtoolsClient.get.mockResolvedValue(data);
+}
+
+/**
+ * Mock createCustomDataValue - successful POST
+ */
+export function mockCreateCustomDataValue(responseData: any = 'created') {
+    mockChurchtoolsClient.post.mockResolvedValue(responseData);
+}
+
+/**
+ * Mock updateCustomDataValue - successful PUT
+ */
+export function mockUpdateCustomDataValue(responseData: any = {}) {
+    mockChurchtoolsClient.put.mockResolvedValue(responseData);
+}
+
+/**
+ * Mock deleteCustomDataValue - successful DELETE
+ */
+export function mockDeleteCustomDataValue() {
+    mockChurchtoolsClient.deleteApi.mockResolvedValue(undefined);
+}
+
+/**
+ * Mock ChurchTools extension context
+ */
+export function mockChurchtoolsContext(moduleId: number = 14) {
+    return {
+        moduleId,
+        name: 'timetracker',
+    };
+}
+

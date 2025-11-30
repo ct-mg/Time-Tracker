@@ -103,3 +103,43 @@ export const sampleTranslations = {
         'test.with.param': 'Hallo {name}',
     },
 };
+
+// KV Store Fixtures
+
+export const sampleCustomDataValue = {
+    id: 1,
+    dataCategoryId: 10,
+    value: JSON.stringify({
+        userId: 123,
+        categoryId: 'work',
+        startTime: '2024-01-15T09:00:00.000Z',
+        endTime: '2024-01-15T17:00:00.000Z',
+    }),
+};
+
+export const sampleCustomDataValues = [
+    sampleCustomDataValue,
+    {
+        id: 2,
+        dataCategoryId: 10,
+        value: JSON.stringify({
+            schemaVersion: 2,
+            hoursPerWeek: 40,
+        }),
+    },
+];
+
+export const sampleParsedDataValue = {
+    userId: 123,
+    categoryId: 'work',
+    startTime: '2024-01-15T09:00:00.000Z',
+    endTime: '2024-01-15T17:00:00.000Z',
+    id: 1,
+    dataCategoryId: 10,
+};
+
+export const sampleModuleContext = {
+    moduleId: 14,
+    name: 'timetracker',
+};
+
