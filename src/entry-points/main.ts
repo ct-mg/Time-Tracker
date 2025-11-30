@@ -123,13 +123,21 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
     let filterUser: string | 'all' = user?.id?.toString() || 'all'; // User filter (manager only)
 
     // Date preset calculation functions
+    // Helper to format date as YYYY-MM-DD in local timezone
+    function formatLocalDate(date: Date): string {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    }
+
     function getThisMonthRange(): { from: string; to: string } {
         const now = new Date();
         const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
         const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
         return {
-            from: firstDay.toISOString().split('T')[0],
-            to: lastDay.toISOString().split('T')[0],
+            from: formatLocalDate(firstDay),
+            to: formatLocalDate(lastDay),
         };
     }
 
@@ -138,8 +146,8 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
         const firstDay = new Date(now.getFullYear(), now.getMonth() - 1, 1);
         const lastDay = new Date(now.getFullYear(), now.getMonth(), 0);
         return {
-            from: firstDay.toISOString().split('T')[0],
-            to: lastDay.toISOString().split('T')[0],
+            from: formatLocalDate(firstDay),
+            to: formatLocalDate(lastDay),
         };
     }
 
@@ -148,8 +156,8 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
         const firstDay = new Date(now.getFullYear(), 0, 1);
         const lastDay = new Date(now.getFullYear(), 11, 31);
         return {
-            from: firstDay.toISOString().split('T')[0],
-            to: lastDay.toISOString().split('T')[0],
+            from: formatLocalDate(firstDay),
+            to: formatLocalDate(lastDay),
         };
     }
 
@@ -158,8 +166,8 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
         const firstDay = new Date(now.getFullYear() - 1, 0, 1);
         const lastDay = new Date(now.getFullYear() - 1, 11, 31);
         return {
-            from: firstDay.toISOString().split('T')[0],
-            to: lastDay.toISOString().split('T')[0],
+            from: formatLocalDate(firstDay),
+            to: formatLocalDate(lastDay),
         };
     }
 
@@ -168,8 +176,8 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
         const dateBefore = new Date(now);
         dateBefore.setDate(dateBefore.getDate() - 30);
         return {
-            from: dateBefore.toISOString().split('T')[0],
-            to: now.toISOString().split('T')[0],
+            from: formatLocalDate(dateBefore),
+            to: formatLocalDate(now),
         };
     }
 
@@ -178,8 +186,8 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
         const dateBefore = new Date(now);
         dateBefore.setDate(dateBefore.getDate() - 365);
         return {
-            from: dateBefore.toISOString().split('T')[0],
-            to: now.toISOString().split('T')[0],
+            from: formatLocalDate(dateBefore),
+            to: formatLocalDate(now),
         };
     }
 
