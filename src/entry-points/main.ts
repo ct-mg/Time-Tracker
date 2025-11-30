@@ -2605,7 +2605,6 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
                     <button id="bulk-edit-toggle" style="padding: 0.5rem 1rem; background: ${bulkEditMode ? '#dc3545' : '#6c757d'}; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.9rem;">
                         ${bulkEditMode ? t('ct.extension.timetracker.bulkEdit.deselectAll') : t('ct.extension.timetracker.bulkEdit.selectMode')}
                     </button>
-                    <button id="apply-filters-btn" style="padding: 0.5rem 1rem; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.9rem;">${t('ct.extension.timetracker.common.applyFilter')}</button>
                     <button id="export-csv-btn" style="padding: 0.5rem 1rem; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; display: inline-flex; align-items: center; gap: 0.5rem;">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
@@ -3748,14 +3747,11 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
             await clockOut();
         });
 
-        // Filters
-        const applyFiltersBtn = element.querySelector('#apply-filters-btn') as HTMLButtonElement;
-        const exportCsvBtn = element.querySelector('#export-csv-btn') as HTMLButtonElement;
-        const exportReportCsvBtn = element.querySelector(
-            '#export-report-csv-btn'
-        ) as HTMLButtonElement;
+        // Auto-apply filters
+        let searchDebounceTimer: number | null = null;
 
-        applyFiltersBtn?.addEventListener('click', () => {
+        // Reusable auto-apply function
+        const autoApplyFilters = () => {
             const fromInput = element.querySelector<HTMLInputElement>('#filter-date-from');
             const toInput = element.querySelector<HTMLInputElement>('#filter-date-to');
             const categorySelect =
@@ -3773,7 +3769,39 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
             virtualScrollTop = 0;
             cachedFilteredEntries = null; // Clear cache when filter changes
             render();
+        };
+
+        // Date inputs - instant apply
+        const dateFromInput = element.querySelector<HTMLInputElement>('#filter-date-from');
+        const dateToInput = element.querySelector<HTMLInputElement>('#filter-date-to');
+        dateFromInput?.addEventListener('change', autoApplyFilters);
+        dateToInput?.addEventListener('change', autoApplyFilters);
+
+        // Category select - instant apply
+        const categorySelect = element.querySelector<HTMLSelectElement>('#filter-category');
+        categorySelect?.addEventListener('change', autoApplyFilters);
+
+        // User select (Manager only) - instant apply
+        const userSelect = element.querySelector<HTMLSelectElement>('#filter-user');
+        userSelect?.addEventListener('change', autoApplyFilters);
+
+        // Search input - debounced (300ms)
+        const searchInput = element.querySelector<HTMLInputElement>('#filter-search');
+        searchInput?.addEventListener('input', () => {
+            if (searchDebounceTimer !== null) {
+                clearTimeout(searchDebounceTimer);
+            }
+            searchDebounceTimer = window.setTimeout(() => {
+                autoApplyFilters();
+                searchDebounceTimer = null;
+            }, 300); // 300ms debounce
         });
+
+        // CSV Export buttons
+        const exportCsvBtn = element.querySelector('#export-csv-btn') as HTMLButtonElement;
+        const exportReportCsvBtn = element.querySelector(
+            '#export-report-csv-btn'
+        ) as HTMLButtonElement;
 
         // Quick filter presets
         const presetButtons = {
