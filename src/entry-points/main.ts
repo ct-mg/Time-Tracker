@@ -1098,9 +1098,10 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
                 showNotification('No entries were deleted', 'warning');
             }
 
-            // Reset bulk edit state
+            // Reset bulk edit state and clear cache
             selectedEntryIds.clear();
             bulkEditMode = false;
+            cachedFilteredEntries = null; // Clear cache to force UI update
             render();
         } catch (error) {
             console.error('[TimeTracker] Bulk delete failed:', error);
@@ -3736,7 +3737,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
             ) {
                 await bulkDeleteEntries(Array.from(selectedEntryIds));
             }
-            render();
+            // No need to render here - bulkDeleteEntries already calls render()
         });
 
         // Bulk cancel
