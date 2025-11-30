@@ -450,6 +450,12 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
         }
     }
 
+    // Get username from user ID (for manager attribution display)
+    function getUserNameFromId(userId: number): string {
+        const user = userList.find((u) => u.id === userId);
+        return user?.name || `User ${userId}`;
+    }
+
     // Get user-specific hours (from employee config) or default hours
     function getUserHours(): { hoursPerDay: number; hoursPerWeek: number } {
         if (!user?.id) {
@@ -3033,6 +3039,20 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
                                                                     <rect x="14" y="4" width="4" height="16" rx="1"></rect>
                                                                 </svg>
                                                                 ${t('ct.extension.timetracker.timeEntries.break')}
+                                                            </span>
+                                                        </span>
+                                                    `
+                                    : ''
+                                }
+                                                    ${isManager && userList.length > 1 && entry.userId !== user?.id
+                                    ? `
+                                                        <span style="background: #e8f4f8; color: #0066cc; padding: 0.15rem 0.4rem; border-radius: 3px; font-size: 0.75rem; font-weight: 600; border: 1px solid #99ccee;">
+                                                            <span style="display: inline-flex; align-items: center; gap: 0.25rem;">
+                                                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                                                                    <circle cx="12" cy="7" r="4"></circle>
+                                                                </svg>
+                                                                ${getUserNameFromId(entry.userId)}
                                                             </span>
                                                         </span>
                                                     `

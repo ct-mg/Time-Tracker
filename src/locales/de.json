@@ -96,6 +96,7 @@
     "ct.extension.timetracker.timeEntries.manual": "Manuell",
     "ct.extension.timetracker.timeEntries.clockedIn": "Gestempelt",
     "ct.extension.timetracker.timeEntries.break": "Pause",
+    "ct.extension.timetracker.timeEntries.user": "Benutzer",
     "ct.extension.timetracker.timeEntries.noEntries": "Keine Einträge gefunden",
     "ct.extension.timetracker.timeEntries.deleteConfirm": "Diesen Eintrag wirklich löschen?",
     "ct.extension.timetracker.timeEntries.exportExcel": "Excel exportieren",
