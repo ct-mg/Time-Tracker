@@ -2252,9 +2252,9 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
                             <line x1="12" y1="11" x2="12" y2="17"></line>
                             <line x1="9" y1="14" x2="15" y2="14"></line>
                         </svg>
-                        Bulk Add Time Entries
+                        ${t('ct.extension.timetracker.bulkEntry.title')}
                     </h3>
-                    <button id="close-bulk-entry-btn" style="padding: 0.25rem 0.5rem; background: #6c757d; color: white; border: none; border-radius: 3px; cursor: pointer;">✕ Close</button>
+                    <button id="close-bulk-entry-btn" style="padding: 0.5rem 1rem; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer;">${t('ct.extension.timetracker.common.cancel')}</button>
                 </div>
 
                 <div style="overflow-x: auto; margin-bottom: 1rem;">
@@ -2438,6 +2438,9 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
                             </svg>
                             Save All Entries (${bulkEntryRows.length})
                         </button>
+                        <button id="reset-bulk-entries-btn" style="padding: 0.5rem 1rem; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600;">
+                            ${t('ct.extension.timetracker.common.reset')}
+                        </button>
                     </div>
                 </div>
             </div>
@@ -2545,7 +2548,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
                     <path d="M9 12h6"></path>
                     <path d="M9 16h6"></path>
                 </svg>
-                ${t('ct.extension.timetracker.bulkEntry.title') || 'Bulk Entry'}
+                ${t('ct.extension.timetracker.timeEntries.addManualEntryTitle')}
             </h1>
                 <!-- Add/Edit Manual Entry Form -->
                 <div style="background: ${editingEntry ? '#d1ecf1' : '#fff3cd'}; border: 1px solid ${editingEntry ? '#17a2b8' : '#ffc107'}; border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem;">
@@ -2635,6 +2638,9 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
                             ${editingEntry ? 'Update Entry' : 'Save Entry'}
                         </button>
                         <button id="cancel-manual-entry-btn" style="padding: 0.5rem 1rem; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer;">Cancel</button>
+                        <button id="reset-manual-entry-btn" style="padding: 0.5rem 1rem; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                            ${t('ct.extension.timetracker.common.reset')}
+                        </button>
                     </div>
                 </div>
             `
@@ -3837,7 +3843,10 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
         ) as HTMLButtonElement;
 
         addManualEntryBtn?.addEventListener('click', () => {
-            showAddManualEntry = !showAddManualEntry; // Toggle instead of always true
+            showAddManualEntry = !showAddManualEntry;
+            if (showAddManualEntry) {
+                showBulkEntry = false; // Close bulk import when opening manual entry
+            }
             render();
         });
 
@@ -3846,6 +3855,25 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
             editingEntry = null;
             showBulkEntry = false;
             render();
+        });
+
+        // Reset manual entry form
+        const resetManualEntryBtn = element.querySelector('#reset-manual-entry-btn');
+        resetManualEntryBtn?.addEventListener('click', () => {
+            // Clear all form fields
+            const startInput = element.querySelector('#manual-start') as HTMLInputElement;
+            const endInput = element.querySelector('#manual-end') as HTMLInputElement;
+            const categorySelect = element.querySelector('#manual-category') as HTMLSelectElement;
+            const descriptionInput = element.querySelector('#manual-description') as HTMLInputElement;
+            const isBreakCheckbox = element.querySelector('#manual-is-break') as HTMLInputElement;
+
+            if (startInput) startInput.value = '';
+            if (endInput) endInput.value = '';
+            if (categorySelect && categorySelect.options.length > 0) categorySelect.selectedIndex = 0;
+            if (descriptionInput) descriptionInput.value = '';
+            if (isBreakCheckbox) isBreakCheckbox.checked = false;
+
+            editingEntry = null;
         });
 
         saveManualEntryBtn?.addEventListener('click', async () => {
@@ -3987,6 +4015,17 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
 
         closeBulkEntryBtn?.addEventListener('click', () => {
             showBulkEntry = false;
+            render();
+        });
+
+        // Reset bulk entries
+        const resetBulkEntriesBtn = element.querySelector('#reset-bulk-entries-btn');
+        resetBulkEntriesBtn?.addEventListener('click', () => {
+            bulkEntryRows = [];
+            // Start fresh with 3 empty rows
+            addBulkEntryRow();
+            addBulkEntryRow();
+            addBulkEntryRow();
             render();
         });
 
