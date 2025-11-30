@@ -96,6 +96,7 @@
     "ct.extension.timetracker.timeEntries.manual": "Manual",
     "ct.extension.timetracker.timeEntries.clockedIn": "Tracked",
     "ct.extension.timetracker.timeEntries.break": "Break",
+    "ct.extension.timetracker.timeEntries.user": "User",
     "ct.extension.timetracker.timeEntries.noEntries": "No entries found",
     "ct.extension.timetracker.timeEntries.deleteConfirm": "Are you sure you want to delete this entry?",
     "ct.extension.timetracker.timeEntries.exportExcel": "Export Excel",
