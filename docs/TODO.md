@@ -434,7 +434,83 @@
 - Template löschen
 
 **Status:** Offen
+**Aufwand:** Klein
+
+---
+
+### Neue Features - Hohe Priorität
+
+#### User Attribution für Manager
+**Problem:** Manager sehen Zeiteinträge mehrerer Mitarbeiter, aber es ist nicht ersichtlich, wem welcher Eintrag gehört
+**Feature:** Anzeige des Benutzernamens bei jedem Zeiteintrag wenn Manager mehrere Personen sieht
+**Status:** Geplant
+**Aufwand:** Klein-Mittel
+**Priority:** Hoch
+
+**Anforderungen:**
+- Bei jedem Zeiteintrag in der Liste soll der Benutzername angezeigt werden
+- Nur sichtbar für Manager die mehr als nur ihre eigenen Einträge sehen
+- Ggf. als zusätzliche Spalte oder Badge am Eintrag
+
+---
+
+#### Manager Berechtigungen - Klärung & Implementierung
+**Frage:** Kann ein Manager für seine Arbeiter Einträge erstellen oder löschen?
+**Aktueller Status:** ❌ Manager können NICHT für andere Einträge erstellen/löschen
+   - KV-Store ist user-spezifisch (jeder User hat seinen eigenen Store)
+   - Delete/Create Funktionen arbeiten nur mit dem Store des aktuellen Users
+**Status:** Zu klären mit User
+**Aufwand:** Mittel (falls Implementierung gewünscht)
+**Priority:** Hoch
+
+**Optionen:**
+1. **Status Quo:** Manager können nur eigene Einträge verwalten, sehen aber die anderer
+2. **Volle Berechtigung:** Manager können Einträge für ihre Mitarbeiter erstellen/bearbeiten/löschen
+   - Erfordert API-Änderungen um auf andere User-Stores zuzugreifen
+   - Permission-Checks einbauen
+3. **Eingeschränkt:** Manager können nur bestimmte Aktionen (z.B. Kategorie ändern, aber nicht löschen)
+
+---
+
+#### Admin Activity Log
+**Feature:** Log-System für Admin zur Nachverfolgung von Änderungen
+**Status:** Geplant
 **Aufwand:** Mittel
+**Priority:** Hoch
+
+**Anforderungen:**
+- Log aller wichtigen Aktionen (Create, Update, Delete von Einträgen)
+- Timestamp, User, Action, Affected Data
+- Nur für Admin einsehbar
+- Ggf. als separater Tab im Admin Panel
+- Optional: Export-Funktion für Logs
+
+**Technische Details:**
+- Speicherung in KV-Store (eigene Category "activityLog")
+- Log-Einträge bei allen CRUD-Operationen erstellen
+- UI im Admin Panel zum Anzeigen/Filtern von Logs
+
+---
+
+#### Auto-Apply Filter (Remove Filter Button)
+**Problem:** User muss "Filter anwenden" Button klicken
+**Feature:** Filter automatisch bei jeder Änderung anwenden
+**Status:** Geplant
+**Aufwand:** Klein
+**Priority:** Hoch
+
+**Anforderungen:**
+- Filter-Button entfernen
+- Bei Datum-Änderung: Sofort filtern
+- Bei Category-Änderung: Sofort filtern
+- Bei Textfeld (Search): Delay von ~300-500ms nach letztem Keystroke (debounce)
+  - Verhindert zu viele Re-Renders beim Tippen
+  - Erst filtern wenn User zu Ende getippt hat
+
+**Implementation:**
+- Event Listener direkt auf Inputs statt auf Button
+- Debounce-Funktion für Text-Inputs
+- Cache-Invalidierung bleibt gleich
 
 ---
 
