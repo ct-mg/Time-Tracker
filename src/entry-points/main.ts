@@ -122,6 +122,67 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
     let filterSearch = ''; // Description search term
     let filterUser: string | 'all' = user?.id?.toString() || 'all'; // User filter (manager only)
 
+    // Date preset calculation functions
+    function getThisMonthRange(): { from: string; to: string } {
+        const now = new Date();
+        const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+        const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+        return {
+            from: firstDay.toISOString().split('T')[0],
+            to: lastDay.toISOString().split('T')[0],
+        };
+    }
+
+    function getLastMonthRange(): { from: string; to: string } {
+        const now = new Date();
+        const firstDay = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        const lastDay = new Date(now.getFullYear(), now.getMonth(), 0);
+        return {
+            from: firstDay.toISOString().split('T')[0],
+            to: lastDay.toISOString().split('T')[0],
+        };
+    }
+
+    function getThisYearRange(): { from: string; to: string } {
+        const now = new Date();
+        const firstDay = new Date(now.getFullYear(), 0, 1);
+        const lastDay = new Date(now.getFullYear(), 11, 31);
+        return {
+            from: firstDay.toISOString().split('T')[0],
+            to: lastDay.toISOString().split('T')[0],
+        };
+    }
+
+    function getLastYearRange(): { from: string; to: string } {
+        const now = new Date();
+        const firstDay = new Date(now.getFullYear() - 1, 0, 1);
+        const lastDay = new Date(now.getFullYear() - 1, 11, 31);
+        return {
+            from: firstDay.toISOString().split('T')[0],
+            to: lastDay.toISOString().split('T')[0],
+        };
+    }
+
+    function getLast30DaysRange(): { from: string; to: string } {
+        const now = new Date();
+        const dateBefore = new Date(now);
+        dateBefore.setDate(dateBefore.getDate() - 30);
+        return {
+            from: dateBefore.toISOString().split('T')[0],
+            to: now.toISOString().split('T')[0],
+        };
+    }
+
+    function getLast365DaysRange(): { from: string; to: string } {
+        const now = new Date();
+        const dateBefore = new Date(now);
+        dateBefore.setDate(dateBefore.getDate() - 365);
+        return {
+            from: dateBefore.toISOString().split('T')[0],
+            to: now.toISOString().split('T')[0],
+        };
+    }
+
     // UI state
     let currentView: 'dashboard' | 'entries' | 'absences' | 'reports' = 'dashboard';
     let showAddManualEntry = false;
@@ -2451,6 +2512,33 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
         return `
             <!-- Filters -->
             <div style="background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                <!-- Quick Filter Presets -->
+                <div style="margin-bottom: 1rem; padding: 1rem; background: #f8f9fa; border-radius: 4px;">
+                    <div style="margin-bottom: 0.5rem; font-weight: 600; color: #333; font-size: 0.9rem;">
+                        ${t('ct.extension.timetracker.filters.quickFilters')}:
+                    </div>
+                    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                        <button id="preset-this-month" style="padding: 0.4rem 0.8rem; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85rem;">
+                            ${t('ct.extension.timetracker.filters.preset.thisMonth')}
+                        </button>
+                        <button id="preset-last-month" style="padding: 0.4rem 0.8rem; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85rem;">
+                            ${t('ct.extension.timetracker.filters.preset.lastMonth')}
+                        </button>
+                        <button id="preset-this-year" style="padding: 0.4rem 0.8rem; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85rem;">
+                            ${t('ct.extension.timetracker.filters.preset.thisYear')}
+                        </button>
+                        <button id="preset-last-year" style="padding: 0.4rem 0.8rem; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85rem;">
+                            ${t('ct.extension.timetracker.filters.preset.lastYear')}
+                        </button>
+                        <button id="preset-last-30-days" style="padding: 0.4rem 0.8rem; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85rem;">
+                            ${t('ct.extension.timetracker.filters.preset.last30Days')}
+                        </button>
+                        <button id="preset-last-365-days" style="padding: 0.4rem 0.8rem; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85rem;">
+                            ${t('ct.extension.timetracker.filters.preset.last365Days')}
+                        </button>
+                    </div>
+                </div>
+                
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1rem;">
                     <div>
                         <label for="filter-date-from" style="display: block; margin-bottom: 0.25rem; color: #666; font-size: 0.85rem;">${t('ct.extension.timetracker.reports.from')}</label>
@@ -3675,7 +3763,29 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
 
             // Reset scroll position when filters change
             virtualScrollTop = 0;
+            cachedFilteredEntries = null; // Clear cache when filter changes
             render();
+        });
+
+        // Quick filter presets
+        const presetButtons = {
+            'preset-this-month': getThisMonthRange,
+            'preset-last-month': getLastMonthRange,
+            'preset-this-year': getThisYearRange,
+            'preset-last-year': getLastYearRange,
+            'preset-last-30-days': getLast30DaysRange,
+            'preset-last-365-days': getLast365DaysRange,
+        };
+
+        Object.entries(presetButtons).forEach(([id, getRangeFn]) => {
+            const btn = element.querySelector(`#${id}`);
+            btn?.addEventListener('click', () => {
+                const range = getRangeFn();
+                filterDateFrom = range.from;
+                filterDateTo = range.to;
+                cachedFilteredEntries = null; // Clear cache
+                render();
+            });
         });
 
         // Virtual scroll event handler
