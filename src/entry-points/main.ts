@@ -2822,7 +2822,8 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
                             style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;"
                         >
                             <option value="all">${t('ct.extension.timetracker.entries.allUsers')}</option>
-                            ${userList.map((u) => `<option value="${u.id}" ${filterUser === u.id.toString() ? 'selected' : ''}>${u.name}</option>`).join('')}
+                            ${user?.id ? `<option value="${user.id}" ${filterUser === user.id.toString() ? 'selected' : ''}>${t('ct.extension.timetracker.entries.myEntries')}</option>` : ''}
+                            ${userList.filter(u => u.id !== user?.id).map((u) => `<option value="${u.id}" ${filterUser === u.id.toString() ? 'selected' : ''}>${u.name}</option>`).join('')}
                         </select>
                     </div>
                     `
