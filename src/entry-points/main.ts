@@ -602,17 +602,25 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
                 }>
             >('/persons');
 
+            console.log('[TimeTracker] Raw persons response:', response);
+            console.log('[TimeTracker] First person example:', response?.[0]);
+
             // Map to simplified format
             userList = (response || [])
-                .map((person) => ({
-                    id: person.id,
-                    name:
+                .map((person) => {
+                    const name =
                         `${person.domainAttributes?.firstName || ''} ${person.domainAttributes?.lastName || ''}`.trim() ||
-                        `User ${person.id}`,
-                }))
+                        `User ${person.id}`;
+                    console.log(`[TimeTracker] Person ${person.id}: ${name}`, person.domainAttributes);
+                    return {
+                        id: person.id,
+                        name,
+                    };
+                })
                 .filter((u) => u.id); // Remove invalid entries
 
             console.log('[TimeTracker] Loaded', userList.length, 'users for filter');
+            console.log('[TimeTracker] UserList sample:', userList.slice(0, 3));
         } catch (error) {
             console.error('[TimeTracker] Failed to load user list:', error);
             userList = [];
