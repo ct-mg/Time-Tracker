@@ -2552,7 +2552,10 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
                         </svg>
                         ${t('ct.extension.timetracker.bulkEntry.title')}
                     </h3>
-                    <button id="close-bulk-entry-btn" style="padding: 0.5rem 1rem; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer;">${t('ct.extension.timetracker.common.cancel')}</button>
+                    <div style="display: flex; gap: 0.5rem;">
+                        <button id="reset-bulk-entries-btn" style="padding: 0.5rem 1rem; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600;">${t('ct.extension.timetracker.common.reset')}</button>
+                        <button id="reset-and-close-bulk-entry-btn" style="padding: 0.5rem 1rem; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600;">${t('ct.extension.timetracker.common.resetAndClose')}</button>
+                    </div>
                 </div>
 
                 <div style="overflow-x: auto; margin-bottom: 1rem;">
@@ -2727,19 +2730,14 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
                         </svg>
                         ${t('ct.extension.timetracker.bulkEntry.addRow')}
                     </button>
-                    <div style="display: flex; gap: 0.5rem;">
-                        <button id="save-bulk-entries-btn" ${bulkEntryRows.length === 0 ? 'disabled' : ''} style="padding: 0.5rem 1.5rem; background: ${bulkEntryRows.length === 0 ? '#6c757d' : '#28a745'}; color: white; border: none; border-radius: 4px; cursor: ${bulkEntryRows.length === 0 ? 'not-allowed' : 'pointer'}; font-weight: 600; display: inline-flex; align-items: center; gap: 0.5rem;">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
-                                <polyline points="17 21 17 13 7 13 7 21"></polyline>
-                                <polyline points="7 3 7 8 15 8"></polyline>
-                            </svg>
-                            ${t('ct.extension.timetracker.bulkEntry.saveAllEntries')} (${bulkEntryRows.length})
-                        </button>
-                        <button id="reset-bulk-entries-btn" style="padding: 0.5rem 1rem; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600;">
-                            ${t('ct.extension.timetracker.common.reset')}
-                        </button>
-                    </div>
+                    <button id="save-bulk-entries-btn" ${bulkEntryRows.length === 0 ? 'disabled' : ''} style="padding: 0.5rem 1.5rem; background: ${bulkEntryRows.length === 0 ? '#6c757d' : '#28a745'}; color: white; border: none; border-radius: 4px; cursor: ${bulkEntryRows.length === 0 ? 'not-allowed' : 'pointer'}; font-weight: 600; display: inline-flex; align-items: center; gap: 0.5rem;">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                            <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                            <polyline points="7 3 7 8 15 8"></polyline>
+                        </svg>
+                        ${t('ct.extension.timetracker.bulkEntry.saveAllEntries')} (${bulkEntryRows.length})
+                    </button>
                 </div>
             </div>
         `;
@@ -2886,7 +2884,10 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
                             `
                 }
                         </h3>
-                        <button id="cancel-manual-entry-btn" style="padding: 0.5rem 1rem; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer;">${t('ct.extension.timetracker.common.cancel')}</button>
+                        <div style="display: flex; gap: 0.5rem;">
+                            <button id="reset-manual-entry-btn" style="padding: 0.5rem 1rem; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer;">${t('ct.extension.timetracker.common.reset')}</button>
+                            <button id="reset-and-close-manual-entry-btn" style="padding: 0.5rem 1rem; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer;">${t('ct.extension.timetracker.common.resetAndClose')}</button>
+                        </div>
                     </div>
 
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
@@ -2948,9 +2949,6 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
                         <span style="color: #666; font-size: 0.95rem;">${t('ct.extension.timetracker.manualEntry.isBreakLabel')}</span>
                     </label>
                     <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
-                        <button id="reset-manual-entry-btn" style="padding: 0.5rem 1rem; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer;">
-                            ${t('ct.extension.timetracker.common.reset')}
-                        </button>
                         <button id="save-manual-entry-btn" style="padding: 0.5rem 1.5rem; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; display: inline-flex; align-items: center; gap: 0.5rem;">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
@@ -4213,13 +4211,9 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
 
             render();
         });
-
         // Manual entry
         const addManualEntryBtn = element.querySelector(
             '#add-manual-entry-btn'
-        ) as HTMLButtonElement;
-        const cancelManualEntryBtn = element.querySelector(
-            '#cancel-manual-entry-btn'
         ) as HTMLButtonElement;
         const saveManualEntryBtn = element.querySelector(
             '#save-manual-entry-btn'
@@ -4233,14 +4227,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
             render();
         });
 
-        cancelManualEntryBtn?.addEventListener('click', () => {
-            showAddManualEntry = false;
-            editingEntry = null;
-            showBulkEntry = false;
-            render();
-        });
-
-        // Reset manual entry form
+        // Reset manual entry form (clears fields only)
         const resetManualEntryBtn = element.querySelector('#reset-manual-entry-btn');
         resetManualEntryBtn?.addEventListener('click', () => {
             // Clear all form fields
@@ -4257,6 +4244,29 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
             if (isBreakCheckbox) isBreakCheckbox.checked = false;
 
             editingEntry = null;
+        });
+
+        // Reset and close manual entry form (clears fields + closes)
+        const resetAndCloseManualEntryBtn = element.querySelector('#reset-and-close-manual-entry-btn');
+        resetAndCloseManualEntryBtn?.addEventListener('click', () => {
+            // Clear all form fields
+            const startInput = element.querySelector('#manual-start') as HTMLInputElement;
+            const endInput = element.querySelector('#manual-end') as HTMLInputElement;
+            const categorySelect = element.querySelector('#manual-category') as HTMLSelectElement;
+            const descriptionInput = element.querySelector('#manual-description') as HTMLInputElement;
+            const isBreakCheckbox = element.querySelector('#manual-is-break') as HTMLInputElement;
+
+            if (startInput) startInput.value = '';
+            if (endInput) endInput.value = '';
+            if (categorySelect && categorySelect.options.length > 0) categorySelect.selectedIndex = 0;
+            if (descriptionInput) descriptionInput.value = '';
+            if (isBreakCheckbox) isBreakCheckbox.checked = false;
+
+            editingEntry = null;
+
+            // Close the form
+            showAddManualEntry = false;
+            render();
         });
 
         saveManualEntryBtn?.addEventListener('click', async () => {
@@ -4415,12 +4425,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
             render();
         });
 
-        closeBulkEntryBtn?.addEventListener('click', () => {
-            showBulkEntry = false;
-            render();
-        });
-
-        // Reset bulk entries
+        // Reset bulk entries (clears entries only)
         const resetBulkEntriesBtn = element.querySelector('#reset-bulk-entries-btn');
         resetBulkEntriesBtn?.addEventListener('click', () => {
             bulkEntryRows = [];
@@ -4428,6 +4433,14 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
             addBulkEntryRow();
             addBulkEntryRow();
             addBulkEntryRow();
+            render();
+        });
+
+        // Reset and close bulk entries (clears entries + closes)
+        const resetAndCloseBulkEntryBtn = element.querySelector('#reset-and-close-bulk-entry-btn');
+        resetAndCloseBulkEntryBtn?.addEventListener('click', () => {
+            bulkEntryRows = [];
+            showBulkEntry = false;
             render();
         });
 
