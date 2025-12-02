@@ -312,5 +312,6 @@
     "ct.extension.timetracker.common.of": "von",
     "ct.extension.timetracker.common.active": "Aktiv",
     "ct.extension.timetracker.common.fillBothTimes": "Bitte Start- und Endzeit ausfüllen.",
-    "ct.extension.timetracker.common.endAfterStart": "Endzeit muss nach Startzeit liegen."
+    "ct.extension.timetracker.common.endAfterStart": "Endzeit muss nach Startzeit liegen.",
+    "ct.extension.timetracker.common.resetAndClose": "Zurücksetzen und schließen"
 }
