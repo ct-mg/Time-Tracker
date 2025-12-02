@@ -2964,16 +2964,25 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
             <div style="background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
                     <h2 style="margin: 0; font-size: 1.2rem; color: #333;">${t('ct.extension.timetracker.timeEntries.title')} (${getFilteredEntries().length})</h2>
-                    ${getFilteredEntries().length > ENTRIES_PER_PAGE
+                    <div style="display: flex; gap: 0.5rem; align-items: center;">
+                        <button id="bulk-edit-toggle" style="padding: 0.4rem 0.8rem; background: ${bulkEditMode ? '#dc3545' : '#6c757d'}; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85rem; display: inline-flex; align-items: center; gap: 0.4rem;">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                ${bulkEditMode
+                ? `<line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line>`
+                : `<polyline points="9 11 12 14 22 4"></polyline><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>`
+            }
+                            </svg>
+                            ${bulkEditMode ? t('ct.extension.timetracker.bulkEdit.deselectAll') : t('ct.extension.timetracker.bulkEdit.selectMode')}
+                        </button>
+                        ${getFilteredEntries().length > ENTRIES_PER_PAGE
                 ? `
-                        <div style="display: flex; gap: 0.5rem; align-items: center;">
                             <span style="color: #666; font-size: 0.9rem;">${t('ct.extension.timetracker.common.page')} ${entriesPage} ${t('ct.extension.timetracker.common.of')} ${Math.ceil(getFilteredEntries().length / ENTRIES_PER_PAGE)}</span>
                             <button id="entries-prev-page" ${entriesPage === 1 ? 'disabled' : ''} style="padding: 0.25rem 0.5rem; background: ${entriesPage === 1 ? '#e9ecef' : '#007bff'}; color: ${entriesPage === 1 ? '#6c757d' : 'white'}; border: none; border-radius: 3px; cursor: ${entriesPage === 1 ? 'not-allowed' : 'pointer'};">‹ ${t('ct.extension.timetracker.common.back')}</button>
                             <button id="entries-next-page" ${entriesPage >= Math.ceil(getFilteredEntries().length / ENTRIES_PER_PAGE) ? 'disabled' : ''} style="padding: 0.25rem 0.5rem; background: ${entriesPage >= Math.ceil(getFilteredEntries().length / ENTRIES_PER_PAGE) ? '#e9ecef' : '#007bff'}; color: ${entriesPage >= Math.ceil(getFilteredEntries().length / ENTRIES_PER_PAGE) ? '#6c757d' : 'white'}; border: none; border-radius: 3px; cursor: ${entriesPage >= Math.ceil(getFilteredEntries().length / ENTRIES_PER_PAGE) ? 'not-allowed' : 'pointer'};">${t('ct.extension.timetracker.common.next')} ›</button>
-                        </div>
-                    `
+                        `
                 : ''
             }
+                    </div>
                 </div>
                 ${renderEntriesList(getFilteredEntries())}
             </div>
@@ -3311,21 +3320,6 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
 
             html += `</div>`; // Close week group
         }
-
-        // Add Bulk Edit toggle button at bottom of entries
-        html += `
-            <div style="display: flex; justify-content: flex-end; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #e9ecef;">
-                <button id="bulk-edit-toggle" style="padding: 0.5rem 1rem; background: ${bulkEditMode ? '#dc3545' : '#6c757d'}; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85rem; display: inline-flex; align-items: center; gap: 0.5rem; opacity: 0.9;">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        ${bulkEditMode
-                ? `<line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line>`
-                : `<polyline points="9 11 12 14 22 4"></polyline><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>`
-            }
-                    </svg>
-                    ${bulkEditMode ? t('ct.extension.timetracker.bulkEdit.deselectAll') : t('ct.extension.timetracker.bulkEdit.selectMode')}
-                </button>
-            </div>
-        `;
 
         // Add Bulk Action Bar if in bulk edit mode and entries selected
         if (bulkEditMode && selectedEntryIds.size > 0) {
