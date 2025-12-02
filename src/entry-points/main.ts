@@ -3768,7 +3768,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
                                             <line x1="12" y1="9" x2="12" y2="13"></line>
                                             <line x1="12" y1="17" x2="12.01" y2="17"></line>
                                         </svg>
-                                        Close to Target
+                                        ${t('ct.extension.timetracker.reports.closeToTarget')}
                                     </span>
                                 `
                             : `
@@ -3778,7 +3778,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
                                             <line x1="15" y1="9" x2="9" y2="15"></line>
                                             <line x1="9" y1="9" x2="15" y2="15"></line>
                                         </svg>
-                                        Below Target
+                                        ${t('ct.extension.timetracker.reports.belowTarget')}
                                     </span>
                                 `
                     }
@@ -3786,7 +3786,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
                             <div style="color: ${isOverTarget ? '#155724' : percentage >= 80 ? '#856404' : '#721c24'}; font-size: 0.9rem;">
                                 ${isOverTarget
                         ? `${t('ct.extension.timetracker.reports.targetAchievedMessage').replace('{hours}', parseFloat(stats.overtime).toFixed(0) + 'h ' + Math.round((parseFloat(stats.overtime) % 1) * 60) + 'm')}`
-                        : `You need to work ${formatDecimalHours(Math.abs(parseFloat(stats.overtime)))} more to reach your target.`
+                        : t('ct.extension.timetracker.reports.needMoreHours').replace('{hours}', formatDecimalHours(Math.abs(parseFloat(stats.overtime))))
                     }
                             </div>
                         </div>
