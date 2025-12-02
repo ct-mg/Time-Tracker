@@ -57,6 +57,14 @@ interface Settings {
     managerAssignments?: ManagerAssignment[]; // Manager -> Employee assignments
     workWeekDays?: number[]; // Days of week that count as work days (0=Sunday, 1=Monday, ..., 6=Saturday)
     language?: 'auto' | 'de' | 'en'; // UI language (auto = browser detection)
+    activityLogSettings?: {
+        // Activity Log configuration
+        enabled: boolean; // Master toggle for activity logging
+        logCreate: boolean; // Log CREATE operations
+        logUpdate: boolean; // Log UPDATE operations
+        logDelete: boolean; // Log DELETE operations
+        archiveAfterDays: number; // Auto-archive logs older than X days
+    };
     schemaVersion: number; // Schema version for migration handling
     lastModified: number; // Timestamp of last modification
     modifiedBy?: string; // Optional: User who made the change
@@ -85,6 +93,14 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
         excelImportEnabled: false, // Disabled by default (Alpha)
         workWeekDays: [1, 2, 3, 4, 5], // Default: Monday to Friday
         language: 'auto', // Default: auto-detect from browser
+        activityLogSettings: {
+            // Default: full logging enabled
+            enabled: true,
+            logCreate: true,
+            logUpdate: true,
+            logDelete: true,
+            archiveAfterDays: 90,
+        },
         schemaVersion: CURRENT_SCHEMA_VERSION,
         lastModified: Date.now(),
     };
@@ -142,6 +158,20 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
         managerGroupId: undefined,
         managerAssignments: undefined,
     };
+
+    // Activity Log state
+    let activityLogs: any[] = []; // Will be typed as ActivityLog from main.ts
+    let filteredLogs: any[] = [];
+    let logFilterUser: string = 'all';
+    let logFilterAction: string = 'all';
+    let logFilterDateFrom: string = '';
+    let logFilterDateTo: string = '';
+    let logPage: number = 1;
+    const LOGS_PER_PAGE = 50;
+    let hasUnsavedActivityLogChanges = false;
+    let originalActivityLogSettings = { ...settings.activityLogSettings };
+    let activityLogCategory: any | null = null;
+    let activityLogArchiveCategory: any | null = null;
 
     // Browser warning for unsaved changes
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
@@ -217,8 +247,10 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                 await loadManagersFromGroup(settings.managerGroupId);
             }
 
+            // Load activity logs
+            await loadActivityLogs();
+
             isLoading = false;
-            errorMessage = '';
             render();
         } catch (error) {
             console.error('[TimeTracker Admin] Initialization error:', error);
@@ -226,6 +258,65 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
             errorMessage = error instanceof Error ? error.message : 'Failed to initialize';
             render();
         }
+    }
+
+    // Load activity logs from KV store
+    async function loadActivityLogs(): Promise<void> {
+        try {
+            if (!moduleId) return;
+
+            // Get or create activity log category
+            activityLogCategory = await getCustomDataCategory<object>('activityLog');
+            if (!activityLogCategory) {
+                activityLogs = [];
+                return;
+            }
+
+            // Load all logs
+            const rawLogs = await getCustomDataValues<any>(activityLogCategory.id, moduleId);
+            activityLogs = rawLogs.sort((a, b) => b.timestamp - a.timestamp); // Newest first
+
+            // Apply filters
+            applyLogFilters();
+        } catch (error) {
+            console.error('[TimeTracker Admin] Failed to load activity logs:', error);
+            activityLogs = [];
+        }
+    }
+
+    // Apply filters to activity logs
+    function applyLogFilters() {
+        filteredLogs = activityLogs.filter((log) => {
+            // User filter
+            if (logFilterUser !== 'all' && log.userId.toString() !== logFilterUser) {
+                return false;
+            }
+
+            // Action filter
+            if (logFilterAction !== 'all' && log.action !== logFilterAction) {
+                return false;
+            }
+
+            // Date range filter
+            if (logFilterDateFrom) {
+                const logDate = new Date(log.timestamp).toISOString().split('T')[0];
+                if (logDate < logFilterDateFrom) {
+                    return false;
+                }
+            }
+
+            if (logFilterDateTo) {
+                const logDate = new Date(log.timestamp).toISOString().split('T')[0];
+                if (logDate > logFilterDateTo) {
+                    return false;
+                }
+            }
+
+            return true;
+        });
+
+        // Reset to page 1 when filters change
+        logPage = 1;
     }
 
     // Get or create a category
@@ -516,8 +607,8 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
             console.error('[TimeTracker Admin] Restore failed:', e);
             alert(
                 t('ct.extension.timetracker.admin.backupRestoreFailed') +
-                    ': ' +
-                    (e instanceof Error ? e.message : 'Unknown error')
+                ': ' +
+                (e instanceof Error ? e.message : 'Unknown error')
             );
         }
     }
@@ -1210,6 +1301,198 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
             updateButton(saveManagerBtn, 'Manager Assignments', hasUnsavedManagerChanges);
     }
 
+    // Render Activity Log Section
+    function renderActivityLogSection(): string {
+        const totalPages = Math.ceil(filteredLogs.length / LOGS_PER_PAGE);
+        const startIdx = (logPage - 1) * LOGS_PER_PAGE;
+        const endIdx = Math.min(startIdx + LOGS_PER_PAGE, filteredLogs.length);
+        const pageLog = filteredLogs.slice(startIdx, endIdx);
+
+        // Calculate statistics
+        const todayTimestamp = new Date().setHours(0, 0, 0, 0);
+        const actionsToday = filteredLogs.filter(log => log.timestamp >= todayTimestamp).length;
+        const createCount = filteredLogs.filter(log => log.action === 'CREATE').length;
+        const updateCount = filteredLogs.filter(log => log.action === 'UPDATE').length;
+        const deleteCount = filteredLogs.filter(log => log.action === 'DELETE').length;
+
+        return `
+            <!-- Activity Log Section -->
+            <div style="background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                <h2 style="margin: 0 0 0.5rem 0; font-size: 1.3rem; color: #333;">${t('ct.extension.timetracker.admin.activityLog')}</h2>
+                <p style="margin: 0 0 1.5rem 0; color: #666; font-size: 0.95rem;">${t('ct.extension.timetracker.admin.activityLog.description')}</p>
+
+                <!-- Activity Log Settings -->
+                <div style="background: #f9f9f9; padding: 1rem; border-radius: 6px; margin-bottom: 1.5rem;">
+                    <h3 style="margin: 0 0 1rem 0; font-size: 1.1rem; color: #333;">${t('ct.extension.timetracker.admin.activityLog.settings')}</h3>
+                    
+                    <div style="display: grid; gap: 1rem;">
+                        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                            <input type="checkbox" id="activity-log-enabled" ${settings.activityLogSettings?.enabled ? 'checked' : ''} 
+                                   style="cursor: pointer;"/>
+                            <span>${t('ct.extension.timetracker.admin.activityLog.enableLogging')}</span>
+                        </label>
+
+                        <div style="display: flex; gap: 1.5rem; margin-left: 1.5rem;">
+                            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                                <input type="checkbox" id="activity-log-create" ${settings.activityLogSettings?.logCreate ? 'checked' : ''}
+                                       ${!settings.activityLogSettings?.enabled ? 'disabled' : ''} style="cursor: pointer;"/>
+                                <span style="color: ${!settings.activityLogSettings?.enabled ? '#999' : ''};">${t('ct.extension.timetracker.admin.activityLog.logCreate')}</span>
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                                <input type="checkbox" id="activity-log-update" ${settings.activityLogSettings?.logUpdate ? 'checked' : ''}
+                                       ${!settings.activityLogSettings?.enabled ? 'disabled' : ''} style="cursor: pointer;"/>
+                                <span style="color: ${!settings.activityLogSettings?.enabled ? '#999' : ''};">${t('ct.extension.timetracker.admin.activityLog.logUpdate')}</span>
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                                <input type="checkbox" id="activity-log-delete" ${settings.activityLogSettings?.logDelete ? 'checked' : ''}
+                                       ${!settings.activityLogSettings?.enabled ? 'disabled' : ''} style="cursor: pointer;"/>
+                                <span style="color: ${!settings.activityLogSettings?.enabled ? '#999' : ''};">${t('ct.extension.timetracker.admin.activityLog.logDelete')}</span>
+                            </label>
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: auto 1fr; gap: 0.5rem; align-items: center;">
+                            <label for="activity-log-archive-days">${t('ct.extension.timetracker.admin.activityLog.archiveAfterDays')}:</label>
+                            <div style="display: flex; gap: 0.5rem; align-items: center;">
+                                <input type="range" id="activity-log-archive-days" min="30" max="365" step="5"
+                                       value="${settings.activityLogSettings?.archiveAfterDays || 90}"
+                                       ${!settings.activityLogSettings?.enabled ? 'disabled' : ''}
+                                       style="flex: 1;"/>
+                                <span id="archive-days-value" style="min-width: 60px; font-weight: bold;">${settings.activityLogSettings?.archiveAfterDays || 90} ${t('ct.extension.timetracker.dashboard.day')}${(settings.activityLogSettings?.archiveAfterDays || 90) > 1 ? 's' : ''}</span>
+                            </div>
+                            <div style="grid-column: 2; font-size: 0.85rem; color: #666;">
+                                ${t('ct.extension.timetracker.admin.activityLog.archiveAfterDaysHelp')}
+                            </div>
+                        </div>
+                    </div>
+
+                    <button id="save-activity-log-settings-btn"
+                            style="margin-top: 1rem; padding: 0.5rem 1rem; background: ${hasUnsavedActivityLogChanges ? '#dc3545' : '#28a745'}; 
+                                   color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 500;">
+                        ${t('ct.extension.timetracker.admin.activityLog.saveSettings')}
+                    </button>
+                </div>
+
+                <!-- Statistics -->
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+                    <div style="background: #f0f8ff; padding: 1rem; border-radius: 6px; text-align: center;">
+                        <div style="font-size: 1.5rem; font-weight: bold; color: #007bff;">${filteredLogs.length}</div>
+                        <div style="font-size: 0.85rem; color: #666;">${t('ct.extension.timetracker.admin.activityLog.activeLogs')}</div>
+                    </div>
+                    <div style="background: #f0fff4; padding: 1rem; border-radius: 6px; text-align: center;">
+                        <div style="font-size: 1.5rem; font-weight: bold; color: #28a745;">${actionsToday}</div>
+                        <div style="font-size: 0.85rem; color: #666;">${t('ct.extension.timetracker.admin.activityLog.actionsToday')}</div>
+                    </div>
+                    <div style="background: #fef5e7; padding: 1rem; border-radius: 6px; text-align: center;">
+                        <div style="font-size: 1.2rem; font-weight: bold; color: #f39c12;">
+                            C:${createCount} U:${updateCount} D:${deleteCount}
+                        </div>
+                        <div style="font-size: 0.85rem; color: #666;">By Action</div>
+                    </div>
+                </div>
+
+                <!-- Filters -->
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+                    <div>
+                        <label style="display: block; margin-bottom: 0.25rem; font-size: 0.9rem; color: #666;">${t('ct.extension.timetracker.admin.activityLog.filterUser')}</label>
+                        <select id="log-filter-user" style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;">
+                            <option value="all">${t('ct.extension.timetracker.entries.allUsers')}</option>
+                            ${[...new Set(activityLogs.map(log => log.userId))].map(userId => {
+            const log = activityLogs.find(l => l.userId === userId);
+            return `<option value="${userId}" ${logFilterUser === userId.toString() ? 'selected' : ''}>${log?.userName || `User ${userId}`}</option>`;
+        }).join('')}
+                        </select>
+                    </div>
+                    <div>
+                        <label style="display: block; margin-bottom: 0.25rem; font-size: 0.9rem; color: #666;">${t('ct.extension.timetracker.admin.activityLog.filterAction')}</label>
+                        <select id="log-filter-action" style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;">
+                            <option value="all" ${logFilterAction === 'all' ? 'selected' : ''}>${t('ct.extension.timetracker.admin.activityLog.allActions')}</option>
+                            <option value="CREATE" ${logFilterAction === 'CREATE' ? 'selected' : ''}>${t('ct.extension.timetracker.admin.activityLog.created')}</option>
+                            <option value="UPDATE" ${logFilterAction === 'UPDATE' ? 'selected' : ''}>${t('ct.extension.timetracker.admin.activityLog.updated')}</option>
+                            <option value="DELETE" ${logFilterAction === 'DELETE' ? 'selected' : ''}>${t('ct.extension.timetracker.admin.activityLog.deleted')}</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label style="display: block; margin-bottom: 0.25rem; font-size: 0.9rem; color: #666;">${t('ct.extension.timetracker.admin.activityLog.dateFrom')}</label>
+                        <input type="date" id="log-filter-date-from" value="${logFilterDateFrom}"
+                               style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;"/>
+                    </div>
+                    <div>
+                        <label style="display: block; margin-bottom: 0.25rem; font-size: 0.9rem; color: #666;">${t('ct.extension.timetracker.admin.activityLog.dateTo')}</label>
+                        <input type="date" id="log-filter-date-to" value="${logFilterDateTo}"
+                               style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;"/>
+                    </div>
+                </div>
+
+                <!-- Log Table -->
+                ${pageLog.length > 0 ? `
+                    <div style="overflow-x: auto; margin-bottom: 1rem;">
+                        <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
+                            <thead>
+                                <tr style="background: #f5f5f5;">
+                                    <th style="padding: 0.75rem; text-align: left; border-bottom: 2px solid #ddd;">${t('ct.extension.timetracker.admin.activityLog.timestamp')}</th>
+                                    <th style="padding: 0.75rem; text-align: left; border-bottom: 2px solid #ddd;">${t('ct.extension.timetracker.admin.activityLog.user')}</th>
+                                    <th style="padding: 0.75rem; text-align: left; border-bottom: 2px solid #ddd;">${t('ct.extension.timetracker.admin.activityLog.action')}</th>
+                                    <th style="padding: 0.75rem; text-align: left; border-bottom: 2px solid #ddd;">${t('ct.extension.timetracker.admin.activityLog.details')}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${pageLog.map(log => {
+            const actionColor = log.action === 'CREATE' ? '#28a745' : log.action === 'UPDATE' ? '#ffc107' : '#dc3545';
+            const date = new Date(log.timestamp);
+            return `
+                                        <tr style="border-bottom: 1px solid #eee;">
+                                            <td style="padding: 0.75rem;">${date.toLocaleString()}</td>
+                                            <td style="padding: 0.75rem;">${log.userName}</td>
+                                            <td style="padding: 0.75rem;"><span style="background: ${actionColor}; color: white; padding: 0.25rem 0.5rem; border-radius: 3px; font-size: 0.85rem;">${log.action}</span></td>
+                                            <td style="padding: 0.75rem; font-size: 0.85rem; color: #666;">
+                                                ${log.details.categoryName || ''} 
+                                                ${log.details.description ? `- ${log.details.description.substring(0, 50)}${log.details.description.length > 50 ? '...' : ''}` : ''}
+                                                ${log.details.duration ? `(${Math.round(log.details.duration / 1000 / 60)}min)` : ''}
+                                            </td>
+                                        </tr>
+                                    `;
+        }).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Pagination -->
+                    ${totalPages > 1 ? `
+                        <div style="display: flex; justify-content: space-between; align-items: center; padding: 1rem 0;">
+                            <div style="font-size: 0.9rem; color: #666;">
+                                ${t('ct.extension.timetracker.admin.activityLog.showingEntries')
+                        .replace('{from}', (startIdx + 1).toString())
+                        .replace('{to}', endIdx.toString())
+                        .replace('{total}', filteredLogs.length.toString())}
+                            </div>
+                            <div style="display: flex; gap: 0.5rem;">
+                                <button id="log-prev-page" ${logPage === 1 ? 'disabled' : ''}
+                                        style="padding: 0.5rem 1rem; border: 1px solid #ddd; background: ${logPage === 1 ? '#f5f5f5' : '#fff'}; 
+                                               border-radius: 4px; cursor: ${logPage === 1 ? 'not-allowed' : 'pointer'};">
+                                    ← Prev
+                                </button>
+                                <span style="padding: 0.5rem 1rem; border: 1px solid #ddd; background: #f5f5f5; border-radius: 4px;">
+                                    ${t('ct.extension.timetracker.admin.activityLog.page')
+                        .replace('{current}', logPage.toString())
+                        .replace('{total}', totalPages.toString())}
+                                </span>
+                                <button id="log-next-page" ${logPage === totalPages ? 'disabled' : ''}
+                                        style="padding: 0.5rem 1rem; border: 1px solid #ddd; background: ${logPage === totalPages ? '#f5f5f5' : '#fff'}; 
+                                               border-radius: 4px; cursor: ${logPage === totalPages ? 'not-allowed' : 'pointer'};">
+                                    Next →
+                                </button>
+                            </div>
+                        </div>
+                    ` : ''}
+                ` : `
+                    <div style="padding: 2rem; text-align: center; color: #999;">
+                        ${t('ct.extension.timetracker.admin.activityLog.noLogs')}
+                    </div>
+                `}
+            </div>
+        `;
+    }
+
     function renderBackupsSection(): string {
         if (backupsList.length === 0) {
             return `
@@ -1267,9 +1550,8 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                     </div>
                 </div>
 
-                ${
-                    isLoading
-                        ? `
+                ${isLoading
+                ? `
                     <div style="max-width: 1200px; margin: 0 auto; text-align: center; padding: 3rem;">
                         <div style="margin-bottom: 1rem; display: flex; justify-content: center;">
                             <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#007bff" stroke-width="2" style="animation: spin 1s linear infinite;">
@@ -1285,20 +1567,21 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                         <p>Loading settings...</p>
                     </div>
                 `
-                        : errorMessage
-                          ? `
+                : errorMessage
+                    ? `
                     <div style="padding: 1.5rem; background: #fee; border: 1px solid #fcc; border-radius: 8px; color: #c00; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
                         <strong>Error:</strong> ${errorMessage}
                     </div>
                 `
-                          : `
+                    : `
                     ${renderGeneralSettings()}
                     ${renderGroupManagement()}
                     ${renderManagerAssignments()}
                     ${renderWorkCategories()}
+                    ${renderActivityLogSection()}
                     ${renderBackupsSection()}
                 `
-                }
+            }
             </div>
         `;
 
@@ -1379,41 +1662,41 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
 
                     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 0.75rem;">
                         ${[
-                            // Array indices: 0=Sun, 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri, 6=Sat
-                            {
-                                day: 0,
-                                label: t('ct.extension.timetracker.common.weekDaysFull.sun'),
-                            },
-                            {
-                                day: 1,
-                                label: t('ct.extension.timetracker.common.weekDaysFull.mon'),
-                            },
-                            {
-                                day: 2,
-                                label: t('ct.extension.timetracker.common.weekDaysFull.tue'),
-                            },
-                            {
-                                day: 3,
-                                label: t('ct.extension.timetracker.common.weekDaysFull.wed'),
-                            },
-                            {
-                                day: 4,
-                                label: t('ct.extension.timetracker.common.weekDaysFull.thu'),
-                            },
-                            {
-                                day: 5,
-                                label: t('ct.extension.timetracker.common.weekDaysFull.fri'),
-                            },
-                            {
-                                day: 6,
-                                label: t('ct.extension.timetracker.common.weekDaysFull.sat'),
-                            },
-                        ]
-                            .map(({ day, label }) => {
-                                const isChecked = (
-                                    settings.workWeekDays || [1, 2, 3, 4, 5]
-                                ).includes(day);
-                                return `
+                // Array indices: 0=Sun, 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri, 6=Sat
+                {
+                    day: 0,
+                    label: t('ct.extension.timetracker.common.weekDaysFull.sun'),
+                },
+                {
+                    day: 1,
+                    label: t('ct.extension.timetracker.common.weekDaysFull.mon'),
+                },
+                {
+                    day: 2,
+                    label: t('ct.extension.timetracker.common.weekDaysFull.tue'),
+                },
+                {
+                    day: 3,
+                    label: t('ct.extension.timetracker.common.weekDaysFull.wed'),
+                },
+                {
+                    day: 4,
+                    label: t('ct.extension.timetracker.common.weekDaysFull.thu'),
+                },
+                {
+                    day: 5,
+                    label: t('ct.extension.timetracker.common.weekDaysFull.fri'),
+                },
+                {
+                    day: 6,
+                    label: t('ct.extension.timetracker.common.weekDaysFull.sat'),
+                },
+            ]
+                .map(({ day, label }) => {
+                    const isChecked = (
+                        settings.workWeekDays || [1, 2, 3, 4, 5]
+                    ).includes(day);
+                    return `
                                 <label style="display: flex; align-items: center; gap: 0.5rem; padding: 0.75rem; background: ${isChecked ? '#e7f3ff' : '#f8f9fa'}; border: 1px solid ${isChecked ? '#007bff' : '#dee2e6'}; border-radius: 4px; cursor: pointer; transition: all 0.2s;">
                                     <input
                                         type="checkbox"
@@ -1425,8 +1708,8 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                                     <span style="font-weight: ${isChecked ? '600' : '400'}; color: ${isChecked ? '#007bff' : '#333'}; font-size: 0.9rem;">${label}</span>
                                 </label>
                             `;
-                            })
-                            .join('')}
+                })
+                .join('')}
                     </div>
                 </div>
 
@@ -1536,9 +1819,8 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                         ${t('ct.extension.timetracker.admin.individualSettingsHelp')}
                     </p>
 
-                    ${
-                        employeesList.length > 0
-                            ? `
+                    ${employeesList.length > 0
+                ? `
                         <!-- Employees Table -->
                         <div style="background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 6px; padding: 1rem;">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin: 0 0 1rem 0;">
@@ -1551,9 +1833,8 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                                     style="padding: 0.5rem; background: ${!settings.employeeGroupId || loadingEmployees ? '#6c757d' : '#17a2b8'}; color: white; border: none; border-radius: 4px; cursor: ${!settings.employeeGroupId || loadingEmployees ? 'not-allowed' : 'pointer'}; display: inline-flex; align-items: center; gap: 0.5rem;"
                                     title="${loadingEmployees ? 'Loading...' : 'Refresh employees from ChurchTools'}"
                                 >
-                                    ${
-                                        loadingEmployees
-                                            ? `
+                                    ${loadingEmployees
+                    ? `
                                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation: spin 1s linear infinite;">
                                             <style>
                                                 @keyframes spin {
@@ -1564,14 +1845,14 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                                             <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
                                         </svg>
                                     `
-                                            : `
+                    : `
                                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                             <polyline points="23 4 23 10 17 10"></polyline>
                                             <polyline points="1 20 1 14 7 14"></polyline>
                                             <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
                                         </svg>
                                     `
-                                    }
+                }
                                 </button>
                             </div>
 
@@ -1589,38 +1870,37 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                                     </thead>
                                     <tbody>
                                         ${employeesList
-                                            .map((emp) => {
-                                                const existingConfig =
-                                                    settings.userHoursConfig?.find(
-                                                        (c) => c.userId === emp.userId
-                                                    );
-                                                const hoursPerDay =
-                                                    existingConfig?.hoursPerDay ||
-                                                    settings.defaultHoursPerDay;
-                                                const hoursPerWeek =
-                                                    existingConfig?.hoursPerWeek ||
-                                                    settings.defaultHoursPerWeek;
-                                                const isActive = existingConfig?.isActive !== false;
+                    .map((emp) => {
+                        const existingConfig =
+                            settings.userHoursConfig?.find(
+                                (c) => c.userId === emp.userId
+                            );
+                        const hoursPerDay =
+                            existingConfig?.hoursPerDay ||
+                            settings.defaultHoursPerDay;
+                        const hoursPerWeek =
+                            existingConfig?.hoursPerWeek ||
+                            settings.defaultHoursPerWeek;
+                        const isActive = existingConfig?.isActive !== false;
 
-                                                return `
+                        return `
                                                 <tr style="border-bottom: 1px solid #dee2e6; ${!isActive ? 'background: #fff3cd;' : ''}">
                                                     <td style="padding: 0.75rem; color: #333;">
                                                         ${emp.userName} <span style="color: #999; font-size: 0.85rem;">(${emp.userId})</span>
                                                     </td>
                                                     <td style="padding: 0.75rem;">
-                                                        ${
-                                                            isActive
-                                                                ? `
+                                                        ${isActive
+                                ? `
                                                             <span style="background: #d4edda; color: #155724; padding: 0.25rem 0.5rem; border-radius: 3px; font-size: 0.75rem; font-weight: 600; border: 1px solid #c3e6cb; white-space: nowrap;">
                                                                 ✓ ${t('ct.extension.timetracker.admin.active')}
                                                             </span>
                                                         `
-                                                                : `
+                                : `
                                                             <span style="background: #fff3cd; color: #856404; padding: 0.25rem 0.5rem; border-radius: 3px; font-size: 0.75rem; font-weight: 600; border: 1px solid #ffeaa7;">
                                                                 ⚠ ${t('ct.extension.timetracker.admin.removed')}
                                                             </span>
                                                         `
-                                                        }
+                            }
                                                     </td>
                                                     <td style="padding: 0.75rem;">
                                                         <input
@@ -1653,62 +1933,61 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                                                     <td style="padding: 0.75rem;">
                                                         <div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px;">
                                                             ${[
-                                                                t(
-                                                                    'ct.extension.timetracker.common.weekDays.sun'
-                                                                ),
-                                                                t(
-                                                                    'ct.extension.timetracker.common.weekDays.mon'
-                                                                ),
-                                                                t(
-                                                                    'ct.extension.timetracker.common.weekDays.tue'
-                                                                ),
-                                                                t(
-                                                                    'ct.extension.timetracker.common.weekDays.wed'
-                                                                ),
-                                                                t(
-                                                                    'ct.extension.timetracker.common.weekDays.thu'
-                                                                ),
-                                                                t(
-                                                                    'ct.extension.timetracker.common.weekDays.fri'
-                                                                ),
-                                                                t(
-                                                                    'ct.extension.timetracker.common.weekDays.sat'
-                                                                ),
-                                                            ]
-                                                                .map((day, index) => {
-                                                                    const workWeek =
-                                                                        existingConfig?.workWeekDays ||
-                                                                            settings.workWeekDays || [
-                                                                                1, 2, 3, 4, 5,
-                                                                            ];
-                                                                    const isChecked =
-                                                                        workWeek.includes(index);
-                                                                    return `
-                                                                <label style="display: flex; align-items: center; justify-content: center; cursor: ${isActive ? 'pointer' : 'not-allowed'}; opacity: ${isActive ? '1' : '0.5'};" title="${
-                                                                    [
-                                                                        t(
-                                                                            'ct.extension.timetracker.common.weekDaysFull.sun'
-                                                                        ),
-                                                                        t(
-                                                                            'ct.extension.timetracker.common.weekDaysFull.mon'
-                                                                        ),
-                                                                        t(
-                                                                            'ct.extension.timetracker.common.weekDaysFull.tue'
-                                                                        ),
-                                                                        t(
-                                                                            'ct.extension.timetracker.common.weekDaysFull.wed'
-                                                                        ),
-                                                                        t(
-                                                                            'ct.extension.timetracker.common.weekDaysFull.thu'
-                                                                        ),
-                                                                        t(
-                                                                            'ct.extension.timetracker.common.weekDaysFull.fri'
-                                                                        ),
-                                                                        t(
-                                                                            'ct.extension.timetracker.common.weekDaysFull.sat'
-                                                                        ),
-                                                                    ][index]
-                                                                }">
+                                t(
+                                    'ct.extension.timetracker.common.weekDays.sun'
+                                ),
+                                t(
+                                    'ct.extension.timetracker.common.weekDays.mon'
+                                ),
+                                t(
+                                    'ct.extension.timetracker.common.weekDays.tue'
+                                ),
+                                t(
+                                    'ct.extension.timetracker.common.weekDays.wed'
+                                ),
+                                t(
+                                    'ct.extension.timetracker.common.weekDays.thu'
+                                ),
+                                t(
+                                    'ct.extension.timetracker.common.weekDays.fri'
+                                ),
+                                t(
+                                    'ct.extension.timetracker.common.weekDays.sat'
+                                ),
+                            ]
+                                .map((day, index) => {
+                                    const workWeek =
+                                        existingConfig?.workWeekDays ||
+                                        settings.workWeekDays || [
+                                            1, 2, 3, 4, 5,
+                                        ];
+                                    const isChecked =
+                                        workWeek.includes(index);
+                                    return `
+                                                                <label style="display: flex; align-items: center; justify-content: center; cursor: ${isActive ? 'pointer' : 'not-allowed'}; opacity: ${isActive ? '1' : '0.5'};" title="${[
+                                            t(
+                                                'ct.extension.timetracker.common.weekDaysFull.sun'
+                                            ),
+                                            t(
+                                                'ct.extension.timetracker.common.weekDaysFull.mon'
+                                            ),
+                                            t(
+                                                'ct.extension.timetracker.common.weekDaysFull.tue'
+                                            ),
+                                            t(
+                                                'ct.extension.timetracker.common.weekDaysFull.wed'
+                                            ),
+                                            t(
+                                                'ct.extension.timetracker.common.weekDaysFull.thu'
+                                            ),
+                                            t(
+                                                'ct.extension.timetracker.common.weekDaysFull.fri'
+                                            ),
+                                            t(
+                                                'ct.extension.timetracker.common.weekDaysFull.sat'
+                                            ),
+                                        ][index]
+                                        }">
                                                                     <input
                                                                         type="checkbox"
                                                                         class="user-work-week-checkbox"
@@ -1721,14 +2000,13 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                                                                     <span style="font-size: 0.7rem; margin-left: 2px; color: ${isActive ? '#333' : '#999'}; user-select: none;">${day}</span>
                                                                 </label>
                 `;
-                                                                })
-                                                                .join('')}
+                                })
+                                .join('')}
                                                         </div>
                                                     </td>
                                                     <td style="padding: 0.75rem; text-align: center;">
-                                                        ${
-                                                            !isActive
-                                                                ? `
+                                                        ${!isActive
+                                ? `
                                                             <button
                                                                 class="delete-employee-btn"
                                                                 data-user-id="${emp.userId}"
@@ -1743,28 +2021,28 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                                                                 ${t('ct.extension.timetracker.common.delete')}
                                                             </button>
                                                         `
-                                                                : `
+                                : `
                                                             <span style="color: #999; font-size: 0.85rem; font-style: italic;">-</span>
                                                         `
-                                                        }
+                            }
                                                     </td>
                                                 </tr>
                                             `;
-                                            })
-                                            .join('')}
+                    })
+                    .join('')}
                                     </tbody>
                                 </table>
                             </div>
                         </div>
                     `
-                            : !loadingEmployees && settings.employeeGroupId
-                              ? `
+                : !loadingEmployees && settings.employeeGroupId
+                    ? `
                         <p style="color: #666; font-style: italic; background: #f8f9fa; padding: 1rem; border-radius: 4px; border-left: 3px solid #6c757d;">
                             ${t('ct.extension.timetracker.admin.clickLoadEmployees')}
                         </p>
                     `
-                              : ''
-                    }
+                    : ''
+            }
                 </div>
 
                 <button
@@ -1825,9 +2103,8 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                     <small style="color: #666; font-size: 0.85rem;">Enter the ChurchTools group ID for managers, then click "Load Managers"</small>
                 </div>
 
-                ${
-                    loadingManagers
-                        ? `
+                ${loadingManagers
+                ? `
                     <div style="text-align: center; padding: 2rem; color: #666;">
                         <div style="display: inline-block;">
                             <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#007bff" stroke-width="2" style="animation: spin 1s linear infinite;">
@@ -1837,26 +2114,26 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                         <p style="margin-top: 1rem;">Loading managers...</p>
                     </div>
                 `
-                        : managersList.length > 0
-                          ? `
+                : managersList.length > 0
+                    ? `
                     <div style="background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 6px; padding: 1rem; margin-bottom: 1rem;">
                         <h3 style="margin: 0 0 1rem 0; font-size: 1.1rem; color: #333;">Manager Assignments (${managersList.length} managers)</h3>
                         
                         ${managersList
-                            .map((manager) => {
-                                const assignment = settings.managerAssignments?.find(
-                                    (a) => a.managerId === manager.userId
-                                );
-                                const assignedIds = assignment?.employeeIds || [];
+                        .map((manager) => {
+                            const assignment = settings.managerAssignments?.find(
+                                (a) => a.managerId === manager.userId
+                            );
+                            const assignedIds = assignment?.employeeIds || [];
 
-                                return `
+                            return `
                                 <div style="background: white; border: 1px solid #dee2e6; border-radius: 4px; padding: 1rem; margin-bottom: 0.75rem;">
                                     <h4 style="margin: 0 0 0.75rem 0; font-size: 1rem; color: #495057;">${manager.userName}</h4>
                                     <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 0.5rem;">
                                         ${employeesList
-                                            .map((emp) => {
-                                                const isChecked = assignedIds.includes(emp.userId);
-                                                return `
+                                    .map((emp) => {
+                                        const isChecked = assignedIds.includes(emp.userId);
+                                        return `
                                                 <label style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem; border-radius: 3px; cursor: pointer; hover: background: #f8f9fa;">
                                                     <input
                                                         type="checkbox"
@@ -1869,13 +2146,13 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                                                     <span style="font-size: 0.9rem;">${emp.userName}</span>
                                                 </label>
                                             `;
-                                            })
-                                            .join('')}
+                                    })
+                                    .join('')}
                                     </div>
                                 </div>
                             `;
-                            })
-                            .join('')}
+                        })
+                        .join('')}
                     </div>
 
                     <!-- Status Message -->
@@ -1893,14 +2170,14 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                         Save Manager Assignments
                     </button>
                 `
-                          : settings.managerGroupId
-                            ? `
+                    : settings.managerGroupId
+                        ? `
                     <div style="text-align: center; padding: 2rem; color: #666; background: #f8f9fa; border-radius: 4px;">
                         <p>Click "Load Managers" to load managers from group ${settings.managerGroupId}</p>
                     </div>
                 `
-                            : ''
-                }
+                        : ''
+            }
             </div>
         `;
     }
@@ -1928,35 +2205,32 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                     </button>
                 </div>
 
-                ${
-                    showAddCategory || editingCategory
-                        ? `
+                ${showAddCategory || editingCategory
+                ? `
                     <!-- Category Form -->
                     <div style="background: #f8f9fa; border: 2px solid ${editingCategory ? '#ffc107' : '#28a745'}; border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem;">
                         <h3 style="margin: 0 0 1rem 0; color: #333; display: flex; align-items: center; gap: 0.5rem;">
-                            ${
-                                editingCategory
-                                    ? `
+                            ${editingCategory
+                    ? `
                                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                     <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
                                     <path d="M18.5 2.5a2.121 2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
                                 </svg>
                                 ${t('ct.extension.timetracker.admin.editCategory')}
                             `
-                                    : `
+                    : `
                                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                     <line x1="12" y1="5" x2="12" y2="19"></line>
                                     <line x1="5" y1="12" x2="19" y2="12"></line>
                                 </svg>
                                 ${t('ct.extension.timetracker.admin.addCategory')}
                             `
-                            }
+                }
                         </h3>
 
                         <div style="display: grid; gap: 1rem; margin-bottom: 1rem;">
-                            ${
-                                editingCategory
-                                    ? `
+                            ${editingCategory
+                    ? `
                             <div>
                                 <label style="display: block; margin-bottom: 0.5rem; color: #333; font-weight: 600;">
                                     ${t('ct.extension.timetracker.admin.categoryId')}
@@ -1971,8 +2245,8 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                                 <small style="color: #666; font-size: 0.85rem;">${t('ct.extension.timetracker.admin.idCannotBeChanged')}</small>
                             </div>
                             `
-                                    : ''
-                            }
+                    : ''
+                }
 
                             <div>
                                 <label style="display: block; margin-bottom: 0.5rem; color: #333; font-weight: 600;">
@@ -2033,12 +2307,11 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                         <div id="category-form-status" style="margin-top: 1rem; padding: 0.75rem; border-radius: 4px; display: none;"></div>
                     </div>
                 `
-                        : ''
-                }
+                : ''
+            }
 
-                ${
-                    showDeleteDialog && categoryToDelete
-                        ? `
+                ${showDeleteDialog && categoryToDelete
+                ? `
                     <!-- Delete Confirmation Dialog -->
                     <div style="background: #fff3cd; border: 2px solid #ffc107; border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem;">
                         <h3 style="margin: 0 0 1rem 0; color: #856404; display: flex; align-items: center; gap: 0.5rem;">
@@ -2068,12 +2341,12 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                                 style="width: 100%; padding: 0.75rem; border: 1px solid #ffc107; border-radius: 4px; background: white;"
                             >
                                 ${workCategories
-                                    .filter((c) => c.id !== categoryToDelete!.id)
-                                    .map(
-                                        (c) =>
-                                            `<option value="${c.id}" ${c.id === replacementCategoryId ? 'selected' : ''}>${c.name}</option>`
-                                    )
-                                    .join('')}
+                    .filter((c) => c.id !== categoryToDelete!.id)
+                    .map(
+                        (c) =>
+                            `<option value="${c.id}" ${c.id === replacementCategoryId ? 'selected' : ''}>${c.name}</option>`
+                    )
+                    .join('')}
                             </select>
                         </div>
 
@@ -2097,18 +2370,17 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                         </div>
                     </div>
                 `
-                        : ''
-                }
+                : ''
+            }
 
                 <!-- Categories List -->
-                ${
-                    workCategories.length === 0
-                        ? '<p style="color: #666; text-align: center; padding: 2rem;">No categories defined yet. Click "Add Category" to create one.</p>'
-                        : `
+                ${workCategories.length === 0
+                ? '<p style="color: #666; text-align: center; padding: 2rem;">No categories defined yet. Click "Add Category" to create one.</p>'
+                : `
                     <div style="display: grid; gap: 1rem;">
                         ${workCategories
-                            .map(
-                                (category) => `
+                    .map(
+                        (category) => `
                             <div style="display: flex; align-items: center; justify-content: space-between; padding: 1rem; border: 1px solid #dee2e6; border-radius: 6px; background: #f8f9fa;">
                                 <div style="display: flex; align-items: center; gap: 1rem; flex: 1;">
                                     <div style="width: 40px; height: 40px; background: ${category.color}; border-radius: 6px; border: 2px solid #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.1);"></div>
@@ -2143,11 +2415,11 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                                 </div>
                             </div>
                         `
-                            )
-                            .join('')}
+                    )
+                    .join('')}
                     </div>
                 `
-                }
+            }
             </div>
         `;
     }
@@ -2905,6 +3177,137 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
             saveBtn.innerHTML =
                 saveIconHTML + (editingCategory ? 'Update Category' : 'Save Category');
         }
+    }
+
+    // This function will attach all event handlers to the DOM elements
+    function attachEventHandlers() {
+        // Activity Log Event Handlers
+        const activityLogEnabled = element.querySelector('#activity-log-enabled') as HTMLInputElement;
+        const activityLogCreate = element.querySelector('#activity-log-create') as HTMLInputElement;
+        const activityLogUpdate = element.querySelector('#activity-log-update') as HTMLInputElement;
+        const activityLogDelete = element.querySelector('#activity-log-delete') as HTMLInputElement;
+        const activityLogArchiveDays = element.querySelector('#activity-log-archive-days') as HTMLInputElement;
+        const saveActivityLogSettingsBtn = element.querySelector('#save-activity-log-settings-btn') as HTMLButtonElement;
+        const logFilterUserSelect = element.querySelector('#log-filter-user') as HTMLSelectElement;
+        const logFilterActionSelect = element.querySelector('#log-filter-action') as HTMLSelectElement;
+        const logFilterDateFromInput = element.querySelector('#log-filter-date-from') as HTMLInputElement;
+        const logFilterDateToInput = element.querySelector('#log-filter-date-to') as HTMLInputElement;
+        const logPrevPageBtn = element.querySelector('#log-prev-page') as HTMLButtonElement;
+        const logNextPageBtn = element.querySelector('#log-next-page') as HTMLButtonElement;
+
+        // Track activity log settings changes
+        function checkActivityLogChanges() {
+            const currentSettings = settings.activityLogSettings;
+            const original = originalActivityLogSettings;
+
+            hasUnsavedActivityLogChanges =
+                currentSettings?.enabled !== original?.enabled ||
+                currentSettings?.logCreate !== original?.logCreate ||
+                currentSettings?.logUpdate !== original?.logUpdate ||
+                currentSettings?.logDelete !== original?.logDelete ||
+                currentSettings?.archiveAfterDays !== original?.archiveAfterDays;
+
+            if (saveActivityLogSettingsBtn) {
+                saveActivityLogSettingsBtn.style.background = hasUnsavedActivityLogChanges ? '#dc3545' : '#28a745';
+            }
+        }
+
+        activityLogEnabled?.addEventListener('change', () => {
+            if (!settings.activityLogSettings) settings.activityLogSettings = { enabled: true, logCreate: true, logUpdate: true, logDelete: true, archiveAfterDays: 90 };
+            settings.activityLogSettings.enabled = activityLogEnabled.checked;
+
+            // Enable/disable sub-checkboxes
+            [activityLogCreate, activityLogUpdate, activityLogDelete, activityLogArchiveDays].forEach(el => {
+                if (el) el.disabled = !activityLogEnabled.checked;
+            });
+
+            checkActivityLogChanges();
+            render();
+        });
+
+        [activityLogCreate, activityLogUpdate, activityLogDelete].forEach(checkbox => {
+            checkbox?.addEventListener('change', () => {
+                if (!settings.activityLogSettings) return;
+                if (checkbox === activityLogCreate) settings.activityLogSettings.logCreate = checkbox.checked;
+                if (checkbox === activityLogUpdate) settings.activityLogSettings.logUpdate = checkbox.checked;
+                if (checkbox === activityLogDelete) settings.activityLogSettings.logDelete = checkbox.checked;
+                checkActivityLogChanges();
+            });
+        });
+
+        activityLogArchiveDays?.addEventListener('input', () => {
+            if (!settings.activityLogSettings) return;
+            const value = parseInt(activityLogArchiveDays.value);
+            settings.activityLogSettings.archiveAfterDays = value;
+            const valueDisplay = element.querySelector('#archive-days-value');
+            if (valueDisplay) {
+                valueDisplay.textContent = `${value} ${t('ct.extension.timetracker.dashboard.day')}${value > 1 ? 's' : ''}`;
+            }
+            checkActivityLogChanges();
+        });
+
+        saveActivityLogSettingsBtn?.addEventListener('click', async () => {
+            try {
+                await saveSettings(settings, 'Activity log settings updated');
+                originalActivityLogSettings = { ...settings.activityLogSettings };
+                hasUnsavedActivityLogChanges = false;
+                render();
+
+                emit('notification:show', {
+                    message: '✓ Activity log settings saved!',
+                    type: 'success',
+                    duration: 3000,
+                });
+            } catch (error) {
+                console.error('[Admin] Failed to save activity log settings:', error);
+                emit('notification:show', {
+                    message: 'Failed to save activity log settings',
+                    type: 'error',
+                    duration: 5000,
+                });
+            }
+        });
+
+        // Filter event handlers
+        logFilterUserSelect?.addEventListener('change', () => {
+            logFilterUser = logFilterUserSelect.value;
+            applyLogFilters();
+            render();
+        });
+
+        logFilterActionSelect?.addEventListener('change', () => {
+            logFilterAction = logFilterActionSelect.value;
+            applyLogFilters();
+            render();
+        });
+
+        logFilterDateFromInput?.addEventListener('change', () => {
+            logFilterDateFrom = logFilterDateFromInput.value;
+            applyLogFilters();
+            render();
+        });
+
+        logFilterDateToInput?.addEventListener('change', () => {
+            logFilterDateTo = logFilterDateToInput.value;
+            applyLogFilters();
+            render();
+        });
+
+        // Pagination event handlers
+        logPrevPageBtn?.addEventListener('click', () => {
+            if (logPage > 1) {
+                logPage--;
+                render();
+            }
+        });
+
+        logNextPageBtn?.addEventListener('click', () => {
+            const totalPages = Math.ceil(filteredLogs.length / LOGS_PER_PAGE);
+            if (logPage < totalPages) {
+                logPage++;
+                render();
+            }
+        });
     }
 
     // Initialize on load
