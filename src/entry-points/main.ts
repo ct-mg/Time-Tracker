@@ -78,12 +78,37 @@ interface Settings {
     managerAssignments?: ManagerAssignment[]; // Manager -> Employee assignments
     workWeekDays?: number[]; // Days of week that count as work days (0=Sunday, 1=Monday, ..., 6=Saturday). Default: [1,2,3,4,5] (Mon-Fri)
     language?: 'auto' | 'de' | 'en'; // UI language (auto = browser detection)
+    activityLogSettings?: {
+        // Activity Log configuration
+        enabled: boolean; // Master toggle for activity logging
+        logCreate: boolean; // Log CREATE operations
+        logUpdate: boolean; // Log UPDATE operations
+        logDelete: boolean; // Log DELETE operations
+        archiveAfterDays: number; // Auto-archive logs older than X days
+    };
 }
 
 interface UserPermissions {
     canSeeAllEntries: boolean; // HR role
     canSeeOwnEntries: boolean; // Everyone
     managedEmployeeIds: number[]; // Empty for non-managers
+}
+
+interface ActivityLog {
+    timestamp: number; // Unix timestamp
+    userId: number; // User who performed the action
+    userName: string; // User name for display
+    action: 'CREATE' | 'UPDATE' | 'DELETE';
+    entityType: 'TIME_ENTRY'; // Future: could add 'CATEGORY', 'SETTINGS', etc.
+    entityId: string; // Identifier of the affected entity (for TIME_ENTRY: startTime ISO string)
+    details: {
+        // Flexible details object
+        oldValue?: Partial<TimeEntry>; // For UPDATE: previous values
+        newValue?: Partial<TimeEntry>; // For CREATE/UPDATE: new values
+        categoryName?: string; // Category name for quick display
+        description?: string; // Description for quick display
+        duration?: number; // Duration in milliseconds for quick display
+    };
 }
 
 const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient, user, KEY }) => {
@@ -104,6 +129,10 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
     let isLoading = true;
     let errorMessage = '';
     let moduleId: number | null = null;
+
+    // Activity Log categories
+    let activityLogCategory: any | null = null;
+    let activityLogArchiveCategory: any | null = null;
 
     // Filters - Initialize to This Week (Monday to Sunday)
     const now = new Date();
@@ -269,6 +298,141 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
         }
     }
 
+    // Activity Log Helper Functions
+    /**
+     * Create an activity log entry
+     * @param action - The action performed (CREATE, UPDATE, DELETE)
+     * @param entityId - Identifier of the affected entity
+     * @param details - Additional details about the action
+     */
+    async function createActivityLog(
+        action: 'CREATE' | 'UPDATE' | 'DELETE',
+        entityId: string,
+        details: ActivityLog['details']
+    ): Promise<void> {
+        try {
+            // Check if logging is enabled
+            if (!settings?.activityLogSettings?.enabled) {
+                console.log('[ActivityLog] Logging is disabled');
+                return;
+            }
+
+            // Check if specific action is enabled
+            if (action === 'CREATE' && !settings.activityLogSettings.logCreate) return;
+            if (action === 'UPDATE' && !settings.activityLogSettings.logUpdate) return;
+            if (action === 'DELETE' && !settings.activityLogSettings.logDelete) return;
+
+            // Ensure activity log category exists
+            if (!activityLogCategory) {
+                activityLogCategory = await getCustomDataCategory<object>('activityLog');
+                if (!activityLogCategory) {
+                    activityLogCategory = await createCustomDataCategory(
+                        {
+                            customModuleId: moduleId!,
+                            name: 'Activity Log',
+                            shorty: 'activityLog',
+                            description: 'Activity log for time entry operations',
+                        },
+                        moduleId!
+                    );
+                }
+            }
+
+            // Create log entry
+            const logEntry: ActivityLog = {
+                timestamp: Date.now(),
+                userId: user?.id || 0,
+                userName: user?.firstName && user?.lastName
+                    ? `${user.firstName} ${user.lastName}`
+                    : `User ${user?.id || 'Unknown'}`,
+                action,
+                entityType: 'TIME_ENTRY',
+                entityId,
+                details,
+            };
+
+            await createCustomDataValue(
+                {
+                    dataCategoryId: activityLogCategory.id,
+                    value: JSON.stringify(logEntry),
+                },
+                moduleId!
+            );
+
+            console.log(`[ActivityLog] ${action} logged for entity ${entityId}`);
+        } catch (error) {
+            console.error('[ActivityLog] Failed to create log:', error);
+            // Never block the actual operation due to logging failure
+        }
+    }
+
+    /**
+     * Archive old activity logs (move to archive category)
+     * Called periodically (e.g., on app init)
+     */
+    async function archiveOldLogs(): Promise<void> {
+        try {
+            if (!settings?.activityLogSettings?.enabled) return;
+
+            const archiveAfterDays = settings.activityLogSettings.archiveAfterDays || 90;
+            const cutoffDate = Date.now() - archiveAfterDays * 24 * 60 * 60 * 1000;
+
+            // Ensure categories exist
+            if (!activityLogCategory) {
+                activityLogCategory = await getCustomDataCategory<object>('activityLog');
+            }
+            if (!activityLogArchiveCategory) {
+                activityLogArchiveCategory = await getCustomDataCategory<object>('activityLogArchive');
+                if (!activityLogArchiveCategory) {
+                    activityLogArchiveCategory = await createCustomDataCategory(
+                        {
+                            customModuleId: moduleId!,
+                            name: 'Activity Log Archive',
+                            shorty: 'activityLogArchive',
+                            description: 'Archived activity logs',
+                        },
+                        moduleId!
+                    );
+                }
+            }
+
+            if (!activityLogCategory) return;
+
+            // Get all logs from active category
+            const rawLogs: Array<{ id: number; value: string }> = await churchtoolsClient.get(
+                `/custommodules/${moduleId}/customdatacategories/${activityLogCategory.id}/customdatavalues`
+            );
+
+            let archivedCount = 0;
+
+            for (const rawLog of rawLogs) {
+                const log = JSON.parse(rawLog.value) as ActivityLog;
+
+                // Check if log is older than cutoff date
+                if (log.timestamp < cutoffDate) {
+                    // Move to archive by creating in archive category and deleting from active
+                    await createCustomDataValue(
+                        {
+                            dataCategoryId: activityLogArchiveCategory.id,
+                            value: JSON.stringify(log),
+                        },
+                        moduleId!
+                    );
+
+                    await deleteCustomDataValue(activityLogCategory.id, rawLog.id, moduleId!);
+                    archivedCount++;
+                }
+            }
+
+            if (archivedCount > 0) {
+                console.log(`[ActivityLog] Archived ${archivedCount} old logs`);
+            }
+        } catch (error) {
+            console.error('[ActivityLog] Failed to archive old logs:', error);
+            // Don't throw - archiving failure shouldn't block app
+        }
+    }
+
     // Initialize
     async function initialize() {
         try {
@@ -300,6 +464,11 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
             if (isManager) {
                 await loadUserList();
             }
+
+            // Run activity log archiving (non-blocking)
+            archiveOldLogs().catch((err) =>
+                console.error('[TimeTracker] Activity log archiving failed:', err)
+            );
 
             // Check access (for future use)
             // const hasAccess = await checkUserAccess();
@@ -939,6 +1108,16 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
                 moduleId!
             );
 
+            // Log activity (non-blocking)
+            const duration = new Date(currentEntry.endTime!).getTime() - new Date(currentEntry.startTime).getTime();
+            createActivityLog('UPDATE', currentEntry.startTime, {
+                oldValue: { ...existingValue, endTime: null },
+                newValue: currentEntry,
+                categoryName: currentEntry.categoryName,
+                description: currentEntry.description,
+                duration,
+            }).catch((err) => console.error('[ActivityLog] Failed to log clock-out:', err));
+
             // Update local state
             const entryIndex = timeEntries.findIndex(
                 (e) => e.startTime === currentEntry!.startTime
@@ -975,10 +1154,22 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
             const existingValue = allValues.find((v) => v.startTime === startTime);
 
             if (!existingValue) {
-                throw new Error('Time entry not found in database');
+                throw new Error('Entry not found');
             }
 
             const kvStoreId = (existingValue as any).id;
+
+            // Log activity BEFORE deletion (non-blocking)
+            const duration = existingValue.endTime
+                ? new Date(existingValue.endTime).getTime() - new Date(existingValue.startTime).getTime()
+                : 0;
+            createActivityLog('DELETE', startTime, {
+                oldValue: existingValue,
+                categoryName: existingValue.categoryName,
+                description: existingValue.description,
+                duration,
+            }).catch((err) => console.error('[ActivityLog] Failed to log deletion:', err));
+
             await deleteCustomDataValue(cat.id, kvStoreId, moduleId!);
 
             // Remove from local array
@@ -1047,6 +1238,18 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
                             { value: JSON.stringify(updatedEntry) },
                             moduleId!
                         );
+
+                        // Log activity (non-blocking)
+                        const duration = entry.endTime
+                            ? new Date(entry.endTime).getTime() - new Date(entry.startTime).getTime()
+                            : 0;
+                        createActivityLog('UPDATE', entry.startTime, {
+                            oldValue: { categoryId: entry.categoryId, categoryName: entry.categoryName },
+                            newValue: { categoryId: updatedEntry.categoryId, categoryName: updatedEntry.categoryName },
+                            categoryName: updatedEntry.categoryName,
+                            description: entry.description,
+                            duration,
+                        }).catch((err) => console.error('[ActivityLog] Failed to log bulk update:', err));
 
                         // Update local array
                         const index = timeEntries.findIndex((e) => e.startTime === entry.startTime);
@@ -1134,6 +1337,17 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
                         );
 
                         await deleteCustomDataValue(cat.id, kvStoreId, moduleId!);
+
+                        // Log activity BEFORE removal from local array (non-blocking)
+                        const duration = entry.endTime
+                            ? new Date(entry.endTime).getTime() - new Date(entry.startTime).getTime()
+                            : 0;
+                        createActivityLog('DELETE', entry.startTime, {
+                            oldValue: entry,
+                            categoryName: entry.categoryName,
+                            description: entry.description,
+                            duration,
+                        }).catch((err) => console.error('[ActivityLog] Failed to log bulk delete:', err));
 
                         // Remove from local array
                         const index = timeEntries.findIndex((e) => e.startTime === entry.startTime);
@@ -1297,6 +1511,15 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
                     },
                     moduleId!
                 );
+
+                // Log activity (non-blocking)
+                const duration = new Date(newEntry.endTime!).getTime() - new Date(newEntry.startTime).getTime();
+                createActivityLog('CREATE', newEntry.startTime, {
+                    newValue: newEntry,
+                    categoryName: newEntry.categoryName,
+                    description: newEntry.description,
+                    duration,
+                }).catch((err) => console.error('[ActivityLog] Failed to log bulk entry:', err));
 
                 savedCount++;
             }
@@ -4099,6 +4322,16 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
                         );
                     }
 
+                    // Log activity (non-blocking)
+                    const duration = new Date(updatedEntry.endTime!).getTime() - new Date(updatedEntry.startTime).getTime();
+                    createActivityLog('UPDATE', updatedEntry.startTime, {
+                        oldValue: editingEntry,
+                        newValue: updatedEntry,
+                        categoryName: updatedEntry.categoryName,
+                        description: updatedEntry.description,
+                        duration,
+                    }).catch((err) => console.error('[ActivityLog] Failed to log manual entry update:', err));
+
                     // Update local array
                     const index = timeEntries.findIndex(
                         (e) => e.startTime === editingEntry!.startTime
@@ -4130,6 +4363,15 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
                         },
                         moduleId!
                     );
+
+                    // Log activity (non-blocking)
+                    const duration = new Date(newEntry.endTime!).getTime() - new Date(newEntry.startTime).getTime();
+                    createActivityLog('CREATE', newEntry.startTime, {
+                        newValue: newEntry,
+                        categoryName: newEntry.categoryName,
+                        description: newEntry.description,
+                        duration,
+                    }).catch((err) => console.error('[ActivityLog] Failed to log manual entry creation:', err));
 
                     timeEntries.unshift(newEntry);
                     timeEntries.sort(
