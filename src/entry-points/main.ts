@@ -595,23 +595,17 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
             const response = await churchtoolsClient.get<
                 Array<{
                     id: number;
-                    domainAttributes: {
-                        firstName?: string;
-                        lastName?: string;
-                    };
+                    firstName?: string;
+                    lastName?: string;
                 }>
             >('/persons');
-
-            console.log('[TimeTracker] Raw persons response:', response);
-            console.log('[TimeTracker] First person example:', response?.[0]);
 
             // Map to simplified format
             userList = (response || [])
                 .map((person) => {
                     const name =
-                        `${person.domainAttributes?.firstName || ''} ${person.domainAttributes?.lastName || ''}`.trim() ||
+                        `${person.firstName || ''} ${person.lastName || ''}`.trim() ||
                         `User ${person.id}`;
-                    console.log(`[TimeTracker] Person ${person.id}: ${name}`, person.domainAttributes);
                     return {
                         id: person.id,
                         name,
@@ -620,7 +614,6 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
                 .filter((u) => u.id); // Remove invalid entries
 
             console.log('[TimeTracker] Loaded', userList.length, 'users for filter');
-            console.log('[TimeTracker] UserList sample:', userList.slice(0, 3));
         } catch (error) {
             console.error('[TimeTracker] Failed to load user list:', error);
             userList = [];
