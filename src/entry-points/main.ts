@@ -4623,7 +4623,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
     }
 
     // Setup event delegation for edit/delete entry buttons (only once)
-    element.addEventListener('click', (e) => {
+    element.addEventListener('click', async (e) => {
         const target = e.target as HTMLElement;
 
         // Check if clicked element is an edit button
@@ -4633,7 +4633,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
             const entry = timeEntries.find((e) => e.startTime === startTime);
             if (entry) {
                 editingEntry = entry;
-                showAddManualEntry = false;
+                showAddManualEntry = true; // Open manual entry form
                 currentView = 'entries'; // Switch to entries view to show edit form
                 render();
             }
@@ -4646,13 +4646,17 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
             const startTime = deleteBtn.dataset.entryStart;
             const entry = timeEntries.find((e) => e.startTime === startTime);
 
-            if (
-                entry &&
-                confirm(
-                    `${t('ct.extension.timetracker.timeEntries.deleteConfirm')}\n\n${t('ct.extension.timetracker.timeEntries.startTime')}: ${new Date(entry.startTime).toLocaleString()}\n${t('ct.extension.timetracker.timeEntries.endTime')}: ${entry.endTime ? new Date(entry.endTime).toLocaleString() : 'N/A'}\n${t('ct.extension.timetracker.dashboard.category')}: ${entry.categoryName}${entry.isBreak ? ` (${t('ct.extension.timetracker.timeEntries.break')})` : ''}`
-                )
-            ) {
-                deleteTimeEntry(startTime!);
+            if (entry) {
+                // Use setTimeout to ensure dialog appears after any render cycles
+                setTimeout(() => {
+                    const confirmed = confirm(
+                        `${t('ct.extension.timetracker.timeEntries.deleteConfirm')}\n\n${t('ct.extension.timetracker.timeEntries.startTime')}: ${new Date(entry.startTime).toLocaleString()}\n${t('ct.extension.timetracker.timeEntries.endTime')}: ${entry.endTime ? new Date(entry.endTime).toLocaleString() : 'N/A'}\n${t('ct.extension.timetracker.dashboard.category')}: ${entry.categoryName}${entry.isBreak ? ` (${t('ct.extension.timetracker.timeEntries.break')})` : ''}`
+                    );
+
+                    if (confirmed) {
+                        deleteTimeEntry(startTime!);
+                    }
+                }, 0);
             }
             return;
         }
