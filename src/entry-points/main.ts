@@ -2829,10 +2829,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
             }
                 </div>
                 <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center;">
-                    <button id="bulk-edit-toggle" style="padding: 0.5rem 1rem; background: ${bulkEditMode ? '#dc3545' : '#6c757d'}; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.9rem;">
-                        ${bulkEditMode ? t('ct.extension.timetracker.bulkEdit.deselectAll') : t('ct.extension.timetracker.bulkEdit.selectMode')}
-                    </button>
-                    <button id="export-csv-btn" style="padding: 0.5rem 1rem; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; display: inline-flex; align-items: center; gap: 0.5rem;">
+                    <button id="export-csv-btn" style="padding:0.5rem 1rem; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; display: inline-flex; align-items: center; gap: 0.5rem;">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                             <polyline points="7 10 12 15 17 10"></polyline>
@@ -3314,6 +3311,21 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
 
             html += `</div>`; // Close week group
         }
+
+        // Add Bulk Edit toggle button at bottom of entries
+        html += `
+            <div style="display: flex; justify-content: flex-end; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #e9ecef;">
+                <button id="bulk-edit-toggle" style="padding: 0.5rem 1rem; background: ${bulkEditMode ? '#dc3545' : '#6c757d'}; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85rem; display: inline-flex; align-items: center; gap: 0.5rem; opacity: 0.9;">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        ${bulkEditMode
+                ? `<line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line>`
+                : `<polyline points="9 11 12 14 22 4"></polyline><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>`
+            }
+                    </svg>
+                    ${bulkEditMode ? t('ct.extension.timetracker.bulkEdit.deselectAll') : t('ct.extension.timetracker.bulkEdit.selectMode')}
+                </button>
+            </div>
+        `;
 
         // Add Bulk Action Bar if in bulk edit mode and entries selected
         if (bulkEditMode && selectedEntryIds.size > 0) {
