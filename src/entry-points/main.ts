@@ -4393,9 +4393,6 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
         });
 
         // Bulk entry
-        const closeBulkEntryBtn = element.querySelector(
-            '#close-bulk-entry-btn'
-        ) as HTMLButtonElement;
         const addBulkRowBtn = element.querySelector('#add-bulk-row-btn') as HTMLButtonElement;
         const bulkAddEntriesBtn = element.querySelector(
             '#bulk-add-entries-btn'
