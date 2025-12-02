@@ -2865,38 +2865,33 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
 
             ${showAddManualEntry || editingEntry
                 ? `
-                <h1 class="tab-title" style="display: flex; align-items: center; gap: 0.5rem; margin: 0 0 1.5rem 0; padding: 0; font-size: 1.5rem; font-weight: 600; color: #333;">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
-                    <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
-                    <path d="M9 12h6"></path>
-                    <path d="M9 16h6"></path>
-                </svg>
-                ${t('ct.extension.timetracker.timeEntries.addManualEntryTitle')}
-            </h1>
                 <!-- Add/Edit Manual Entry Form -->
-                <div style="background: ${editingEntry ? '#d1ecf1' : '#fff3cd'}; border: 1px solid ${editingEntry ? '#17a2b8' : '#ffc107'}; border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem;">
-                    <h3 style="margin: 0 0 1rem 0; color: #333; display: flex; align-items: center; gap: 0.5rem;">
-                    ${editingEntry
+                <div style="background: #fff3cd; border: 2px solid #ffc107; border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                        <h3 style="margin: 0; font-size: 1.25rem; color: #333; display: flex; align-items: center; gap: 0.75rem;">
+                            ${editingEntry
                     ? `
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-                        </svg>
-                        ${t('ct.extension.timetracker.common.edit')}
-                    `
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                                </svg>
+                                ${t('ct.extension.timetracker.common.edit')}
+                            `
                     : `
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <circle cx="12" cy="12" r="10"></circle>
-                            <polyline points="12 6 12 12 16 14"></polyline>
-                        </svg>
-                        ${t('ct.extension.timetracker.timeEntries.addManualEntryTitle')}
-                    `
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="12" cy="12" r="10"></circle>
+                                    <polyline points="12 6 12 12 16 14"></polyline>
+                                </svg>
+                                ${t('ct.extension.timetracker.timeEntries.addManualEntryTitle')}
+                            `
                 }
-                </h3>
+                        </h3>
+                        <button id="cancel-manual-entry-btn" style="padding: 0.5rem 1rem; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer;">${t('ct.extension.timetracker.common.cancel')}</button>
+                    </div>
+
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
                         <div>
-                            <label for="manual-start" style="display: block; margin-bottom: 0.5rem; color: #333; font-weight: 500;">Start Date & Time</label>
+                            <label for="manual-start" style="display: block; margin-bottom: 0.5rem; color: #333; font-weight: 500;">${t('ct.extension.timetracker.manualEntry.startDateTime')}</label>
                             <input
                                 type="datetime-local"
                                 id="manual-start"
@@ -2909,7 +2904,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
                             />
                         </div>
                         <div>
-                            <label for="manual-end" style="display: block; margin-bottom: 0.5rem; color: #333; font-weight: 500;">End Date & Time</label>
+                            <label for="manual-end" style="display: block; margin-bottom: 0.5rem; color: #333; font-weight: 500;">${t('ct.extension.timetracker.manualEntry.endDateTime')}</label>
                             <input
                                 type="datetime-local"
                                 id="manual-end"
@@ -2924,7 +2919,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
                     </div>
                     <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 1rem; margin-bottom: 1rem;">
                         <div>
-                            <label for="manual-category" style="display: block; margin-bottom: 0.5rem; color: #333; font-weight: 500;">Category</label>
+                            <label for="manual-category" style="display: block; margin-bottom: 0.5rem; color: #333; font-weight: 500;">${t('ct.extension.timetracker.manualEntry.category')}</label>
                             <select
                                 id="manual-category"
                                 name="manual-category"
@@ -2934,7 +2929,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
                             </select>
                         </div>
                         <div>
-                            <label for="manual-description" style="display: block; margin-bottom: 0.5rem; color: #333; font-weight: 500;">Description</label>
+                            <label for="manual-description" style="display: block; margin-bottom: 0.5rem; color: #333; font-weight: 500;">${t('ct.extension.timetracker.manualEntry.description')}</label>
                             <input
                                 type="text"
                                 id="manual-description"
@@ -2943,27 +2938,26 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
                                 autocomplete="off"
                                 data-lpignore="true"
                                 data-1p-ignore="true"
-                                placeholder="What did you work on?"
+                                placeholder="${t('ct.extension.timetracker.manualEntry.descriptionPlaceholder')}"
                                 style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;"
                             />
                         </div>
                     </div>
                     <label style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem; cursor: pointer; text-align: left;">
                         <input type="checkbox" id="manual-is-break" ${editingEntry && editingEntry.isBreak ? 'checked' : ''} style="width: 18px; height: 18px; cursor: pointer;" />
-                        <span style="color: #666; font-size: 0.95rem;">This is a break/pause (won't count towards work hours)</span>
+                        <span style="color: #666; font-size: 0.95rem;">${t('ct.extension.timetracker.manualEntry.isBreakLabel')}</span>
                     </label>
-                    <div style="display: flex; gap: 0.5rem;">
-                        <button id="save-manual-entry-btn" style="padding: 0.5rem 1rem; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; display: inline-flex; align-items: center; gap: 0.5rem;">
+                    <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
+                        <button id="reset-manual-entry-btn" style="padding: 0.5rem 1rem; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                            ${t('ct.extension.timetracker.common.reset')}
+                        </button>
+                        <button id="save-manual-entry-btn" style="padding: 0.5rem 1.5rem; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; display: inline-flex; align-items: center; gap: 0.5rem;">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
                                 <polyline points="17 21 17 13 7 13 7 21"></polyline>
                                 <polyline points="7 3 7 8 15 8"></polyline>
                             </svg>
-                            ${editingEntry ? 'Update Entry' : 'Save Entry'}
-                        </button>
-                        <button id="cancel-manual-entry-btn" style="padding: 0.5rem 1rem; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer;">Cancel</button>
-                        <button id="reset-manual-entry-btn" style="padding: 0.5rem 1rem; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer;">
-                            ${t('ct.extension.timetracker.common.reset')}
+                            ${editingEntry ? t('ct.extension.timetracker.manualEntry.updateEntry') : t('ct.extension.timetracker.manualEntry.saveEntry')}
                         </button>
                     </div>
                 </div>
