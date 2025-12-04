@@ -4355,6 +4355,8 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
                     }
 
                     editingEntry = null;
+                    showAddManualEntry = false; // Close form after update
+                    render(); // Refresh UI to show updated entry
                 } else {
                     // CREATE new entry
                     const newEntry: TimeEntry = {
