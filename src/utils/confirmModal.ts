@@ -52,7 +52,7 @@ export function showConfirmModal(options: ConfirmModalOptions): Promise<boolean>
         // Modal header
         const header = document.createElement('div');
         header.style.cssText = `
-            padding: 1.5rem;
+            padding: 1.25rem 1.5rem 1rem 1.5rem;
             border-bottom: 1px solid var(--border-color, #e0e0e0);
         `;
         header.innerHTML = `
@@ -64,15 +64,14 @@ export function showConfirmModal(options: ConfirmModalOptions): Promise<boolean>
         // Modal body
         const body = document.createElement('div');
         body.style.cssText = `
-            padding: 1.5rem;
+            padding: 1.25rem 1.5rem;
             color: var(--text-secondary, #666);
             line-height: 1.6;
         `;
-        body.innerHTML = `
-            <p style="margin: 0; white-space: pre-line;">
-                ${escapeHtml(options.message)}
-            </p>
-        `;
+
+        // Format message: support for line breaks and basic formatting
+        const formattedMessage = formatMessage(options.message);
+        body.innerHTML = formattedMessage;
 
         // Modal footer
         const footer = document.createElement('div');
@@ -216,4 +215,26 @@ function escapeHtml(unsafe: string): string {
         .replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#039;');
+}
+
+// Helper function to format message with highlights
+function formatMessage(message: string): string {
+    // Split by double newlines to separate paragraphs
+    const parts = message.split('\n\n');
+
+    return parts.map((part, index) => {
+        // Escape HTML first
+        let formatted = escapeHtml(part);
+
+        // Highlight labels (text ending with colon)
+        // Pattern: "Label: value" becomes "<strong>Label:</strong> value"
+        formatted = formatted.replace(/^([^:]+:)/gm, '<strong style="color: var(--text-primary, #333); font-weight: 600;">$1</strong>');
+
+        // Replace newlines with <br> for line breaks
+        formatted = formatted.replace(/\n/g, '<br>');
+
+        // Wrap in paragraph with appropriate margin
+        const marginTop = index === 0 ? '0' : '1rem';
+        return `<p style="margin: ${marginTop} 0 0 0;">${formatted}</p>`;
+    }).join('');
 }
