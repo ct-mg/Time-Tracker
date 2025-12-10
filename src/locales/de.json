@@ -314,5 +314,11 @@
     "ct.extension.timetracker.common.fillBothTimes": "Bitte Start- und Endzeit ausfüllen.",
     "ct.extension.timetracker.common.endAfterStart": "Endzeit muss nach Startzeit liegen.",
     "ct.extension.timetracker.common.resetAndClose": "Zurücksetzen und schließen",
-    "ct.extension.timetracker.entries.myEntries": "Meine Einträge"
+    "ct.extension.timetracker.entries.myEntries": "Meine Einträge",
+    "ct.extension.timetracker.modal.deleteEntry.title": "Zeitein trag löschen?",
+    "ct.extension.timetracker.modal.deleteEntry.message": "Möchten Sie diesen Zeiteintrag wirklich löschen?\n\nDiese Aktion kann nicht rückgängig gemacht werden.",
+    "ct.extension.timetracker.modal.deleteAbsence.title": "Abwesenheit löschen?",
+    "ct.extension.timetracker.modal.deleteAbsence.message": "Möchten Sie diese Abwesenheit wirklich löschen?\n\nDiese Aktion kann nicht rückgängig gemacht werden.",
+    "ct.extension.timetracker.modal.confirmButton": "Bestätigen",
+    "ct.extension.timetracker.modal.deleteButton": "Löschen"
 }
