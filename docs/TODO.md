@@ -389,6 +389,25 @@
 
 ---
 
+#### "Endzeit auf Jetzt" Button für Manuelle Einträge
+**Use Case:** Beim manuellen Eintrag die Endzeit schnell auf die aktuelle Zeit setzen
+**Feature:** Button "Jetzt" neben Endzeit-Feld
+**Status:** Offen (Feature Request)
+**Aufwand:** Klein
+**Priority:** Niedrig-Mittel
+
+**Implementierungs-Schritte:**
+1. Button neben Endzeit-Input hinzufügen
+2. onClick: Endzeit auf `new Date()` setzen
+3. Beide Felder (Datum + Zeit) aktualisieren
+4. Translations für Button-Text (DE: "Jetzt", EN: "Now")
+
+**UI-Position:**
+- Neben "End Date & Time" Feld
+- Kleiner Button mit Icon (Uhr) oder Text "Jetzt"
+
+---
+
 #### ✅ Filter & Search Verbesserungen (COMPLETED 2025-11-24)
 **Features:**
 - ✅ Search in Description (case-insensitive)

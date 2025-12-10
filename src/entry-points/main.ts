@@ -12,6 +12,7 @@ import {
     deleteCustomDataValue,
 } from '../utils/kv-store';
 import { initI18n, detectBrowserLanguage, t } from '../utils/i18n';
+import { showConfirmModal } from '../utils/confirmModal';
 
 /**
  * Time Tracker Main Module
@@ -595,21 +596,22 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
             const response = await churchtoolsClient.get<
                 Array<{
                     id: number;
-                    domainAttributes: {
-                        firstName?: string;
-                        lastName?: string;
-                    };
+                    firstName?: string;
+                    lastName?: string;
                 }>
             >('/persons');
 
             // Map to simplified format
             userList = (response || [])
-                .map((person) => ({
-                    id: person.id,
-                    name:
-                        `${person.domainAttributes?.firstName || ''} ${person.domainAttributes?.lastName || ''}`.trim() ||
-                        `User ${person.id}`,
-                }))
+                .map((person) => {
+                    const name =
+                        `${person.firstName || ''} ${person.lastName || ''}`.trim() ||
+                        `User ${person.id}`;
+                    return {
+                        id: person.id,
+                        name,
+                    };
+                })
                 .filter((u) => u.id); // Remove invalid entries
 
             console.log('[TimeTracker] Loaded', userList.length, 'users for filter');
@@ -2552,21 +2554,24 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
                         </svg>
                         ${t('ct.extension.timetracker.bulkEntry.title')}
                     </h3>
-                    <button id="close-bulk-entry-btn" style="padding: 0.5rem 1rem; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer;">${t('ct.extension.timetracker.common.cancel')}</button>
+                    <div style="display: flex; gap: 0.5rem;">
+                        <button id="reset-bulk-entries-btn" style="padding: 0.5rem 1rem; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600;">${t('ct.extension.timetracker.common.reset')}</button>
+                        <button id="reset-and-close-bulk-entry-btn" style="padding: 0.5rem 1rem; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600;">${t('ct.extension.timetracker.common.resetAndClose')}</button>
+                    </div>
                 </div>
 
                 <div style="overflow-x: auto; margin-bottom: 1rem;">
                     <table style="width: 100%; border-collapse: collapse; background: white; border-radius: 4px; overflow: hidden;">
                         <thead>
                             <tr style="background: #6f42c1; color: white;">
-                                <th style="padding: 0.75rem; text-align: left; font-weight: 600;">Start Date</th>
-                                <th style="padding: 0.75rem; text-align: left; font-weight: 600;">Start Time</th>
-                                <th style="padding: 0.75rem; text-align: left; font-weight: 600;">End Date</th>
-                                <th style="padding: 0.75rem; text-align: left; font-weight: 600;">End Time</th>
-                                <th style="padding: 0.75rem; text-align: left; font-weight: 600;">Category</th>
-                                <th style="padding: 0.75rem; text-align: left; font-weight: 600;">Description</th>
-                                <th style="padding: 0.75rem; text-align: center; font-weight: 600;">Break?</th>
-                                <th style="padding: 0.75rem; text-align: center; font-weight: 600;">Actions</th>
+                                <th style="padding: 0.75rem; text-align: left; font-weight: 600;">${t('ct.extension.timetracker.bulkEntry.startDate')}</th>
+                                <th style="padding: 0.75rem; text-align: left; font-weight: 600;">${t('ct.extension.timetracker.bulkEntry.startTime')}</th>
+                                <th style="padding: 0.75rem; text-align: left; font-weight: 600;">${t('ct.extension.timetracker.bulkEntry.endDate')}</th>
+                                <th style="padding: 0.75rem; text-align: left; font-weight: 600;">${t('ct.extension.timetracker.bulkEntry.endTime')}</th>
+                                <th style="padding: 0.75rem; text-align: left; font-weight: 600;">${t('ct.extension.timetracker.bulkEntry.category')}</th>
+                                <th style="padding: 0.75rem; text-align: left; font-weight: 600;">${t('ct.extension.timetracker.bulkEntry.description')}</th>
+                                <th style="padding: 0.75rem; text-align: center; font-weight: 600;">${t('ct.extension.timetracker.bulkEntry.isBreak')}</th>
+                                <th style="padding: 0.75rem; text-align: center; font-weight: 600;">${t('ct.extension.timetracker.timeEntries.actions')}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -2574,7 +2579,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
                 ? `
                                 <tr>
                                     <td colspan="8" style="padding: 2rem; text-align: center; color: #666;">
-                                        No entries yet. Click "Add Row" to start.
+                                        ${t('ct.extension.timetracker.bulkEntry.noEntries')}
                                     </td>
                                 </tr>
                             `
@@ -2645,7 +2650,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
                                             data-row-id="${row.id}"
                                             data-field="description"
                                             value="${row.description}"
-                                            placeholder="Description..."
+                                            placeholder="${t('ct.extension.timetracker.bulkEntry.descriptionPlaceholder')}"
                                             style="width: 100%; padding: 0.375rem; border: 1px solid #ddd; border-radius: 3px;"
                                         />
                                     </td>
@@ -2664,7 +2669,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
                                             class="remove-bulk-row-btn"
                                             data-row-id="${row.id}"
                                             style="padding: 0.25rem 0.5rem; background: #dc3545; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 0.85rem;"
-                                            title="Remove"
+                                            title="${t('ct.extension.timetracker.bulkEntry.remove')}"
                                         ><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                                 <polyline points="3 6 5 6 21 6"></polyline>
                                                 <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
@@ -2691,7 +2696,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
                             <line x1="16" y1="17" x2="8" y2="17"></line>
                             <polyline points="10 9 9 9 8 9"></polyline>
                         </svg>
-                        <strong style="color: #856404;">Excel Import/Export</strong>
+                        <strong style="color: #856404;">${t('ct.extension.timetracker.bulkEntry.excelImportExport')}</strong>
                         <span style="background: #ff9800; color: white; padding: 0.125rem 0.5rem; border-radius: 3px; font-size: 0.75rem; margin-left: 0.5rem; font-weight: 700;">ALPHA</span>
                     </div>
                     <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center;">
@@ -2701,7 +2706,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
                                 <polyline points="7 10 12 15 17 10"></polyline>
                                 <line x1="12" y1="15" x2="12" y2="3"></line>
                             </svg>
-                            Download Template
+                            ${t('ct.extension.timetracker.bulkEntry.downloadTemplate')}
                         </button>
                         <input type="file" id="import-excel-input" accept=".xlsx,.xls" style="display: none;" />
                         <button id="import-excel-btn" style="padding: 0.5rem 1rem; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; display: inline-flex; align-items: center; gap: 0.5rem;">
@@ -2710,9 +2715,9 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
                                 <polyline points="17 8 12 3 7 8"></polyline>
                                 <line x1="12" y1="3" x2="12" y2="15"></line>
                             </svg>
-                            Import from Excel
+                            ${t('ct.extension.timetracker.bulkEntry.importFromExcel')}
                         </button>
-                        <span style="color: #856404; font-size: 0.85rem; font-style: italic;">Import will replace existing entries in the table</span>
+                        <span style="color: #856404; font-size: 0.85rem; font-style: italic;">${t('ct.extension.timetracker.bulkEntry.importReplacesNote')}</span>
                     </div>
                 </div>
                 `
@@ -2725,21 +2730,16 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
                             <line x1="12" y1="5" x2="12" y2="19"></line>
                             <line x1="5" y1="12" x2="19" y2="12"></line>
                         </svg>
-                        Add Row
+                        ${t('ct.extension.timetracker.bulkEntry.addRow')}
                     </button>
-                    <div style="display: flex; gap: 0.5rem;">
-                        <button id="save-bulk-entries-btn" ${bulkEntryRows.length === 0 ? 'disabled' : ''} style="padding: 0.5rem 1.5rem; background: ${bulkEntryRows.length === 0 ? '#6c757d' : '#28a745'}; color: white; border: none; border-radius: 4px; cursor: ${bulkEntryRows.length === 0 ? 'not-allowed' : 'pointer'}; font-weight: 600; display: inline-flex; align-items: center; gap: 0.5rem;">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
-                                <polyline points="17 21 17 13 7 13 7 21"></polyline>
-                                <polyline points="7 3 7 8 15 8"></polyline>
-                            </svg>
-                            Save All Entries (${bulkEntryRows.length})
-                        </button>
-                        <button id="reset-bulk-entries-btn" style="padding: 0.5rem 1rem; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600;">
-                            ${t('ct.extension.timetracker.common.reset')}
-                        </button>
-                    </div>
+                    <button id="save-bulk-entries-btn" ${bulkEntryRows.length === 0 ? 'disabled' : ''} style="padding: 0.5rem 1.5rem; background: ${bulkEntryRows.length === 0 ? '#6c757d' : '#28a745'}; color: white; border: none; border-radius: 4px; cursor: ${bulkEntryRows.length === 0 ? 'not-allowed' : 'pointer'}; font-weight: 600; display: inline-flex; align-items: center; gap: 0.5rem;">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                            <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                            <polyline points="7 3 7 8 15 8"></polyline>
+                        </svg>
+                        ${t('ct.extension.timetracker.bulkEntry.saveAllEntries')} (${bulkEntryRows.length})
+                    </button>
                 </div>
             </div>
         `;
@@ -2822,8 +2822,11 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
                             id="filter-user"
                             style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;"
                         >
+                            ${user?.id ? `<option value="${user.id}" ${filterUser === user.id.toString() ? 'selected' : ''}>${t('ct.extension.timetracker.entries.myEntries')}</option>` : ''}
+                            <option disabled>──────────</option>
                             <option value="all">${t('ct.extension.timetracker.entries.allUsers')}</option>
-                            ${userList.map((u) => `<option value="${u.id}" ${filterUser === u.id.toString() ? 'selected' : ''}>${u.name}</option>`).join('')}
+                            <option disabled>──────────</option>
+                            ${userList.filter(u => u.id !== user?.id).map((u) => `<option value="${u.id}" ${filterUser === u.id.toString() ? 'selected' : ''}>${u.name}</option>`).join('')}
                         </select>
                     </div>
                     `
@@ -2831,10 +2834,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
             }
                 </div>
                 <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center;">
-                    <button id="bulk-edit-toggle" style="padding: 0.5rem 1rem; background: ${bulkEditMode ? '#dc3545' : '#6c757d'}; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.9rem;">
-                        ${bulkEditMode ? t('ct.extension.timetracker.bulkEdit.deselectAll') : t('ct.extension.timetracker.bulkEdit.selectMode')}
-                    </button>
-                    <button id="export-csv-btn" style="padding: 0.5rem 1rem; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; display: inline-flex; align-items: center; gap: 0.5rem;">
+                    <button id="export-csv-btn" style="padding:0.5rem 1rem; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; display: inline-flex; align-items: center; gap: 0.5rem;">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                             <polyline points="7 10 12 15 17 10"></polyline>
@@ -2865,38 +2865,36 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
 
             ${showAddManualEntry || editingEntry
                 ? `
-                <h1 class="tab-title" style="display: flex; align-items: center; gap: 0.5rem; margin: 0 0 1.5rem 0; padding: 0; font-size: 1.5rem; font-weight: 600; color: #333;">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
-                    <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
-                    <path d="M9 12h6"></path>
-                    <path d="M9 16h6"></path>
-                </svg>
-                ${t('ct.extension.timetracker.timeEntries.addManualEntryTitle')}
-            </h1>
                 <!-- Add/Edit Manual Entry Form -->
-                <div style="background: ${editingEntry ? '#d1ecf1' : '#fff3cd'}; border: 1px solid ${editingEntry ? '#17a2b8' : '#ffc107'}; border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem;">
-                    <h3 style="margin: 0 0 1rem 0; color: #333; display: flex; align-items: center; gap: 0.5rem;">
-                    ${editingEntry
+                <div style="background: #fff3cd; border: 2px solid #ffc107; border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                        <h3 style="margin: 0; font-size: 1.25rem; color: #333; display: flex; align-items: center; gap: 0.75rem;">
+                            ${editingEntry
                     ? `
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-                        </svg>
-                        ${t('ct.extension.timetracker.common.edit')}
-                    `
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                                </svg>
+                                ${t('ct.extension.timetracker.common.edit')}
+                            `
                     : `
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <circle cx="12" cy="12" r="10"></circle>
-                            <polyline points="12 6 12 12 16 14"></polyline>
-                        </svg>
-                        ${t('ct.extension.timetracker.timeEntries.addManualEntryTitle')}
-                    `
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="12" cy="12" r="10"></circle>
+                                    <polyline points="12 6 12 12 16 14"></polyline>
+                                </svg>
+                                ${t('ct.extension.timetracker.timeEntries.addManualEntryTitle')}
+                            `
                 }
-                </h3>
+                        </h3>
+                        <div style="display: flex; gap: 0.5rem;">
+                            <button id="reset-manual-entry-btn" style="padding: 0.5rem 1rem; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer;">${t('ct.extension.timetracker.common.reset')}</button>
+                            <button id="reset-and-close-manual-entry-btn" style="padding: 0.5rem 1rem; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer;">${t('ct.extension.timetracker.common.resetAndClose')}</button>
+                        </div>
+                    </div>
+
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
                         <div>
-                            <label for="manual-start" style="display: block; margin-bottom: 0.5rem; color: #333; font-weight: 500;">Start Date & Time</label>
+                            <label for="manual-start" style="display: block; margin-bottom: 0.5rem; color: #333; font-weight: 500;">${t('ct.extension.timetracker.manualEntry.startDateTime')}</label>
                             <input
                                 type="datetime-local"
                                 id="manual-start"
@@ -2909,7 +2907,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
                             />
                         </div>
                         <div>
-                            <label for="manual-end" style="display: block; margin-bottom: 0.5rem; color: #333; font-weight: 500;">End Date & Time</label>
+                            <label for="manual-end" style="display: block; margin-bottom: 0.5rem; color: #333; font-weight: 500;">${t('ct.extension.timetracker.manualEntry.endDateTime')}</label>
                             <input
                                 type="datetime-local"
                                 id="manual-end"
@@ -2924,7 +2922,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
                     </div>
                     <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 1rem; margin-bottom: 1rem;">
                         <div>
-                            <label for="manual-category" style="display: block; margin-bottom: 0.5rem; color: #333; font-weight: 500;">Category</label>
+                            <label for="manual-category" style="display: block; margin-bottom: 0.5rem; color: #333; font-weight: 500;">${t('ct.extension.timetracker.manualEntry.category')}</label>
                             <select
                                 id="manual-category"
                                 name="manual-category"
@@ -2934,7 +2932,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
                             </select>
                         </div>
                         <div>
-                            <label for="manual-description" style="display: block; margin-bottom: 0.5rem; color: #333; font-weight: 500;">Description</label>
+                            <label for="manual-description" style="display: block; margin-bottom: 0.5rem; color: #333; font-weight: 500;">${t('ct.extension.timetracker.manualEntry.description')}</label>
                             <input
                                 type="text"
                                 id="manual-description"
@@ -2943,27 +2941,23 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
                                 autocomplete="off"
                                 data-lpignore="true"
                                 data-1p-ignore="true"
-                                placeholder="What did you work on?"
+                                placeholder="${t('ct.extension.timetracker.manualEntry.descriptionPlaceholder')}"
                                 style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;"
                             />
                         </div>
                     </div>
                     <label style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem; cursor: pointer; text-align: left;">
                         <input type="checkbox" id="manual-is-break" ${editingEntry && editingEntry.isBreak ? 'checked' : ''} style="width: 18px; height: 18px; cursor: pointer;" />
-                        <span style="color: #666; font-size: 0.95rem;">This is a break/pause (won't count towards work hours)</span>
+                        <span style="color: #666; font-size: 0.95rem;">${t('ct.extension.timetracker.manualEntry.isBreakLabel')}</span>
                     </label>
-                    <div style="display: flex; gap: 0.5rem;">
-                        <button id="save-manual-entry-btn" style="padding: 0.5rem 1rem; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; display: inline-flex; align-items: center; gap: 0.5rem;">
+                    <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
+                        <button id="save-manual-entry-btn" style="padding: 0.5rem 1.5rem; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; display: inline-flex; align-items: center; gap: 0.5rem;">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
                                 <polyline points="17 21 17 13 7 13 7 21"></polyline>
                                 <polyline points="7 3 7 8 15 8"></polyline>
                             </svg>
-                            ${editingEntry ? 'Update Entry' : 'Save Entry'}
-                        </button>
-                        <button id="cancel-manual-entry-btn" style="padding: 0.5rem 1rem; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer;">Cancel</button>
-                        <button id="reset-manual-entry-btn" style="padding: 0.5rem 1rem; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer;">
-                            ${t('ct.extension.timetracker.common.reset')}
+                            ${editingEntry ? t('ct.extension.timetracker.manualEntry.updateEntry') : t('ct.extension.timetracker.manualEntry.saveEntry')}
                         </button>
                     </div>
                 </div>
@@ -2974,17 +2968,26 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
             <!-- Entries List -->
             <div style="background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-                    <h2 style="margin: 0; font-size: 1.2rem; color: #333;">Time Entries (${getFilteredEntries().length})</h2>
-                    ${getFilteredEntries().length > ENTRIES_PER_PAGE
+                    <h2 style="margin: 0; font-size: 1.2rem; color: #333;">${t('ct.extension.timetracker.timeEntries.title')} (${getFilteredEntries().length})</h2>
+                    <div style="display: flex; gap: 0.5rem; align-items: center;">
+                        <button id="bulk-edit-toggle" style="padding: 0.4rem 0.8rem; background: ${bulkEditMode ? '#dc3545' : '#6c757d'}; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85rem; display: inline-flex; align-items: center; gap: 0.4rem;">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                ${bulkEditMode
+                ? `<line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line>`
+                : `<polyline points="9 11 12 14 22 4"></polyline><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>`
+            }
+                            </svg>
+                            ${bulkEditMode ? t('ct.extension.timetracker.bulkEdit.deselectAll') : t('ct.extension.timetracker.bulkEdit.selectMode')}
+                        </button>
+                        ${getFilteredEntries().length > ENTRIES_PER_PAGE
                 ? `
-                        <div style="display: flex; gap: 0.5rem; align-items: center;">
-                            <span style="color: #666; font-size: 0.9rem;">Page ${entriesPage} of ${Math.ceil(getFilteredEntries().length / ENTRIES_PER_PAGE)}</span>
-                            <button id="entries-prev-page" ${entriesPage === 1 ? 'disabled' : ''} style="padding: 0.25rem 0.5rem; background: ${entriesPage === 1 ? '#e9ecef' : '#007bff'}; color: ${entriesPage === 1 ? '#6c757d' : 'white'}; border: none; border-radius: 3px; cursor: ${entriesPage === 1 ? 'not-allowed' : 'pointer'};">‹ Prev</button>
-                            <button id="entries-next-page" ${entriesPage >= Math.ceil(getFilteredEntries().length / ENTRIES_PER_PAGE) ? 'disabled' : ''} style="padding: 0.25rem 0.5rem; background: ${entriesPage >= Math.ceil(getFilteredEntries().length / ENTRIES_PER_PAGE) ? '#e9ecef' : '#007bff'}; color: ${entriesPage >= Math.ceil(getFilteredEntries().length / ENTRIES_PER_PAGE) ? '#6c757d' : 'white'}; border: none; border-radius: 3px; cursor: ${entriesPage >= Math.ceil(getFilteredEntries().length / ENTRIES_PER_PAGE) ? 'not-allowed' : 'pointer'};">Next ›</button>
-                        </div>
-                    `
+                            <span style="color: #666; font-size: 0.9rem;">${t('ct.extension.timetracker.common.page')} ${entriesPage} ${t('ct.extension.timetracker.common.of')} ${Math.ceil(getFilteredEntries().length / ENTRIES_PER_PAGE)}</span>
+                            <button id="entries-prev-page" ${entriesPage === 1 ? 'disabled' : ''} style="padding: 0.25rem 0.5rem; background: ${entriesPage === 1 ? '#e9ecef' : '#007bff'}; color: ${entriesPage === 1 ? '#6c757d' : 'white'}; border: none; border-radius: 3px; cursor: ${entriesPage === 1 ? 'not-allowed' : 'pointer'};">‹ ${t('ct.extension.timetracker.common.back')}</button>
+                            <button id="entries-next-page" ${entriesPage >= Math.ceil(getFilteredEntries().length / ENTRIES_PER_PAGE) ? 'disabled' : ''} style="padding: 0.25rem 0.5rem; background: ${entriesPage >= Math.ceil(getFilteredEntries().length / ENTRIES_PER_PAGE) ? '#e9ecef' : '#007bff'}; color: ${entriesPage >= Math.ceil(getFilteredEntries().length / ENTRIES_PER_PAGE) ? '#6c757d' : 'white'}; border: none; border-radius: 3px; cursor: ${entriesPage >= Math.ceil(getFilteredEntries().length / ENTRIES_PER_PAGE) ? 'not-allowed' : 'pointer'};">${t('ct.extension.timetracker.common.next')} ›</button>
+                        `
                 : ''
             }
+                    </div>
                 </div>
                 ${renderEntriesList(getFilteredEntries())}
             </div>
@@ -3223,7 +3226,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
                                     : ''
                                 }
                                             <td style="padding: 0.5rem;">${start.toLocaleTimeString()}</td>
-                                            <td style="padding: 0.5rem;">${entry.endTime ? end.toLocaleTimeString() : '<span style="color: #28a745; font-weight: 600;">Active</span>'}</td>
+                                            <td style="padding: 0.5rem;">${entry.endTime ? end.toLocaleTimeString() : `<span style="color: #28a745; font-weight: 600;">${t('ct.extension.timetracker.common.active')}</span>`}</td>
                                             <td style="padding: 0.5rem; font-weight: 600;">${duration}</td>
                                             <td style="padding: 0.5rem;">
                                                 <span style="background: ${category?.color || '#6c757d'}; color: white; padding: 0.2rem 0.4rem; border-radius: 3px; font-size: 0.8rem;">
@@ -3774,7 +3777,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
                                             <line x1="12" y1="9" x2="12" y2="13"></line>
                                             <line x1="12" y1="17" x2="12.01" y2="17"></line>
                                         </svg>
-                                        Close to Target
+                                        ${t('ct.extension.timetracker.reports.closeToTarget')}
                                     </span>
                                 `
                             : `
@@ -3784,7 +3787,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
                                             <line x1="15" y1="9" x2="9" y2="15"></line>
                                             <line x1="9" y1="9" x2="15" y2="15"></line>
                                         </svg>
-                                        Below Target
+                                        ${t('ct.extension.timetracker.reports.belowTarget')}
                                     </span>
                                 `
                     }
@@ -3792,7 +3795,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
                             <div style="color: ${isOverTarget ? '#155724' : percentage >= 80 ? '#856404' : '#721c24'}; font-size: 0.9rem;">
                                 ${isOverTarget
                         ? `${t('ct.extension.timetracker.reports.targetAchievedMessage').replace('{hours}', parseFloat(stats.overtime).toFixed(0) + 'h ' + Math.round((parseFloat(stats.overtime) % 1) * 60) + 'm')}`
-                        : `You need to work ${formatDecimalHours(Math.abs(parseFloat(stats.overtime)))} more to reach your target.`
+                        : t('ct.extension.timetracker.reports.needMoreHours').replace('{hours}', formatDecimalHours(Math.abs(parseFloat(stats.overtime))))
                     }
                             </div>
                         </div>
@@ -4219,13 +4222,9 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
 
             render();
         });
-
         // Manual entry
         const addManualEntryBtn = element.querySelector(
             '#add-manual-entry-btn'
-        ) as HTMLButtonElement;
-        const cancelManualEntryBtn = element.querySelector(
-            '#cancel-manual-entry-btn'
         ) as HTMLButtonElement;
         const saveManualEntryBtn = element.querySelector(
             '#save-manual-entry-btn'
@@ -4239,14 +4238,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
             render();
         });
 
-        cancelManualEntryBtn?.addEventListener('click', () => {
-            showAddManualEntry = false;
-            editingEntry = null;
-            showBulkEntry = false;
-            render();
-        });
-
-        // Reset manual entry form
+        // Reset manual entry form (clears fields only)
         const resetManualEntryBtn = element.querySelector('#reset-manual-entry-btn');
         resetManualEntryBtn?.addEventListener('click', () => {
             // Clear all form fields
@@ -4263,6 +4255,29 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
             if (isBreakCheckbox) isBreakCheckbox.checked = false;
 
             editingEntry = null;
+        });
+
+        // Reset and close manual entry form (clears fields + closes)
+        const resetAndCloseManualEntryBtn = element.querySelector('#reset-and-close-manual-entry-btn');
+        resetAndCloseManualEntryBtn?.addEventListener('click', () => {
+            // Clear all form fields
+            const startInput = element.querySelector('#manual-start') as HTMLInputElement;
+            const endInput = element.querySelector('#manual-end') as HTMLInputElement;
+            const categorySelect = element.querySelector('#manual-category') as HTMLSelectElement;
+            const descriptionInput = element.querySelector('#manual-description') as HTMLInputElement;
+            const isBreakCheckbox = element.querySelector('#manual-is-break') as HTMLInputElement;
+
+            if (startInput) startInput.value = '';
+            if (endInput) endInput.value = '';
+            if (categorySelect && categorySelect.options.length > 0) categorySelect.selectedIndex = 0;
+            if (descriptionInput) descriptionInput.value = '';
+            if (isBreakCheckbox) isBreakCheckbox.checked = false;
+
+            editingEntry = null;
+
+            // Close the form
+            showAddManualEntry = false;
+            render();
         });
 
         saveManualEntryBtn?.addEventListener('click', async () => {
@@ -4341,6 +4356,10 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
                     }
 
                     editingEntry = null;
+                    showAddManualEntry = false; // Close form after update
+                    await refreshData(); // Full refresh like green button - reloads all data and clears cache
+                    render(); // Refresh UI to show updated entry
+                    showNotification(t('ct.extension.timetracker.common.success') + ': Entry updated!', 'success');
                 } else {
                     // CREATE new entry
                     const newEntry: TimeEntry = {
@@ -4389,9 +4408,6 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
         });
 
         // Bulk entry
-        const closeBulkEntryBtn = element.querySelector(
-            '#close-bulk-entry-btn'
-        ) as HTMLButtonElement;
         const addBulkRowBtn = element.querySelector('#add-bulk-row-btn') as HTMLButtonElement;
         const bulkAddEntriesBtn = element.querySelector(
             '#bulk-add-entries-btn'
@@ -4421,12 +4437,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
             render();
         });
 
-        closeBulkEntryBtn?.addEventListener('click', () => {
-            showBulkEntry = false;
-            render();
-        });
-
-        // Reset bulk entries
+        // Reset bulk entries (clears entries only)
         const resetBulkEntriesBtn = element.querySelector('#reset-bulk-entries-btn');
         resetBulkEntriesBtn?.addEventListener('click', () => {
             bulkEntryRows = [];
@@ -4434,6 +4445,14 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
             addBulkEntryRow();
             addBulkEntryRow();
             addBulkEntryRow();
+            render();
+        });
+
+        // Reset and close bulk entries (clears entries + closes)
+        const resetAndCloseBulkEntryBtn = element.querySelector('#reset-and-close-bulk-entry-btn');
+        resetAndCloseBulkEntryBtn?.addEventListener('click', () => {
+            bulkEntryRows = [];
+            showBulkEntry = false;
             render();
         });
 
@@ -4569,47 +4588,20 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
 
             if (editingAbsence) {
                 await updateAbsence(editingAbsence.id, data);
+                await refreshData(); // Full refresh like green button
+                render();
             } else {
                 await createAbsence(data);
+                await refreshData(); // Full refresh like green button
+                render();
             }
         });
 
-        // Edit/Delete absence buttons (using event delegation)
-        const editAbsenceBtns = element.querySelectorAll('.edit-absence-btn');
-        editAbsenceBtns.forEach((btn) => {
-            btn.addEventListener('click', (e) => {
-                const target = e.target as HTMLElement;
-                const absenceId = parseInt(target.dataset.absenceId || '0');
-                const absence = absences.find((a) => a.id === absenceId);
-                if (absence) {
-                    editingAbsence = absence;
-                    showAddAbsence = false;
-                    render();
-                }
-            });
-        });
-
-        const deleteAbsenceBtns = element.querySelectorAll('.delete-absence-btn');
-        deleteAbsenceBtns.forEach((btn) => {
-            btn.addEventListener('click', (e) => {
-                const target = e.target as HTMLElement;
-                const absenceId = parseInt(target.dataset.absenceId || '0');
-                const absence = absences.find((a) => a.id === absenceId);
-
-                if (
-                    absence &&
-                    confirm(
-                        `${t('ct.extension.timetracker.absences.deleteConfirm')}\n\n${t('ct.extension.timetracker.reports.from')}: ${new Date(absence.startDate).toLocaleDateString()}\n${t('ct.extension.timetracker.reports.to')}: ${new Date(absence.endDate).toLocaleDateString()}\n${t('ct.extension.timetracker.absences.reason')}: ${absence.absenceReason?.nameTranslated || absence.absenceReason?.name}`
-                    )
-                ) {
-                    deleteAbsence(absenceId);
-                }
-            });
-        });
+        // Absences edit/delete buttons now handled via event delegation below
     }
 
     // Setup event delegation for edit/delete entry buttons (only once)
-    element.addEventListener('click', (e) => {
+    element.addEventListener('click', async (e) => {
         const target = e.target as HTMLElement;
 
         // Check if clicked element is an edit button
@@ -4619,7 +4611,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
             const entry = timeEntries.find((e) => e.startTime === startTime);
             if (entry) {
                 editingEntry = entry;
-                showAddManualEntry = false;
+                showAddManualEntry = true; // Open manual entry form
                 currentView = 'entries'; // Switch to entries view to show edit form
                 render();
             }
@@ -4632,13 +4624,59 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
             const startTime = deleteBtn.dataset.entryStart;
             const entry = timeEntries.find((e) => e.startTime === startTime);
 
-            if (
-                entry &&
-                confirm(
-                    `${t('ct.extension.timetracker.timeEntries.deleteConfirm')}\n\n${t('ct.extension.timetracker.timeEntries.startTime')}: ${new Date(entry.startTime).toLocaleString()}\n${t('ct.extension.timetracker.timeEntries.endTime')}: ${entry.endTime ? new Date(entry.endTime).toLocaleString() : 'N/A'}\n${t('ct.extension.timetracker.dashboard.category')}: ${entry.categoryName}${entry.isBreak ? ` (${t('ct.extension.timetracker.timeEntries.break')})` : ''}`
-                )
-            ) {
-                deleteTimeEntry(startTime!);
+            if (entry) {
+                // Use custom modal instead of native confirm
+                const entryDetails = `${t('ct.extension.timetracker.timeEntries.startTime')}: ${new Date(entry.startTime).toLocaleString()}\n${t('ct.extension.timetracker.timeEntries.endTime')}: ${entry.endTime ? new Date(entry.endTime).toLocaleString() : 'N/A'}\n${t('ct.extension.timetracker.dashboard.category')}: ${entry.categoryName}${entry.isBreak ? ` (${t('ct.extension.timetracker.timeEntries.break')})` : ''}`;
+
+                showConfirmModal({
+                    title: t('ct.extension.timetracker.modal.deleteEntry.title'),
+                    message: `${t('ct.extension.timetracker.modal.deleteEntry.message')}\n\n${entryDetails}`,
+                    confirmText: t('ct.extension.timetracker.modal.deleteButton'),
+                    cancelText: t('ct.extension.timetracker.common.cancel'),
+                    confirmButtonStyle: 'danger',
+                }).then((confirmed) => {
+                    if (confirmed) {
+                        deleteTimeEntry(startTime!);
+                    }
+                });
+            }
+            return;
+        }
+
+        // Check if clicked element is an absence edit button
+        const editAbsenceBtn = target.closest('.edit-absence-btn') as HTMLElement;
+        if (editAbsenceBtn) {
+            const absenceId = parseInt(editAbsenceBtn.dataset.absenceId || '0');
+            const absence = absences.find((a) => a.id === absenceId);
+            if (absence) {
+                editingAbsence = absence;
+                showAddAbsence = true; // Open edit form
+                render();
+            }
+            return;
+        }
+
+        // Check if clicked element is an absence delete button
+        const deleteAbsenceBtn = target.closest('.delete-absence-btn') as HTMLElement;
+        if (deleteAbsenceBtn) {
+            const absenceId = parseInt(deleteAbsenceBtn.dataset.absenceId || '0');
+            const absence = absences.find((a) => a.id === absenceId);
+
+            if (absence) {
+                // Use custom modal instead of native confirm
+                const absenceDetails = `${t('ct.extension.timetracker.reports.from')}: ${new Date(absence.startDate).toLocaleDateString()}\n${t('ct.extension.timetracker.reports.to')}: ${new Date(absence.endDate).toLocaleDateString()}\n${t('ct.extension.timetracker.absences.reason')}: ${absence.absenceReason?.nameTranslated || absence.absenceReason?.name}`;
+
+                showConfirmModal({
+                    title: t('ct.extension.timetracker.modal.deleteAbsence.title'),
+                    message: `${t('ct.extension.timetracker.modal.deleteAbsence.message')}\n\n${absenceDetails}`,
+                    confirmText: t('ct.extension.timetracker.modal.deleteButton'),
+                    cancelText: t('ct.extension.timetracker.common.cancel'),
+                    confirmButtonStyle: 'danger',
+                }).then((confirmed) => {
+                    if (confirmed) {
+                        deleteAbsence(absenceId);
+                    }
+                });
             }
             return;
         }
