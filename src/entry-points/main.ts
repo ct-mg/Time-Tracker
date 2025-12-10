@@ -12,6 +12,7 @@ import {
     deleteCustomDataValue,
 } from '../utils/kv-store';
 import { initI18n, detectBrowserLanguage, t } from '../utils/i18n';
+import { showConfirmModal } from '../utils/confirmModal';
 
 /**
  * Time Tracker Main Module
@@ -4590,38 +4591,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
             }
         });
 
-        // Edit/Delete absence buttons (using event delegation)
-        const editAbsenceBtns = element.querySelectorAll('.edit-absence-btn');
-        editAbsenceBtns.forEach((btn) => {
-            btn.addEventListener('click', (e) => {
-                const target = e.target as HTMLElement;
-                const absenceId = parseInt(target.dataset.absenceId || '0');
-                const absence = absences.find((a) => a.id === absenceId);
-                if (absence) {
-                    editingAbsence = absence;
-                    showAddAbsence = false;
-                    render();
-                }
-            });
-        });
-
-        const deleteAbsenceBtns = element.querySelectorAll('.delete-absence-btn');
-        deleteAbsenceBtns.forEach((btn) => {
-            btn.addEventListener('click', (e) => {
-                const target = e.target as HTMLElement;
-                const absenceId = parseInt(target.dataset.absenceId || '0');
-                const absence = absences.find((a) => a.id === absenceId);
-
-                if (
-                    absence &&
-                    confirm(
-                        `${t('ct.extension.timetracker.absences.deleteConfirm')}\n\n${t('ct.extension.timetracker.reports.from')}: ${new Date(absence.startDate).toLocaleDateString()}\n${t('ct.extension.timetracker.reports.to')}: ${new Date(absence.endDate).toLocaleDateString()}\n${t('ct.extension.timetracker.absences.reason')}: ${absence.absenceReason?.nameTranslated || absence.absenceReason?.name}`
-                    )
-                ) {
-                    deleteAbsence(absenceId);
-                }
-            });
-        });
+        // Absences edit/delete buttons now handled via event delegation below
     }
 
     // Setup event delegation for edit/delete entry buttons (only once)
@@ -4649,16 +4619,58 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
             const entry = timeEntries.find((e) => e.startTime === startTime);
 
             if (entry) {
-                // Use setTimeout to ensure dialog appears after any render cycles
-                setTimeout(() => {
-                    const confirmed = confirm(
-                        `${t('ct.extension.timetracker.timeEntries.deleteConfirm')}\n\n${t('ct.extension.timetracker.timeEntries.startTime')}: ${new Date(entry.startTime).toLocaleString()}\n${t('ct.extension.timetracker.timeEntries.endTime')}: ${entry.endTime ? new Date(entry.endTime).toLocaleString() : 'N/A'}\n${t('ct.extension.timetracker.dashboard.category')}: ${entry.categoryName}${entry.isBreak ? ` (${t('ct.extension.timetracker.timeEntries.break')})` : ''}`
-                    );
+                // Use custom modal instead of native confirm
+                const entryDetails = `${t('ct.extension.timetracker.timeEntries.startTime')}: ${new Date(entry.startTime).toLocaleString()}\n${t('ct.extension.timetracker.timeEntries.endTime')}: ${entry.endTime ? new Date(entry.endTime).toLocaleString() : 'N/A'}\n${t('ct.extension.timetracker.dashboard.category')}: ${entry.categoryName}${entry.isBreak ? ` (${t('ct.extension.timetracker.timeEntries.break')})` : ''}`;
 
+                showConfirmModal({
+                    title: t('ct.extension.timetracker.modal.deleteEntry.title'),
+                    message: `${t('ct.extension.timetracker.modal.deleteEntry.message')}\n\n${entryDetails}`,
+                    confirmText: t('ct.extension.timetracker.modal.deleteButton'),
+                    cancelText: t('ct.extension.timetracker.common.cancel'),
+                    confirmButtonStyle: 'danger',
+                }).then((confirmed) => {
                     if (confirmed) {
                         deleteTimeEntry(startTime!);
                     }
-                }, 0);
+                });
+            }
+            return;
+        }
+
+        // Check if clicked element is an absence edit button
+        const editAbsenceBtn = target.closest('.edit-absence-btn') as HTMLElement;
+        if (editAbsenceBtn) {
+            const absenceId = parseInt(editAbsenceBtn.dataset.absenceId || '0');
+            const absence = absences.find((a) => a.id === absenceId);
+            if (absence) {
+                editingAbsence = absence;
+                showAddAbsence = true; // Open edit form
+                render();
+            }
+            return;
+        }
+
+        // Check if clicked element is an absence delete button
+        const deleteAbsenceBtn = target.closest('.delete-absence-btn') as HTMLElement;
+        if (deleteAbsenceBtn) {
+            const absenceId = parseInt(deleteAbsenceBtn.dataset.absenceId || '0');
+            const absence = absences.find((a) => a.id === absenceId);
+
+            if (absence) {
+                // Use custom modal instead of native confirm
+                const absenceDetails = `${t('ct.extension.timetracker.reports.from')}: ${new Date(absence.startDate).toLocaleDateString()}\n${t('ct.extension.timetracker.reports.to')}: ${new Date(absence.endDate).toLocaleDateString()}\n${t('ct.extension.timetracker.absences.reason')}: ${absence.absenceReason?.nameTranslated || absence.absenceReason?.name}`;
+
+                showConfirmModal({
+                    title: t('ct.extension.timetracker.modal.deleteAbsence.title'),
+                    message: `${t('ct.extension.timetracker.modal.deleteAbsence.message')}\n\n${absenceDetails}`,
+                    confirmText: t('ct.extension.timetracker.modal.deleteButton'),
+                    cancelText: t('ct.extension.timetracker.common.cancel'),
+                    confirmButtonStyle: 'danger',
+                }).then((confirmed) => {
+                    if (confirmed) {
+                        deleteAbsence(absenceId);
+                    }
+                });
             }
             return;
         }
