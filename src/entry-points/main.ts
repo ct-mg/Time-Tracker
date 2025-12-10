@@ -1009,14 +1009,10 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
         if (!user?.id) return;
 
         try {
-            // Use the generic request method with DELETE
-            await (churchtoolsClient as any).request(
-                'DELETE',
-                `/persons/${user.id}/absences/${absenceId}`
-            );
-            await loadAbsences();
-            render();
-            showNotification('Absence deleted successfully!', 'success');
+            // Delete absence using ChurchTools API
+            await churchtoolsClient.delete(`/persons/${user.id}/absences/${absenceId}`);
+            await refreshData(); // Full refresh like after other operations
+            showNotification(t('ct.extension.timetracker.common.success') + ': Absence deleted!', 'success');
         } catch (error) {
             console.error('[TimeTracker] Failed to delete absence:', error);
             showNotification('Failed to delete absence. Please try again.', 'error');
