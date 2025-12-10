@@ -4357,7 +4357,9 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
 
                     editingEntry = null;
                     showAddManualEntry = false; // Close form after update
+                    await loadTimeEntries(); // Reload from server to show changes immediately
                     render(); // Refresh UI to show updated entry
+                    showNotification(t('ct.extension.timetracker.common.success') + ': Entry updated!', 'success');
                 } else {
                     // CREATE new entry
                     const newEntry: TimeEntry = {
@@ -4586,8 +4588,12 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
 
             if (editingAbsence) {
                 await updateAbsence(editingAbsence.id, data);
+                await loadAbsences(); // Reload to show changes immediately
+                render();
             } else {
                 await createAbsence(data);
+                await loadAbsences(); // Reload to show new absence immediately
+                render();
             }
         });
 
