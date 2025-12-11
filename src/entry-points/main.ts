@@ -4241,7 +4241,22 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
             render();
         });
 
-        // Reset manual entry form (clears fields only)
+        // Auto-fill end time for new entries
+        const endInput = element.querySelector('#manual-end') as HTMLInputElement;
+
+        if (endInput && !editingEntry) {
+            // Auto-fill with current time for new entries
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const day = String(now.getDate()).padStart(2, '0');
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            endInput.value = `${year}-${month}-${day}T${hours}:${minutes}`;
+        }
+
+
+        // Reset manual entry form (clears fields, auto-fills end time with NOW)
         const resetManualEntryBtn = element.querySelector('#reset-manual-entry-btn');
         resetManualEntryBtn?.addEventListener('click', () => {
             // Clear all form fields
@@ -4252,7 +4267,16 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
             const isBreakCheckbox = element.querySelector('#manual-is-break') as HTMLInputElement;
 
             if (startInput) startInput.value = '';
-            if (endInput) endInput.value = '';
+            // Auto-fill end time with current date/time instead of clearing
+            if (endInput) {
+                const now = new Date();
+                const year = now.getFullYear();
+                const month = String(now.getMonth() + 1).padStart(2, '0');
+                const day = String(now.getDate()).padStart(2, '0');
+                const hours = String(now.getHours()).padStart(2, '0');
+                const minutes = String(now.getMinutes()).padStart(2, '0');
+                endInput.value = `${year}-${month}-${day}T${hours}:${minutes}`;
+            }
             if (categorySelect && categorySelect.options.length > 0) categorySelect.selectedIndex = 0;
             if (descriptionInput) descriptionInput.value = '';
             if (isBreakCheckbox) isBreakCheckbox.checked = false;
@@ -4260,7 +4284,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
             editingEntry = null;
         });
 
-        // Reset and close manual entry form (clears fields + closes)
+        // Reset and close manual entry form (clears fields, auto-fills end time with NOW, then closes)
         const resetAndCloseManualEntryBtn = element.querySelector('#reset-and-close-manual-entry-btn');
         resetAndCloseManualEntryBtn?.addEventListener('click', () => {
             // Clear all form fields
@@ -4271,7 +4295,16 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
             const isBreakCheckbox = element.querySelector('#manual-is-break') as HTMLInputElement;
 
             if (startInput) startInput.value = '';
-            if (endInput) endInput.value = '';
+            // Auto-fill end time with current date/time instead of clearing
+            if (endInput) {
+                const now = new Date();
+                const year = now.getFullYear();
+                const month = String(now.getMonth() + 1).padStart(2, '0');
+                const day = String(now.getDate()).padStart(2, '0');
+                const hours = String(now.getHours()).padStart(2, '0');
+                const minutes = String(now.getMinutes()).padStart(2, '0');
+                endInput.value = `${year}-${month}-${day}T${hours}:${minutes}`;
+            }
             if (categorySelect && categorySelect.options.length > 0) categorySelect.selectedIndex = 0;
             if (descriptionInput) descriptionInput.value = '';
             if (isBreakCheckbox) isBreakCheckbox.checked = false;
