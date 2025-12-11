@@ -2910,42 +2910,17 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
                             />
                         </div>
                         <div>
-                            <div style="position: relative;">
-                                <label for="manual-end" style="display: block; margin-bottom: 0.5rem; color: #333; font-weight: 500;">${t('ct.extension.timetracker.manualEntry.endDateTime')}</label>
-                                <input
-                                    type="datetime-local"
-                                    id="manual-end"
-                                    name="end-time"
-                                    value="${editingEntry && editingEntry.endTime ? editingEntry.endTime.slice(0, 16) : ''}"
-                                    autocomplete="off"
-                                    data-lpignore="true"
-                                    data-1p-ignore="true"
-                                    ${!editingEntry ? 'data-auto-filled="true"' : ''}
-                                    style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;"
-                                />
-                                ${!editingEntry ? `
-                                    <span id="auto-fill-badge" style="
-                                        position: absolute;
-                                        top: 0;
-                                        right: 0;
-                                        background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
-                                        color: #1976d2;
-                                        padding: 0.25rem 0.6rem;
-                                        border-radius: 4px;
-                                        font-size: 0.75rem;
-                                        font-weight: 600;
-                                        display: inline-flex;
-                                        align-items: center;
-                                        gap: 0.3rem;
-                                        box-shadow: 0 1px 3px rgba(25, 118, 210, 0.2);
-                                    ">
-                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                                            <polyline points="20 6 9 17 4 12"></polyline>
-                                        </svg>
-                                        ${t('ct.extension.timetracker.manualEntry.autoFilled')}
-                                    </span>
-                                ` : ''}
-                            </div>
+                            <label for="manual-end" style="display: block; margin-bottom: 0.5rem; color: #333; font-weight: 500;">${t('ct.extension.timetracker.manualEntry.endDateTime')}</label>
+                            <input
+                                type="datetime-local"
+                                id="manual-end"
+                                name="end-time"
+                                value="${editingEntry && editingEntry.endTime ? editingEntry.endTime.slice(0, 16) : ''}"
+                                autocomplete="off"
+                                data-lpignore="true"
+                                data-1p-ignore="true"
+                                style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;"
+                            />
                         </div>
                     </div>
                     <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 1rem; margin-bottom: 1rem;">
@@ -4266,12 +4241,11 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
             render();
         });
 
-        // Auto-fill end time for new entries and remove badge on user edit
+        // Auto-fill end time for new entries
         const endInput = element.querySelector('#manual-end') as HTMLInputElement;
-        const autoFillBadge = element.querySelector('#auto-fill-badge') as HTMLSpanElement;
 
-        if (endInput && endInput.dataset.autoFilled === 'true' && !editingEntry) {
-            // Auto-fill with current time
+        if (endInput && !editingEntry) {
+            // Auto-fill with current time for new entries
             const now = new Date();
             const year = now.getFullYear();
             const month = String(now.getMonth() + 1).padStart(2, '0');
@@ -4281,15 +4255,8 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
             endInput.value = `${year}-${month}-${day}T${hours}:${minutes}`;
         }
 
-        // Remove badge when user edits the field
-        endInput?.addEventListener('input', () => {
-            if (autoFillBadge) {
-                autoFillBadge.style.display = 'none';
-            }
-            endInput.removeAttribute('data-auto-filled');
-        }, { once: true });
 
-        // Reset manual entry form (clears fields only)
+        // Reset manual entry form (clears fields, auto-fills end time with NOW)
         const resetManualEntryBtn = element.querySelector('#reset-manual-entry-btn');
         resetManualEntryBtn?.addEventListener('click', () => {
             // Clear all form fields
@@ -4300,7 +4267,16 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
             const isBreakCheckbox = element.querySelector('#manual-is-break') as HTMLInputElement;
 
             if (startInput) startInput.value = '';
-            if (endInput) endInput.value = '';
+            // Auto-fill end time with current date/time instead of clearing
+            if (endInput) {
+                const now = new Date();
+                const year = now.getFullYear();
+                const month = String(now.getMonth() + 1).padStart(2, '0');
+                const day = String(now.getDate()).padStart(2, '0');
+                const hours = String(now.getHours()).padStart(2, '0');
+                const minutes = String(now.getMinutes()).padStart(2, '0');
+                endInput.value = `${year}-${month}-${day}T${hours}:${minutes}`;
+            }
             if (categorySelect && categorySelect.options.length > 0) categorySelect.selectedIndex = 0;
             if (descriptionInput) descriptionInput.value = '';
             if (isBreakCheckbox) isBreakCheckbox.checked = false;
@@ -4308,7 +4284,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
             editingEntry = null;
         });
 
-        // Reset and close manual entry form (clears fields + closes)
+        // Reset and close manual entry form (clears fields, auto-fills end time with NOW, then closes)
         const resetAndCloseManualEntryBtn = element.querySelector('#reset-and-close-manual-entry-btn');
         resetAndCloseManualEntryBtn?.addEventListener('click', () => {
             // Clear all form fields
@@ -4319,7 +4295,16 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
             const isBreakCheckbox = element.querySelector('#manual-is-break') as HTMLInputElement;
 
             if (startInput) startInput.value = '';
-            if (endInput) endInput.value = '';
+            // Auto-fill end time with current date/time instead of clearing
+            if (endInput) {
+                const now = new Date();
+                const year = now.getFullYear();
+                const month = String(now.getMonth() + 1).padStart(2, '0');
+                const day = String(now.getDate()).padStart(2, '0');
+                const hours = String(now.getHours()).padStart(2, '0');
+                const minutes = String(now.getMinutes()).padStart(2, '0');
+                endInput.value = `${year}-${month}-${day}T${hours}:${minutes}`;
+            }
             if (categorySelect && categorySelect.options.length > 0) categorySelect.selectedIndex = 0;
             if (descriptionInput) descriptionInput.value = '';
             if (isBreakCheckbox) isBreakCheckbox.checked = false;
