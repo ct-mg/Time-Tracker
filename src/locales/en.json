@@ -37,6 +37,7 @@
     "ct.extension.timetracker.common.applyFilter": "Apply Filter",
     "ct.extension.timetracker.common.timeTracker": "Time Tracker",
     "ct.extension.timetracker.common.exportCSV": "Export CSV",
+    "ct.extension.timetracker.navigation.adminPanel": "Admin Panel",
     "ct.extension.timetracker.dashboard.title": "Dashboard",
     "ct.extension.timetracker.dashboard.clockIn": "Clock In",
     "ct.extension.timetracker.dashboard.clockOut": "Clock Out",

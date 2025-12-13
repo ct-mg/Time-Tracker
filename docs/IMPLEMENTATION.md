@@ -762,6 +762,109 @@ HTML wird bei jedem `render()` komplett neu generiert. Event Listeners gehen ver
   - Duplicate pause badge in dashboard
   - Edit button visibility fixes
 
+### v1.9.0 - Advanced User Features (2025-11-24)
+- **User Settings & Dark Mode**
+  - Settings modal with gear icon in navigation
+  - Dark Mode: System/On/Off options (uses prefers-color-scheme)
+  - Language selection: Auto/DE/EN (user overrides admin default)
+  - LocalStorage persistence
+  - Brightness filters for colored elements in dark mode
+  - Background: #1a1a1a, text: #e9ecef
+- **Translation Infrastructure**
+  - 35 new translation keys (DE/EN)
+  - Manual Entry form fully translated
+  - Bulk Import form fully translated
+  - Reports section translated
+  - Form button restructuring (reset/reset+close)
+- **Admin UI Improvements**
+  - Independent save-button states (General vs Group Settings)
+  - Green (saved) / Red (unsaved) button states
+  - Browser warning on unsaved changes
+  - Consistent spinner design
+
+### v1.10.0 - Filter & Search Enhancements (2025-11-24+)
+- **Description Search**
+  - Case-insensitive search in entry descriptions
+  - Combined with existing date and category filters
+  - Debounced auto-apply (300ms)
+- **User Filter for Managers**
+  - Dropdown to filter by user when manager
+  - Shows current user first as "Meine Einträge"
+  - Visual separators in dropdown
+  - Fixed user name display (firstName/lastName from top level)
+- **Time Filter Presets** (2025-11-30)
+  - 6 quick-filter buttons for date ranges
+  - This Month, Last Month, This Year, Last Year, Last 30 Days, Last 365 Days
+  - Automatic date calculation with local timezone
+  - Translations for DE/EN
+- **Auto-Apply Filters** (2025-11-30)
+  - Removed "Apply Filters" button
+  - Instant filter application on change
+  - 300ms debounce for search input
+  - Performance preserved
+
+### v1.11.0 - Manager & Performance Features (2025-11-29 - 2025-11-30)
+- **User Attribution for Managers**
+  - Username badges on time entries (light blue #e8f4f8)
+  - Conditional display: isManager && userList.length > 1 && entry.userId !== user?.id
+  - User icon with person silhouette
+  - getUserNameFromId() helper function
+- **Virtual Scrolling** (2025-11-29)
+  - Custom implementation for 100+ entries
+  - 60fps smooth scrolling
+  - Buffer: 10 entries above/below viewport
+  - 150ms debounced scroll handler
+  - Preserves all functionality (grouping, filters, bulk edit)
+  - Scroll position restoration
+- **Bulk Edit** (2025-11-24)
+  - Multi-select checkboxes for time entries
+  - "Mehrfachauswahl" toggle button
+  - Bulk category change
+  - Bulk delete with confirmation modal
+  - Cancel button to exit bulk mode
+
+### v1.12.0 - Admin Activity Log (2025-12-01)
+- **Activity Logging System**
+  - createActivityLog() and archiveOldLogs() functions
+  - 8 CRUD operations instrumented:
+    1. Clock Out (UPDATE)
+    2. Manual Entry Create (CREATE)
+    3. Manual Entry Edit (UPDATE)
+    4. Delete Time Entry (DELETE)
+    5. Bulk Update Category (UPDATE)
+    6. Bulk Delete Entries (DELETE bulk)
+    7. Bulk Save Entries (CREATE bulk)
+    8. Absence operations
+- **Admin UI**
+  - Activity Log table in "Datensicherheit & Wiederherstellung" section
+  - Statistics cards showing log counts
+  - Filter UI (user, action type, date range)
+  - Pagination support
+  - 35 translation keys (DE/EN)
+- **Data Management**
+  - KV-Store category: "activityLog" for active logs
+  - Archive system: "activityLogArchive"
+  - Configurable retention (30-365 days slider)
+  - Automatic archiving of old logs
+
+### v2.0.0 - UI/UX Polish & Bug Fixes (2025-12-09 - 2025-12-11)
+- **Delete & Edit Fixes**
+  - Unified confirmation modal (confirmModal.ts)
+  - Replaced native confirm() with custom modal
+  - Event delegation for edit/delete handlers
+  - Fixed absence delete API calls (runtime check for methods)
+  - Auto-refresh after edit operations (refreshData())
+  - Dark mode support in confirmation modal
+- **Auto-Fill End Time Improvements** (2025-12-11)
+  - Removed "Automatisch ausgefüllt" badge indicator
+  - Reset button now auto-fills end time with current time (JETZT)
+  - Improved UX for manual entry
+  - Code simplification
+- **Empty Entries Fix**
+  - getRecentEntries() function for dashboard
+  - Dashboard always shows last 5 entries (independent of filters)
+  - Fixed virtual scrolling initialization bug
+
 ---
 
 ## Für KI-Assistenten
@@ -774,12 +877,12 @@ HTML wird bei jedem `render()` komplett neu generiert. Event Listeners gehen ver
 5. Git Commit mit Feature-Beschreibung
 
 **Kritische Files:**
-- `src/entry-points/main.ts` (3347 Zeilen) - Vorsichtig ändern! ← UPDATED
-- `src/entry-points/admin.ts` (1640 Zeilen) ← UPDATED
+- `src/entry-points/main.ts` (~4750 Zeilen) - Vorsichtig ändern! ← AKTUELL
+- `src/entry-points/admin.ts` (~1640 Zeilen) ← AKTUELL
 - Niemals `src/utils/kv-store.ts` ändern (Framework)
 
 ---
 
-**Letzte Aktualisierung:** 2025-11-23
-**Version:** 1.8.0
-**Status:** ✅ Production Ready (Phase 3 In Progress)
+**Letzte Aktualisierung:** 2025-12-11
+**Version:** 2.0.0
+**Status:** ✅ Production Ready (Phase 5 - 95% Complete)

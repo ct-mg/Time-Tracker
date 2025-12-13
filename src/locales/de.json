@@ -37,6 +37,7 @@
     "ct.extension.timetracker.common.applyFilter": "Filter anwenden",
     "ct.extension.timetracker.common.timeTracker": "Zeiterfassung",
     "ct.extension.timetracker.common.exportCSV": "CSV exportieren",
+    "ct.extension.timetracker.navigation.adminPanel": "Admin Panel",
     "ct.extension.timetracker.dashboard.title": "Dashboard",
     "ct.extension.timetracker.dashboard.clockIn": "Einstempeln",
     "ct.extension.timetracker.dashboard.clockOut": "Ausstempeln",
