@@ -8,9 +8,9 @@
 
 ## Aktueller Status
 
-**Letztes Update:** 2025-11-29
-**Aktuelle Phase:** Phase 5 - Polish & Testing
-**Nächste Phase:** Kontinuierliche Verbesserungen
+**Letztes Update:** 2025-12-12
+**Aktuelle Phase:** Phase 5 - Polish & Testing (96% Complete)
+**Nächste Phase:** UX Improvements & Manager View Polish
 
 ---
 
@@ -314,40 +314,198 @@
 
 ---
 
+### 🎯 Recently Completed (December 2025)
+
+#### ✅ HR Manager Dashboard (COMPLETED 2025-12-12)
+**Use Case:** Manager können zugewiesene Mitarbeiter-Zeiteinträge einsehen und exportieren
+**Feature:** Manager-to-Employee Assignments + User Filter im Main View
+**Status:** ✅ Vollständig implementiert und getestet
+**Aufwand:** Groß
+
+**Implementierte Features:**
+1. ✅ **Admin Panel**: Manager-to-Employee Assignment Matrix
+   - Manager Group ID konfigurierbar
+   - "Load Managers" Button lädt alle Manager aus ChurchTools Gruppe
+   - Checkbox-Matrix zum Zuweisen von Employees zu Managern
+   - "Save Manager Assignments" mit Toast-Notification
+   - 5 Managers getestet (Screenshot verified)
+
+2. ✅ **Main View**: Benutzer-Filter Dropdown
+   - "Meine Einträge" (default, eigene Entries)
+   - "Alle Benutzer" (HR-Funktion, alle Entries)
+   - Individuelle User (Manager sehen nur zugewiesene Mitarbeiter)
+   - Visual separator zwischen Sections
+
+3. ✅ **Permissions System**:
+   - Normal User: Nur eigene Entries
+   - Manager: Eigene + zugewiesene Mitarbeiter Entries
+   - HR: Alle Entries aller User
+
+**Browser Verified:** 2025-12-12
+**Git Status:** In develop branch (main.ts, admin.ts)
+**Translation:** DE/EN für alle Manager-Features
+
+**Known Limitations (siehe UX Improvements unten):**
+- Manager View UX needs clarity improvements
+- Username attribution missing in filtered view
+
+---
+
+### 🔴 Priorität: Hoch (UX Improvements)
+
+#### Manager View UX Clarity
+**Problem:** Wenn Manager einen Mitarbeiter auswählt und manuellen Entry erstellt, ist unklar für wen der Entry ist
+**Impact:** Verwirrung, potenzielle Datenfehler
+**Status:** Offen
+**Aufwand:** Mittel
+**Priority:** Hoch
+
+**Issues:**
+1. **Manuelle Entry Zuweisung unklar**:
+   - User wählt "Jörn Ackermann" im Filter
+   - Klickt "+ Manuellen Eintrag hinzufügen"
+   - ❌ NICHT ersichtlich: Wird Entry für Jörn oder für mich selbst erstellt?
+   
+2. **UI-Durcheinander**:
+   - Filter/Schnellfilter gemischt mit Export/Import Buttons
+   - Keine klare Trennung zwischen "View Controls" und "Actions"
+   - Benutzer Dropdown zwischen anderen Filtern versteckt
+
+**Lösungsansätze:**
+1. **Klarheit bei Entry-Erstellung**:
+   - Prominenter Hinweis: "Sie erstellen einen Eintrag für: [Username]"
+   - Oder: Disabled state + Tooltip "Wechseln Sie zu 'Meine Einträge' um selbst Entries zu erstellen"
+   - Modal zeigt explizit "Eintrag für: [Name]"
+
+2. **UI-Umstrukturierung**:
+   - **Sektion 1**: Filter (Schnellfilter, Date Range, Category, Search, **User**)
+   - **Sektion 2**: Actions (Export, Import, Neu anlegen)
+   - Visual separation (border, spacing)
+   - Benutzer-Filter hervorheben wenn != "Meine Einträge"
+
+**Referenz-Screenshot:** `/Users/mgoth/.gemini/antigravity/brain/.../uploaded_image_1765555664271.png`
+
+---
+
+#### Username-Spalte in gefilterter Ansicht
+**Problem:** In gefilterter Ansicht ("Alle Benutzer" oder Manager-View) fehlt Username-Attribution
+**Impact:** Manager sehen nicht zu wem welcher Entry gehört
+**Status:** Offen
+**Aufwand:** Klein-Mittel
+**Priority:** Hoch
+
+**Current State:**
+- User wählt "Alle Benutzer" im Filter
+- Zeiteinträge-Liste zeigt: Datum, Zeit, Kategorie, Beschreibung
+- ❌ FEHLT: Zu welchem User gehört der Entry?
+
+**Required:**
+- ✅ Neue Spalte "Benutzer" in Time Entries Table
+- ✅ Zeigt Username nur wenn Filter != "Meine Einträge"
+- ✅ Conditional Rendering (wenn eigene Entries: Spalte ausblenden)
+- ✅ Translation Keys: "Benutzer" (DE), "User" (EN)
+
+**Implementation:**
+```typescript
+// In renderEntriesList()
+if (selectedViewUserId !== currentUserId) {
+  // Add username column
+  const username = getUserNameFromId(entry.userId);
+  // Show in table
+}
+```
+
+**Design:**
+- Spalte zwischen "Datum" und "Kategorie"
+- Badge-Style wie bei User Attribution für Manager (bereits implementiert)
+- Konsistent mit bestehendem Design
+
+---
+
+#### Admin-Zugang via Zahnrad-Button
+**Problem:** Kein einfacher Zugang zum Admin Panel von main.ts
+**Impact:** User müssen URL manuell ändern (/extensions/timetracker/admin)
+**Status:** Offen
+**Aufwand:** Klein
+**Priority:** Mittel-Hoch
+
+**Required:**
+- ✅ Zahnrad-SVG Icon in Navigation (rechts oben, neben Settings)
+- ✅ Permission-basierte Sichtbarkeit (nur für Admins)
+- ✅ onClick: Navigate zu Admin Panel
+- ✅ Tooltip: "Admin Panel" (DE/EN)
+
+**Permission Check Options:**
+1. **Via KV-Store Extension Category** (empfohlen):
+   - Neue Category `adminUsers` im KV-Store
+   - Array von User-IDs: `[123, 456, 789]`
+   - Check on mount: `if (adminUsers.includes(currentUserId))`
+   
+2. **Via ChurchTools Group**:
+   - Admin Group ID in settings
+   - Check if user in group
+   - Ähnlich wie Manager Group
+
+**Implementation:**
+```typescript
+// Check admin permission
+const isAdmin = await checkAdminPermission(currentUserId);
+
+if (isAdmin) {
+  // Show gear icon
+  const adminBtn = `
+    <button id="admin-btn" title="Admin Panel">
+      <svg>...</svg> <!-- Zahnrad icon -->
+    </button>
+  `;
+}
+```
+
+**Git Consideration:**
+- KV-Store Category Approach: Flexibler, keine Code-Änderung nötig
+- Kann in Admin Panel selbst konfiguriert werden
+- Backup: Fallback auf Group-basierte Permission
+
+---
+
 ### 🟡 Priorität: Mittel
 
-#### Bulk Edit für Time Entries ⏳ IN PROGRESS
+#### ✅ Bulk Edit für Time Entries (COMPLETED 2025-12-11)
 **Use Case:** User hat 10 Einträge mit falscher Kategorie
 **Feature:** Multi-Select + Bulk Delete + Kategorie-Änderung für mehrere Einträge
-**Status:** In Progress (Branch: feature/bulk-edit)
+**Status:** ✅ Vollständig implementiert
 **Aufwand:** Mittel
 
 **Implementierungs-Schritte:**
 1. ✅ Checkbox für jeden Eintrag
-2. ✅ "Select All" Toggle
+2. ✅ "Mehrfachauswahl" Toggle Button
 3. ✅ Bulk-Action Bar mit Kategorie-Dropdown
-4. ✅ "Update Selected" Button
-5. ⏳ Bulk Delete Button + Confirmation Dialog
-6. ⏳ Testing
+4. ✅ "Kategorie ändern" Button
+5. ✅ "Ausgewählte löschen" Button
+6. ✅ "Abbrechen" Button zum Exit aus Bulk-Modus
+
+**Verified:** 2025-12-11 - Alle Features funktional
 
 ---
 
-#### Time Filter Presets
+#### ✅ Time Filter Presets (COMPLETED 2025-11-30)
 **Use Case:** User möchte schnell Zeiträume filtern ohne Datum manuell einzugeben
 **Feature:** Vordefinierte Zeitfilter für Time Entries
-**Status:** Geplant (Separate Branch)
+**Status:** ✅ Vollständig implementiert
 **Aufwand:** Klein
 **Priority:** Mittel
 
-**Gewünschte Filter:**
-- Dieser Monat
-- Letzter Monat
-- Dieses Jahr
-- Letztes Jahr
-- Letzte 365 Tage
-- Letzte 30 Tage
+**Implementierte Filter:**
+- ✅ Dieser Monat / This Month
+- ✅ Letzter Monat / Last Month
+- ✅ Dieses Jahr / This Year
+- ✅ Letztes Jahr / Last Year
+- ✅ Letzte 30 Tage / Last 30 Days
+- ✅ Letzte 365 Tage / Last 365 Days
 
 **Location:** Time Entries Filter Sektion
+**Branch:** feature/time-filter-presets (merged to develop)
+**Browser Verified:** 2025-12-11
 
 ---
 
@@ -423,16 +581,23 @@
 
 ### 🟢 Priorität: Niedrig
 
-#### Dark Mode Support
+#### ✅ Dark Mode Support (COMPLETED 2025-11-24)
 **Use Case:** Bessere Lesbarkeit bei Nacht
-**Status:** Offen
+**Status:** ✅ Vollständig implementiert
 **Aufwand:** Mittel
 
-**Implementierungs-Schritte:**
-1. Dark Mode Toggle in Settings
-2. CSS Variablen für Colors
-3. LocalStorage für Preference
-4. Alle Inline-Styles anpassen
+**Implementierung:**
+1. ✅ User Settings Modal mit Dark Mode Toggle (System/On/Off)
+2. ✅ CSS Variables ([data-theme="dark"])
+3. ✅ LocalStorage Persistence (timetracker-dark-mode)
+4. ✅ Complete styling with brightness filters for colored elements
+5. ✅ Language selection integrated in same modal
+
+**Details:**
+- Settings gear button in navigation
+- System mode uses prefers-color-scheme media query
+- Dark background: #1a1a1a, text: #e9ecef
+- Preserves category colors with filter: brightness(0.9)
 
 ---
 
@@ -497,23 +662,42 @@
 
 ---
 
-#### Admin Activity Log
+#### ✅ Admin Activity Log (COMPLETED 2025-12-01)
 **Feature:** Log-System für Admin zur Nachverfolgung von Änderungen
-**Status:** Geplant
-**Aufwand:** Mittel
-**Priority:** Hoch
+**Status:** ✅ Vollständig implementiert und funktional
+**Aufwand:** Komplett (nur Minor Enhancements optional)
+**Priority:** Abgeschlossen
 
-**Anforderungen:**
-- Log aller wichtigen Aktionen (Create, Update, Delete von Einträgen)
-- Timestamp, User, Action, Affected Data
-- Nur für Admin einsehbar
-- Ggf. als separater Tab im Admin Panel
-- Optional: Export-Funktion für Logs
+**Implementiert:**
+- ✅ Backend: createActivityLog(), archiveOldLogs() Funktionen
+- ✅ 8 CRUD-Operationen instrumented:
+  1. Clock Out (UPDATE)
+  2. Manual Entry Create (CREATE)
+  3. Manual Entry Edit (UPDATE)  
+  4. deleteTimeEntry() (DELETE)
+  5. bulkUpdateCategory() (UPDATE)
+  6. bulkDeleteEntries() (DELETE bulk)
+  7. saveBulkEntries() (CREATE bulk)
+  8. Absence operations
+- ✅ Admin UI: Settings Panel, Statistics Cards, Filter UI, Log Table, Pagination
+- ✅ 35 Translation Keys (DE/EN) für Activity Log UI
+- ✅ KV-Store Category "activityLog" für active logs
+- ✅ Archive system: "activityLogArchive" mit configurable retention (30-365 days slider)
+- ✅ Git Commit: `7eb61e0` - "feat: Admin Activity Log implementation" (merged to develop)
 
-**Technische Details:**
-- Speicherung in KV-Store (eigene Category "activityLog")
-- Log-Einträge bei allen CRUD-Operationen erstellen
-- UI im Admin Panel zum Anzeigen/Filtern von Logs
+**Browser Verified (2025-12-11):**
+- ✅ Logs werden korrekt angezeigt in Admin Panel
+- ✅ 8+ Log-Einträge sichtbar mit Timestamps und User-Namen
+- ✅ Integriert in "Datensicherheit & Wiederherstellung" Section
+- ✅ Alle CRUD-Operationen werden geloggt
+- ✅ Filter funktionieren (User, Action Type, Date Range)
+- ✅ KEIN Display Issue - Feature ist vollständig funktional!
+
+**Optional Future Enhancements:**
+- CSV Export für Logs
+- "Archive Now" Button (statt nur automatisch)
+- Refresh Button
+- Separate Activity Log Tab (statt in Data Safety Section)
 
 ---
 

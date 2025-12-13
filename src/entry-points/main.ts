@@ -127,6 +127,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
     let absenceReasons: AbsenceReason[] = [];
     let userList: Array<{ id: number; name: string }> = []; // All users for dropdown (managers only)
     let isManager = false; // Does current user have manager/admin permissions?
+    let isAdmin = false; // Does current user have admin panel access?
     let isLoading = true;
     let errorMessage = '';
     let moduleId: number | null = null;
@@ -461,6 +462,9 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
             // Check if user has manager permissions
             isManager = await checkManagerRole();
 
+            // Check if user has admin permissions
+            isAdmin = await checkAdminPermission();
+
             // Load user list if manager
             if (isManager) {
                 await loadUserList();
@@ -581,6 +585,46 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
         } catch (error) {
             console.error('[TimeTracker] Failed to check manager role:', error);
             return false; // Deny manager status if check fails
+        }
+    }
+
+    // Check if current user has admin panel permissions
+    // Uses ChurchTools native permission system: If user can see 'adminAccess' category, they are admin
+    async function checkAdminPermission(): Promise<boolean> {
+        if (!user?.id) return false;
+
+        try {
+            // Try to access the 'adminAccess' category
+            // If successful, user has permissions to see it -> Admin!
+            const category = await getCustomDataCategory<object>('adminAccess');
+
+            if (!category) {
+                // Category doesn't exist yet - create it
+                console.log('[TimeTracker] Creating adminAccess category...');
+                await createCustomDataCategory(
+                    {
+                        customModuleId: moduleId!,
+                        name: 'Admin Access Control',
+                        shorty: 'adminAccess',
+                        description:
+                            'Control admin panel access via ChurchTools permissions. Users who can see this category have admin access.',
+                    },
+                    moduleId!
+                );
+
+                // User just saw category creation = they have access
+                // But to be safe, return true only if category is now accessible
+                const verifyCategory = await getCustomDataCategory<object>('adminAccess');
+                return !!verifyCategory;
+            }
+
+            // Category exists and user can see it = Admin!
+            console.log('[TimeTracker] User has admin access (can see adminAccess category)');
+            return true;
+        } catch (error) {
+            // Error accessing category = No permission = Not admin
+            console.log('[TimeTracker] User does not have admin access:', error);
+            return false;
         }
     }
 
@@ -2316,6 +2360,14 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
                                         <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
                                     </svg>
                                 </button>
+                                ${isAdmin ? `
+                                    <button id="admin-panel-btn" style="padding: 0.5rem; border: 1px solid #6c757d; background: #fff; color: #6c757d; border-radius: 4px; cursor: pointer; display: flex; align-items: center; justify-content: center;" title="${t('ct.extension.timetracker.navigation.adminPanel')}">
+                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <circle cx="12" cy="12" r="3"></circle>
+                                            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                                        </svg>
+                                    </button>
+                                ` : ''}
                                 <div style="width: 1px; height: 30px; background: #ddd; display: none;" class="nav-divider"></div>
                                 <button id="view-dashboard" style="padding: 0.5rem 1rem; border: ${currentView === 'dashboard' ? '2px' : '1px'} solid ${currentView === 'dashboard' ? '#007bff' : '#ddd'}; background: ${currentView === 'dashboard' ? '#e7f3ff' : '#fff'}; color: ${currentView === 'dashboard' ? '#007bff' : '#666'}; border-radius: 4px; cursor: pointer; font-weight: ${currentView === 'dashboard' ? '600' : '400'}; white-space: nowrap;">${t('ct.extension.timetracker.dashboard.title')}</button>
                                 <button id="view-entries" style="padding: 0.5rem 1rem; border: ${currentView === 'entries' ? '2px' : '1px'} solid ${currentView === 'entries' ? '#007bff' : '#ddd'}; background: ${currentView === 'entries' ? '#e7f3ff' : '#fff'}; color: ${currentView === 'entries' ? '#007bff' : '#666'}; border-radius: 4px; cursor: pointer; font-weight: ${currentView === 'entries' ? '600' : '400'}; white-space: nowrap;">${t('ct.extension.timetracker.timeEntries.title')}</button>
@@ -3940,6 +3992,15 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
             refreshBtn.style.opacity = '1';
             showNotification('Data refreshed successfully!', 'success');
         });
+
+        // Admin panel button handler
+        const adminPanelBtn = element.querySelector('#admin-panel-btn');
+        if (adminPanelBtn) {
+            adminPanelBtn.addEventListener('click', () => {
+                // Navigate to admin entry point using ChurchTools extension route
+                window.location.href = window.location.origin + '/extensions/timetracker/?ep=admin';
+            });
+        }
 
         // View switchers
         const viewDashboard = element.querySelector('#view-dashboard') as HTMLButtonElement;

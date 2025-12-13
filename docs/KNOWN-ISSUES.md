@@ -539,7 +539,7 @@ for (const entry of timeEntries) {
 
 ---
 
-**Letzte Aktualisierung:** 2025-01-22
-**Version:** 1.0
-**Gelöste Probleme:** 4 Critical Issues
+**Letzte Aktualisierung:** 2025-11-22 (Issues aus früher Entwicklungsphase)  
+**Version:** 1.0  
+**Gelöste Probleme:** 4 Critical Issues  
 **Status:** ✅ Alle bekannten Issues gelöst
