@@ -589,49 +589,42 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
     }
 
     // Check if current user has admin panel permissions
+    // Uses ChurchTools native permission system: If user can see 'adminAccess' category, they are admin
     async function checkAdminPermission(): Promise<boolean> {
         if (!user?.id) return false;
 
         try {
-            const category = await getCustomDataCategory<object>('adminUsers');
+            // Try to access the 'adminAccess' category
+            // If successful, user has permissions to see it -> Admin!
+            const category = await getCustomDataCategory<object>('adminAccess');
+
             if (!category) {
-                console.log('[TimeTracker] No adminUsers category found - creating it');
-                // Create category if it doesn't exist
-                const newCategory = await createCustomDataCategory(
+                // Category doesn't exist yet - create it
+                console.log('[TimeTracker] Creating adminAccess category...');
+                await createCustomDataCategory(
                     {
                         customModuleId: moduleId!,
-                        name: 'Admin Users',
-                        shorty: 'adminUsers',
-                        description: 'List of user IDs with admin panel access',
+                        name: 'Admin Access Control',
+                        shorty: 'adminAccess',
+                        description:
+                            'Control admin panel access via ChurchTools permissions. Users who can see this category have admin access.',
                     },
                     moduleId!
                 );
 
-                // Initialize with empty array
-                await createCustomDataValue(
-                    {
-                        dataCategoryId: newCategory.id,
-                        value: JSON.stringify([]), // Empty array - no admins yet
-                    },
-                    moduleId!
-                );
-
-                return false; // Current user not in empty list
+                // User just saw category creation = they have access
+                // But to be safe, return true only if category is now accessible
+                const verifyCategory = await getCustomDataCategory<object>('adminAccess');
+                return !!verifyCategory;
             }
 
-            // Get admin users list
-            const values = await getCustomDataValues<number[]>(category.id, moduleId!);
-
-            if (values.length === 0) {
-                // No admin users configured yet
-                return false;
-            }
-
-            const adminUserIds: number[] = values[0];
-            return adminUserIds.includes(user.id);
+            // Category exists and user can see it = Admin!
+            console.log('[TimeTracker] User has admin access (can see adminAccess category)');
+            return true;
         } catch (error) {
-            console.error('[TimeTracker] Failed to check admin permission:', error);
-            return false; // Deny admin access if check fails
+            // Error accessing category = No permission = Not admin
+            console.log('[TimeTracker] User does not have admin access:', error);
+            return false;
         }
     }
 
