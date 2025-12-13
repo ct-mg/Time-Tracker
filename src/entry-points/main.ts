@@ -3997,7 +3997,8 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
         const adminPanelBtn = element.querySelector('#admin-panel-btn');
         if (adminPanelBtn) {
             adminPanelBtn.addEventListener('click', () => {
-                window.location.href = '/extensions/timetracker/admin';
+                // Navigate to admin entry point using ChurchTools extension route
+                window.location.href = window.location.origin + '/extensions/timetracker/?ep=admin';
             });
         }
 
