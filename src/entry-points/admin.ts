@@ -171,7 +171,7 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
     let hasUnsavedActivityLogChanges = false;
     let originalActivityLogSettings = { ...settings.activityLogSettings };
     let activityLogCategory: any | null = null;
-    let activityLogArchiveCategory: any | null = null;
+
 
     // Browser warning for unsaved changes
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
@@ -2672,6 +2672,135 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                 }
             });
         });
+
+
+        // Activity Log Event Handlers
+        const activityLogEnabled = element.querySelector('#activity-log-enabled') as HTMLInputElement;
+        const activityLogCreate = element.querySelector('#activity-log-create') as HTMLInputElement;
+        const activityLogUpdate = element.querySelector('#activity-log-update') as HTMLInputElement;
+        const activityLogDelete = element.querySelector('#activity-log-delete') as HTMLInputElement;
+        const activityLogArchiveDays = element.querySelector('#activity-log-archive-days') as HTMLInputElement;
+        const saveActivityLogSettingsBtn = element.querySelector('#save-activity-log-settings-btn') as HTMLButtonElement;
+        const logFilterUserSelect = element.querySelector('#log-filter-user') as HTMLSelectElement;
+        const logFilterActionSelect = element.querySelector('#log-filter-action') as HTMLSelectElement;
+        const logFilterDateFromInput = element.querySelector('#log-filter-date-from') as HTMLInputElement;
+        const logFilterDateToInput = element.querySelector('#log-filter-date-to') as HTMLInputElement;
+        const logPrevPageBtn = element.querySelector('#log-prev-page') as HTMLButtonElement;
+        const logNextPageBtn = element.querySelector('#log-next-page') as HTMLButtonElement;
+
+        // Track activity log settings changes
+        function checkActivityLogChanges() {
+            const currentSettings = settings.activityLogSettings;
+            const original = originalActivityLogSettings;
+
+            hasUnsavedActivityLogChanges =
+                currentSettings?.enabled !== original?.enabled ||
+                currentSettings?.logCreate !== original?.logCreate ||
+                currentSettings?.logUpdate !== original?.logUpdate ||
+                currentSettings?.logDelete !== original?.logDelete ||
+                currentSettings?.archiveAfterDays !== original?.archiveAfterDays;
+
+            if (saveActivityLogSettingsBtn) {
+                saveActivityLogSettingsBtn.style.background = hasUnsavedActivityLogChanges ? '#dc3545' : '#28a745';
+            }
+        }
+
+        activityLogEnabled?.addEventListener('change', () => {
+            if (!settings.activityLogSettings) settings.activityLogSettings = { enabled: true, logCreate: true, logUpdate: true, logDelete: true, archiveAfterDays: 90 };
+            settings.activityLogSettings.enabled = activityLogEnabled.checked;
+
+            // Enable/disable sub-checkboxes
+            [activityLogCreate, activityLogUpdate, activityLogDelete, activityLogArchiveDays].forEach(el => {
+                if (el) el.disabled = !activityLogEnabled.checked;
+            });
+
+            checkActivityLogChanges();
+            render();
+        });
+
+        [activityLogCreate, activityLogUpdate, activityLogDelete].forEach(checkbox => {
+            checkbox?.addEventListener('change', () => {
+                if (!settings.activityLogSettings) return;
+                if (checkbox === activityLogCreate) settings.activityLogSettings.logCreate = checkbox.checked;
+                if (checkbox === activityLogUpdate) settings.activityLogSettings.logUpdate = checkbox.checked;
+                if (checkbox === activityLogDelete) settings.activityLogSettings.logDelete = checkbox.checked;
+                checkActivityLogChanges();
+            });
+        });
+
+        activityLogArchiveDays?.addEventListener('input', () => {
+            if (!settings.activityLogSettings) return;
+            const value = parseInt(activityLogArchiveDays.value);
+            settings.activityLogSettings.archiveAfterDays = value;
+            const valueDisplay = element.querySelector('#archive-days-value');
+            if (valueDisplay) {
+                valueDisplay.textContent = `${value} ${t('ct.extension.timetracker.dashboard.day')}${value > 1 ? 's' : ''}`;
+            }
+            checkActivityLogChanges();
+        });
+
+        saveActivityLogSettingsBtn?.addEventListener('click', async () => {
+            try {
+                await saveSettings(settings, 'Activity log settings updated');
+                originalActivityLogSettings = { ...settings.activityLogSettings };
+                hasUnsavedActivityLogChanges = false;
+                render();
+
+                emit('notification:show', {
+                    message: '✓ Activity log settings saved!',
+                    type: 'success',
+                    duration: 3000,
+                });
+            } catch (error) {
+                console.error('[Admin] Failed to save activity log settings:', error);
+                emit('notification:show', {
+                    message: 'Failed to save activity log settings',
+                    type: 'error',
+                    duration: 5000,
+                });
+            }
+        });
+
+        // Filter event handlers
+        logFilterUserSelect?.addEventListener('change', () => {
+            logFilterUser = logFilterUserSelect.value;
+            applyLogFilters();
+            render();
+        });
+
+        logFilterActionSelect?.addEventListener('change', () => {
+            logFilterAction = logFilterActionSelect.value;
+            applyLogFilters();
+            render();
+        });
+
+        logFilterDateFromInput?.addEventListener('change', () => {
+            logFilterDateFrom = logFilterDateFromInput.value;
+            applyLogFilters();
+            render();
+        });
+
+        logFilterDateToInput?.addEventListener('change', () => {
+            logFilterDateTo = logFilterDateToInput.value;
+            applyLogFilters();
+            render();
+        });
+
+        // Pagination event handlers
+        logPrevPageBtn?.addEventListener('click', () => {
+            if (logPage > 1) {
+                logPage--;
+                render();
+            }
+        });
+
+        logNextPageBtn?.addEventListener('click', () => {
+            const totalPages = Math.ceil(filteredLogs.length / LOGS_PER_PAGE);
+            if (logPage < totalPages) {
+                logPage++;
+                render();
+            }
+        });
     }
 
     // Handle save manager assignments
@@ -3180,135 +3309,7 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
     }
 
     // This function will attach all event handlers to the DOM elements
-    function attachEventHandlers() {
-        // Activity Log Event Handlers
-        const activityLogEnabled = element.querySelector('#activity-log-enabled') as HTMLInputElement;
-        const activityLogCreate = element.querySelector('#activity-log-create') as HTMLInputElement;
-        const activityLogUpdate = element.querySelector('#activity-log-update') as HTMLInputElement;
-        const activityLogDelete = element.querySelector('#activity-log-delete') as HTMLInputElement;
-        const activityLogArchiveDays = element.querySelector('#activity-log-archive-days') as HTMLInputElement;
-        const saveActivityLogSettingsBtn = element.querySelector('#save-activity-log-settings-btn') as HTMLButtonElement;
-        const logFilterUserSelect = element.querySelector('#log-filter-user') as HTMLSelectElement;
-        const logFilterActionSelect = element.querySelector('#log-filter-action') as HTMLSelectElement;
-        const logFilterDateFromInput = element.querySelector('#log-filter-date-from') as HTMLInputElement;
-        const logFilterDateToInput = element.querySelector('#log-filter-date-to') as HTMLInputElement;
-        const logPrevPageBtn = element.querySelector('#log-prev-page') as HTMLButtonElement;
-        const logNextPageBtn = element.querySelector('#log-next-page') as HTMLButtonElement;
 
-        // Track activity log settings changes
-        function checkActivityLogChanges() {
-            const currentSettings = settings.activityLogSettings;
-            const original = originalActivityLogSettings;
-
-            hasUnsavedActivityLogChanges =
-                currentSettings?.enabled !== original?.enabled ||
-                currentSettings?.logCreate !== original?.logCreate ||
-                currentSettings?.logUpdate !== original?.logUpdate ||
-                currentSettings?.logDelete !== original?.logDelete ||
-                currentSettings?.archiveAfterDays !== original?.archiveAfterDays;
-
-            if (saveActivityLogSettingsBtn) {
-                saveActivityLogSettingsBtn.style.background = hasUnsavedActivityLogChanges ? '#dc3545' : '#28a745';
-            }
-        }
-
-        activityLogEnabled?.addEventListener('change', () => {
-            if (!settings.activityLogSettings) settings.activityLogSettings = { enabled: true, logCreate: true, logUpdate: true, logDelete: true, archiveAfterDays: 90 };
-            settings.activityLogSettings.enabled = activityLogEnabled.checked;
-
-            // Enable/disable sub-checkboxes
-            [activityLogCreate, activityLogUpdate, activityLogDelete, activityLogArchiveDays].forEach(el => {
-                if (el) el.disabled = !activityLogEnabled.checked;
-            });
-
-            checkActivityLogChanges();
-            render();
-        });
-
-        [activityLogCreate, activityLogUpdate, activityLogDelete].forEach(checkbox => {
-            checkbox?.addEventListener('change', () => {
-                if (!settings.activityLogSettings) return;
-                if (checkbox === activityLogCreate) settings.activityLogSettings.logCreate = checkbox.checked;
-                if (checkbox === activityLogUpdate) settings.activityLogSettings.logUpdate = checkbox.checked;
-                if (checkbox === activityLogDelete) settings.activityLogSettings.logDelete = checkbox.checked;
-                checkActivityLogChanges();
-            });
-        });
-
-        activityLogArchiveDays?.addEventListener('input', () => {
-            if (!settings.activityLogSettings) return;
-            const value = parseInt(activityLogArchiveDays.value);
-            settings.activityLogSettings.archiveAfterDays = value;
-            const valueDisplay = element.querySelector('#archive-days-value');
-            if (valueDisplay) {
-                valueDisplay.textContent = `${value} ${t('ct.extension.timetracker.dashboard.day')}${value > 1 ? 's' : ''}`;
-            }
-            checkActivityLogChanges();
-        });
-
-        saveActivityLogSettingsBtn?.addEventListener('click', async () => {
-            try {
-                await saveSettings(settings, 'Activity log settings updated');
-                originalActivityLogSettings = { ...settings.activityLogSettings };
-                hasUnsavedActivityLogChanges = false;
-                render();
-
-                emit('notification:show', {
-                    message: '✓ Activity log settings saved!',
-                    type: 'success',
-                    duration: 3000,
-                });
-            } catch (error) {
-                console.error('[Admin] Failed to save activity log settings:', error);
-                emit('notification:show', {
-                    message: 'Failed to save activity log settings',
-                    type: 'error',
-                    duration: 5000,
-                });
-            }
-        });
-
-        // Filter event handlers
-        logFilterUserSelect?.addEventListener('change', () => {
-            logFilterUser = logFilterUserSelect.value;
-            applyLogFilters();
-            render();
-        });
-
-        logFilterActionSelect?.addEventListener('change', () => {
-            logFilterAction = logFilterActionSelect.value;
-            applyLogFilters();
-            render();
-        });
-
-        logFilterDateFromInput?.addEventListener('change', () => {
-            logFilterDateFrom = logFilterDateFromInput.value;
-            applyLogFilters();
-            render();
-        });
-
-        logFilterDateToInput?.addEventListener('change', () => {
-            logFilterDateTo = logFilterDateToInput.value;
-            applyLogFilters();
-            render();
-        });
-
-        // Pagination event handlers
-        logPrevPageBtn?.addEventListener('click', () => {
-            if (logPage > 1) {
-                logPage--;
-                render();
-            }
-        });
-
-        logNextPageBtn?.addEventListener('click', () => {
-            const totalPages = Math.ceil(filteredLogs.length / LOGS_PER_PAGE);
-            if (logPage < totalPages) {
-                logPage++;
-                render();
-            }
-        });
-    }
 
     // Initialize on load
     initialize();
