@@ -54,11 +54,11 @@ describe('i18n', () => {
 
     describe('initI18n', () => {
         it('should initialize without errors', async () => {
-            await expect(initI18n()).resolves.not.toThrow();
+            await expect(initI18n('en')).resolves.not.toThrow();
         });
 
         it('should load translations after initialization', async () => {
-            await initI18n();
+            await initI18n('en');
             // After init, t() should return actual translations
             const result = t('ct.extension.timetracker.common.save');
             expect(result).toBeTruthy();

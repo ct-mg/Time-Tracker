@@ -12,6 +12,7 @@ import {
     deleteCustomDataValue,
 } from '../utils/kv-store';
 import { initI18n, detectBrowserLanguage, t } from '../utils/i18n';
+import { showConfirmModal } from '../utils/confirmModal';
 
 /**
  * Time Tracker Main Module
@@ -78,12 +79,37 @@ interface Settings {
     managerAssignments?: ManagerAssignment[]; // Manager -> Employee assignments
     workWeekDays?: number[]; // Days of week that count as work days (0=Sunday, 1=Monday, ..., 6=Saturday). Default: [1,2,3,4,5] (Mon-Fri)
     language?: 'auto' | 'de' | 'en'; // UI language (auto = browser detection)
+    activityLogSettings?: {
+        // Activity Log configuration
+        enabled: boolean; // Master toggle for activity logging
+        logCreate: boolean; // Log CREATE operations
+        logUpdate: boolean; // Log UPDATE operations
+        logDelete: boolean; // Log DELETE operations
+        archiveAfterDays: number; // Auto-archive logs older than X days
+    };
 }
 
 interface UserPermissions {
     canSeeAllEntries: boolean; // HR role
     canSeeOwnEntries: boolean; // Everyone
     managedEmployeeIds: number[]; // Empty for non-managers
+}
+
+interface ActivityLog {
+    timestamp: number; // Unix timestamp
+    userId: number; // User who performed the action
+    userName: string; // User name for display
+    action: 'CREATE' | 'UPDATE' | 'DELETE';
+    entityType: 'TIME_ENTRY'; // Future: could add 'CATEGORY', 'SETTINGS', etc.
+    entityId: string; // Identifier of the affected entity (for TIME_ENTRY: startTime ISO string)
+    details: {
+        // Flexible details object
+        oldValue?: Partial<TimeEntry>; // For UPDATE: previous values
+        newValue?: Partial<TimeEntry>; // For CREATE/UPDATE: new values
+        categoryName?: string; // Category name for quick display
+        description?: string; // Description for quick display
+        duration?: number; // Duration in milliseconds for quick display
+    };
 }
 
 const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient, user, KEY }) => {
@@ -101,9 +127,14 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
     let absenceReasons: AbsenceReason[] = [];
     let userList: Array<{ id: number; name: string }> = []; // All users for dropdown (managers only)
     let isManager = false; // Does current user have manager/admin permissions?
+    let isAdmin = false; // Does current user have admin panel access?
     let isLoading = true;
     let errorMessage = '';
     let moduleId: number | null = null;
+
+    // Activity Log categories
+    let activityLogCategory: any | null = null;
+    let activityLogArchiveCategory: any | null = null;
 
     // Filters - Initialize to This Week (Monday to Sunday)
     const now = new Date();
@@ -269,6 +300,141 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
         }
     }
 
+    // Activity Log Helper Functions
+    /**
+     * Create an activity log entry
+     * @param action - The action performed (CREATE, UPDATE, DELETE)
+     * @param entityId - Identifier of the affected entity
+     * @param details - Additional details about the action
+     */
+    async function createActivityLog(
+        action: 'CREATE' | 'UPDATE' | 'DELETE',
+        entityId: string,
+        details: ActivityLog['details']
+    ): Promise<void> {
+        try {
+            // Check if logging is enabled
+            if (!settings?.activityLogSettings?.enabled) {
+                console.log('[ActivityLog] Logging is disabled');
+                return;
+            }
+
+            // Check if specific action is enabled
+            if (action === 'CREATE' && !settings.activityLogSettings.logCreate) return;
+            if (action === 'UPDATE' && !settings.activityLogSettings.logUpdate) return;
+            if (action === 'DELETE' && !settings.activityLogSettings.logDelete) return;
+
+            // Ensure activity log category exists
+            if (!activityLogCategory) {
+                activityLogCategory = await getCustomDataCategory<object>('activityLog');
+                if (!activityLogCategory) {
+                    activityLogCategory = await createCustomDataCategory(
+                        {
+                            customModuleId: moduleId!,
+                            name: 'Activity Log',
+                            shorty: 'activityLog',
+                            description: 'Activity log for time entry operations',
+                        },
+                        moduleId!
+                    );
+                }
+            }
+
+            // Create log entry
+            const logEntry: ActivityLog = {
+                timestamp: Date.now(),
+                userId: user?.id || 0,
+                userName: user?.firstName && user?.lastName
+                    ? `${user.firstName} ${user.lastName}`
+                    : `User ${user?.id || 'Unknown'}`,
+                action,
+                entityType: 'TIME_ENTRY',
+                entityId,
+                details,
+            };
+
+            await createCustomDataValue(
+                {
+                    dataCategoryId: activityLogCategory.id,
+                    value: JSON.stringify(logEntry),
+                },
+                moduleId!
+            );
+
+            console.log(`[ActivityLog] ${action} logged for entity ${entityId}`);
+        } catch (error) {
+            console.error('[ActivityLog] Failed to create log:', error);
+            // Never block the actual operation due to logging failure
+        }
+    }
+
+    /**
+     * Archive old activity logs (move to archive category)
+     * Called periodically (e.g., on app init)
+     */
+    async function archiveOldLogs(): Promise<void> {
+        try {
+            if (!settings?.activityLogSettings?.enabled) return;
+
+            const archiveAfterDays = settings.activityLogSettings.archiveAfterDays || 90;
+            const cutoffDate = Date.now() - archiveAfterDays * 24 * 60 * 60 * 1000;
+
+            // Ensure categories exist
+            if (!activityLogCategory) {
+                activityLogCategory = await getCustomDataCategory<object>('activityLog');
+            }
+            if (!activityLogArchiveCategory) {
+                activityLogArchiveCategory = await getCustomDataCategory<object>('activityLogArchive');
+                if (!activityLogArchiveCategory) {
+                    activityLogArchiveCategory = await createCustomDataCategory(
+                        {
+                            customModuleId: moduleId!,
+                            name: 'Activity Log Archive',
+                            shorty: 'activityLogArchive',
+                            description: 'Archived activity logs',
+                        },
+                        moduleId!
+                    );
+                }
+            }
+
+            if (!activityLogCategory) return;
+
+            // Get all logs from active category
+            const rawLogs: Array<{ id: number; value: string }> = await churchtoolsClient.get(
+                `/custommodules/${moduleId}/customdatacategories/${activityLogCategory.id}/customdatavalues`
+            );
+
+            let archivedCount = 0;
+
+            for (const rawLog of rawLogs) {
+                const log = JSON.parse(rawLog.value) as ActivityLog;
+
+                // Check if log is older than cutoff date
+                if (log.timestamp < cutoffDate) {
+                    // Move to archive by creating in archive category and deleting from active
+                    await createCustomDataValue(
+                        {
+                            dataCategoryId: activityLogArchiveCategory.id,
+                            value: JSON.stringify(log),
+                        },
+                        moduleId!
+                    );
+
+                    await deleteCustomDataValue(activityLogCategory.id, rawLog.id, moduleId!);
+                    archivedCount++;
+                }
+            }
+
+            if (archivedCount > 0) {
+                console.log(`[ActivityLog] Archived ${archivedCount} old logs`);
+            }
+        } catch (error) {
+            console.error('[ActivityLog] Failed to archive old logs:', error);
+            // Don't throw - archiving failure shouldn't block app
+        }
+    }
+
     // Initialize
     async function initialize() {
         try {
@@ -296,10 +462,18 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
             // Check if user has manager permissions
             isManager = await checkManagerRole();
 
+            // Check if user has admin permissions
+            isAdmin = await checkAdminPermission();
+
             // Load user list if manager
             if (isManager) {
                 await loadUserList();
             }
+
+            // Run activity log archiving (non-blocking)
+            archiveOldLogs().catch((err) =>
+                console.error('[TimeTracker] Activity log archiving failed:', err)
+            );
 
             // Check access (for future use)
             // const hasAccess = await checkUserAccess();
@@ -414,6 +588,46 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
         }
     }
 
+    // Check if current user has admin panel permissions
+    // Uses ChurchTools native permission system: If user can see 'adminAccess' category, they are admin
+    async function checkAdminPermission(): Promise<boolean> {
+        if (!user?.id) return false;
+
+        try {
+            // Try to access the 'adminAccess' category
+            // If successful, user has permissions to see it -> Admin!
+            const category = await getCustomDataCategory<object>('adminAccess');
+
+            if (!category) {
+                // Category doesn't exist yet - create it
+                console.log('[TimeTracker] Creating adminAccess category...');
+                await createCustomDataCategory(
+                    {
+                        customModuleId: moduleId!,
+                        name: 'Admin Access Control',
+                        shorty: 'adminAccess',
+                        description:
+                            'Control admin panel access via ChurchTools permissions. Users who can see this category have admin access.',
+                    },
+                    moduleId!
+                );
+
+                // User just saw category creation = they have access
+                // But to be safe, return true only if category is now accessible
+                const verifyCategory = await getCustomDataCategory<object>('adminAccess');
+                return !!verifyCategory;
+            }
+
+            // Category exists and user can see it = Admin!
+            console.log('[TimeTracker] User has admin access (can see adminAccess category)');
+            return true;
+        } catch (error) {
+            // Error accessing category = No permission = Not admin
+            console.log('[TimeTracker] User does not have admin access:', error);
+            return false;
+        }
+    }
+
     // Load list of all users (for manager dropdown)
     async function loadUserList(): Promise<void> {
         if (!isManager) {
@@ -426,21 +640,22 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
             const response = await churchtoolsClient.get<
                 Array<{
                     id: number;
-                    domainAttributes: {
-                        firstName?: string;
-                        lastName?: string;
-                    };
+                    firstName?: string;
+                    lastName?: string;
                 }>
             >('/persons');
 
             // Map to simplified format
             userList = (response || [])
-                .map((person) => ({
-                    id: person.id,
-                    name:
-                        `${person.domainAttributes?.firstName || ''} ${person.domainAttributes?.lastName || ''}`.trim() ||
-                        `User ${person.id}`,
-                }))
+                .map((person) => {
+                    const name =
+                        `${person.firstName || ''} ${person.lastName || ''}`.trim() ||
+                        `User ${person.id}`;
+                    return {
+                        id: person.id,
+                        name,
+                    };
+                })
                 .filter((u) => u.id); // Remove invalid entries
 
             console.log('[TimeTracker] Loaded', userList.length, 'users for filter');
@@ -838,17 +1053,20 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
         if (!user?.id) return;
 
         try {
-            // Use the generic request method with DELETE
-            await (churchtoolsClient as any).request(
-                'DELETE',
-                `/persons/${user.id}/absences/${absenceId}`
-            );
-            await loadAbsences();
-            render();
-            showNotification('Absence deleted successfully!', 'success');
+            // Try using delete method (standard REST API)
+            // If not available, this will fall back to deleteApi in the catch
+            if (typeof (churchtoolsClient as any).delete === 'function') {
+                await (churchtoolsClient as any).delete(`/persons/${user.id}/absences/${absenceId}`);
+            } else {
+                // Fallback to deleteApi (used by KV store)
+                await (churchtoolsClient as any).deleteApi(`/persons/${user.id}/absences/${absenceId}`);
+            }
+
+            await refreshData();
+            showNotification(t('ct.extension.timetracker.common.success'), 'success');
         } catch (error) {
             console.error('[TimeTracker] Failed to delete absence:', error);
-            showNotification('Failed to delete absence. Please try again.', 'error');
+            showNotification(t('ct.extension.timetracker.common.error'), 'error');
         }
     }
 
@@ -939,6 +1157,16 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
                 moduleId!
             );
 
+            // Log activity (non-blocking)
+            const duration = new Date(currentEntry.endTime!).getTime() - new Date(currentEntry.startTime).getTime();
+            createActivityLog('UPDATE', currentEntry.startTime, {
+                oldValue: { ...existingValue, endTime: null },
+                newValue: currentEntry,
+                categoryName: currentEntry.categoryName,
+                description: currentEntry.description,
+                duration,
+            }).catch((err) => console.error('[ActivityLog] Failed to log clock-out:', err));
+
             // Update local state
             const entryIndex = timeEntries.findIndex(
                 (e) => e.startTime === currentEntry!.startTime
@@ -975,10 +1203,22 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
             const existingValue = allValues.find((v) => v.startTime === startTime);
 
             if (!existingValue) {
-                throw new Error('Time entry not found in database');
+                throw new Error('Entry not found');
             }
 
             const kvStoreId = (existingValue as any).id;
+
+            // Log activity BEFORE deletion (non-blocking)
+            const duration = existingValue.endTime
+                ? new Date(existingValue.endTime).getTime() - new Date(existingValue.startTime).getTime()
+                : 0;
+            createActivityLog('DELETE', startTime, {
+                oldValue: existingValue,
+                categoryName: existingValue.categoryName,
+                description: existingValue.description,
+                duration,
+            }).catch((err) => console.error('[ActivityLog] Failed to log deletion:', err));
+
             await deleteCustomDataValue(cat.id, kvStoreId, moduleId!);
 
             // Remove from local array
@@ -1047,6 +1287,18 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
                             { value: JSON.stringify(updatedEntry) },
                             moduleId!
                         );
+
+                        // Log activity (non-blocking)
+                        const duration = entry.endTime
+                            ? new Date(entry.endTime).getTime() - new Date(entry.startTime).getTime()
+                            : 0;
+                        createActivityLog('UPDATE', entry.startTime, {
+                            oldValue: { categoryId: entry.categoryId, categoryName: entry.categoryName },
+                            newValue: { categoryId: updatedEntry.categoryId, categoryName: updatedEntry.categoryName },
+                            categoryName: updatedEntry.categoryName,
+                            description: entry.description,
+                            duration,
+                        }).catch((err) => console.error('[ActivityLog] Failed to log bulk update:', err));
 
                         // Update local array
                         const index = timeEntries.findIndex((e) => e.startTime === entry.startTime);
@@ -1134,6 +1386,17 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
                         );
 
                         await deleteCustomDataValue(cat.id, kvStoreId, moduleId!);
+
+                        // Log activity BEFORE removal from local array (non-blocking)
+                        const duration = entry.endTime
+                            ? new Date(entry.endTime).getTime() - new Date(entry.startTime).getTime()
+                            : 0;
+                        createActivityLog('DELETE', entry.startTime, {
+                            oldValue: entry,
+                            categoryName: entry.categoryName,
+                            description: entry.description,
+                            duration,
+                        }).catch((err) => console.error('[ActivityLog] Failed to log bulk delete:', err));
 
                         // Remove from local array
                         const index = timeEntries.findIndex((e) => e.startTime === entry.startTime);
@@ -1297,6 +1560,15 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
                     },
                     moduleId!
                 );
+
+                // Log activity (non-blocking)
+                const duration = new Date(newEntry.endTime!).getTime() - new Date(newEntry.startTime).getTime();
+                createActivityLog('CREATE', newEntry.startTime, {
+                    newValue: newEntry,
+                    categoryName: newEntry.categoryName,
+                    description: newEntry.description,
+                    duration,
+                }).catch((err) => console.error('[ActivityLog] Failed to log bulk entry:', err));
 
                 savedCount++;
             }
@@ -2088,6 +2360,14 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
                                         <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
                                     </svg>
                                 </button>
+                                ${isAdmin ? `
+                                    <button id="admin-panel-btn" style="padding: 0.5rem; border: 1px solid #6c757d; background: #fff; color: #6c757d; border-radius: 4px; cursor: pointer; display: flex; align-items: center; justify-content: center;" title="${t('ct.extension.timetracker.navigation.adminPanel')}">
+                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <circle cx="12" cy="12" r="3"></circle>
+                                            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                                        </svg>
+                                    </button>
+                                ` : ''}
                                 <div style="width: 1px; height: 30px; background: #ddd; display: none;" class="nav-divider"></div>
                                 <button id="view-dashboard" style="padding: 0.5rem 1rem; border: ${currentView === 'dashboard' ? '2px' : '1px'} solid ${currentView === 'dashboard' ? '#007bff' : '#ddd'}; background: ${currentView === 'dashboard' ? '#e7f3ff' : '#fff'}; color: ${currentView === 'dashboard' ? '#007bff' : '#666'}; border-radius: 4px; cursor: pointer; font-weight: ${currentView === 'dashboard' ? '600' : '400'}; white-space: nowrap;">${t('ct.extension.timetracker.dashboard.title')}</button>
                                 <button id="view-entries" style="padding: 0.5rem 1rem; border: ${currentView === 'entries' ? '2px' : '1px'} solid ${currentView === 'entries' ? '#007bff' : '#ddd'}; background: ${currentView === 'entries' ? '#e7f3ff' : '#fff'}; color: ${currentView === 'entries' ? '#007bff' : '#666'}; border-radius: 4px; cursor: pointer; font-weight: ${currentView === 'entries' ? '600' : '400'}; white-space: nowrap;">${t('ct.extension.timetracker.timeEntries.title')}</button>
@@ -2329,21 +2609,24 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
                         </svg>
                         ${t('ct.extension.timetracker.bulkEntry.title')}
                     </h3>
-                    <button id="close-bulk-entry-btn" style="padding: 0.5rem 1rem; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer;">${t('ct.extension.timetracker.common.cancel')}</button>
+                    <div style="display: flex; gap: 0.5rem;">
+                        <button id="reset-bulk-entries-btn" style="padding: 0.5rem 1rem; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600;">${t('ct.extension.timetracker.common.reset')}</button>
+                        <button id="reset-and-close-bulk-entry-btn" style="padding: 0.5rem 1rem; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600;">${t('ct.extension.timetracker.common.resetAndClose')}</button>
+                    </div>
                 </div>
 
                 <div style="overflow-x: auto; margin-bottom: 1rem;">
                     <table style="width: 100%; border-collapse: collapse; background: white; border-radius: 4px; overflow: hidden;">
                         <thead>
                             <tr style="background: #6f42c1; color: white;">
-                                <th style="padding: 0.75rem; text-align: left; font-weight: 600;">Start Date</th>
-                                <th style="padding: 0.75rem; text-align: left; font-weight: 600;">Start Time</th>
-                                <th style="padding: 0.75rem; text-align: left; font-weight: 600;">End Date</th>
-                                <th style="padding: 0.75rem; text-align: left; font-weight: 600;">End Time</th>
-                                <th style="padding: 0.75rem; text-align: left; font-weight: 600;">Category</th>
-                                <th style="padding: 0.75rem; text-align: left; font-weight: 600;">Description</th>
-                                <th style="padding: 0.75rem; text-align: center; font-weight: 600;">Break?</th>
-                                <th style="padding: 0.75rem; text-align: center; font-weight: 600;">Actions</th>
+                                <th style="padding: 0.75rem; text-align: left; font-weight: 600;">${t('ct.extension.timetracker.bulkEntry.startDate')}</th>
+                                <th style="padding: 0.75rem; text-align: left; font-weight: 600;">${t('ct.extension.timetracker.bulkEntry.startTime')}</th>
+                                <th style="padding: 0.75rem; text-align: left; font-weight: 600;">${t('ct.extension.timetracker.bulkEntry.endDate')}</th>
+                                <th style="padding: 0.75rem; text-align: left; font-weight: 600;">${t('ct.extension.timetracker.bulkEntry.endTime')}</th>
+                                <th style="padding: 0.75rem; text-align: left; font-weight: 600;">${t('ct.extension.timetracker.bulkEntry.category')}</th>
+                                <th style="padding: 0.75rem; text-align: left; font-weight: 600;">${t('ct.extension.timetracker.bulkEntry.description')}</th>
+                                <th style="padding: 0.75rem; text-align: center; font-weight: 600;">${t('ct.extension.timetracker.bulkEntry.isBreak')}</th>
+                                <th style="padding: 0.75rem; text-align: center; font-weight: 600;">${t('ct.extension.timetracker.timeEntries.actions')}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -2351,7 +2634,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
                 ? `
                                 <tr>
                                     <td colspan="8" style="padding: 2rem; text-align: center; color: #666;">
-                                        No entries yet. Click "Add Row" to start.
+                                        ${t('ct.extension.timetracker.bulkEntry.noEntries')}
                                     </td>
                                 </tr>
                             `
@@ -2422,7 +2705,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
                                             data-row-id="${row.id}"
                                             data-field="description"
                                             value="${row.description}"
-                                            placeholder="Description..."
+                                            placeholder="${t('ct.extension.timetracker.bulkEntry.descriptionPlaceholder')}"
                                             style="width: 100%; padding: 0.375rem; border: 1px solid #ddd; border-radius: 3px;"
                                         />
                                     </td>
@@ -2441,7 +2724,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
                                             class="remove-bulk-row-btn"
                                             data-row-id="${row.id}"
                                             style="padding: 0.25rem 0.5rem; background: #dc3545; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 0.85rem;"
-                                            title="Remove"
+                                            title="${t('ct.extension.timetracker.bulkEntry.remove')}"
                                         ><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                                 <polyline points="3 6 5 6 21 6"></polyline>
                                                 <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
@@ -2468,7 +2751,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
                             <line x1="16" y1="17" x2="8" y2="17"></line>
                             <polyline points="10 9 9 9 8 9"></polyline>
                         </svg>
-                        <strong style="color: #856404;">Excel Import/Export</strong>
+                        <strong style="color: #856404;">${t('ct.extension.timetracker.bulkEntry.excelImportExport')}</strong>
                         <span style="background: #ff9800; color: white; padding: 0.125rem 0.5rem; border-radius: 3px; font-size: 0.75rem; margin-left: 0.5rem; font-weight: 700;">ALPHA</span>
                     </div>
                     <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center;">
@@ -2478,7 +2761,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
                                 <polyline points="7 10 12 15 17 10"></polyline>
                                 <line x1="12" y1="15" x2="12" y2="3"></line>
                             </svg>
-                            Download Template
+                            ${t('ct.extension.timetracker.bulkEntry.downloadTemplate')}
                         </button>
                         <input type="file" id="import-excel-input" accept=".xlsx,.xls" style="display: none;" />
                         <button id="import-excel-btn" style="padding: 0.5rem 1rem; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; display: inline-flex; align-items: center; gap: 0.5rem;">
@@ -2487,9 +2770,9 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
                                 <polyline points="17 8 12 3 7 8"></polyline>
                                 <line x1="12" y1="3" x2="12" y2="15"></line>
                             </svg>
-                            Import from Excel
+                            ${t('ct.extension.timetracker.bulkEntry.importFromExcel')}
                         </button>
-                        <span style="color: #856404; font-size: 0.85rem; font-style: italic;">Import will replace existing entries in the table</span>
+                        <span style="color: #856404; font-size: 0.85rem; font-style: italic;">${t('ct.extension.timetracker.bulkEntry.importReplacesNote')}</span>
                     </div>
                 </div>
                 `
@@ -2502,21 +2785,16 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
                             <line x1="12" y1="5" x2="12" y2="19"></line>
                             <line x1="5" y1="12" x2="19" y2="12"></line>
                         </svg>
-                        Add Row
+                        ${t('ct.extension.timetracker.bulkEntry.addRow')}
                     </button>
-                    <div style="display: flex; gap: 0.5rem;">
-                        <button id="save-bulk-entries-btn" ${bulkEntryRows.length === 0 ? 'disabled' : ''} style="padding: 0.5rem 1.5rem; background: ${bulkEntryRows.length === 0 ? '#6c757d' : '#28a745'}; color: white; border: none; border-radius: 4px; cursor: ${bulkEntryRows.length === 0 ? 'not-allowed' : 'pointer'}; font-weight: 600; display: inline-flex; align-items: center; gap: 0.5rem;">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
-                                <polyline points="17 21 17 13 7 13 7 21"></polyline>
-                                <polyline points="7 3 7 8 15 8"></polyline>
-                            </svg>
-                            Save All Entries (${bulkEntryRows.length})
-                        </button>
-                        <button id="reset-bulk-entries-btn" style="padding: 0.5rem 1rem; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600;">
-                            ${t('ct.extension.timetracker.common.reset')}
-                        </button>
-                    </div>
+                    <button id="save-bulk-entries-btn" ${bulkEntryRows.length === 0 ? 'disabled' : ''} style="padding: 0.5rem 1.5rem; background: ${bulkEntryRows.length === 0 ? '#6c757d' : '#28a745'}; color: white; border: none; border-radius: 4px; cursor: ${bulkEntryRows.length === 0 ? 'not-allowed' : 'pointer'}; font-weight: 600; display: inline-flex; align-items: center; gap: 0.5rem;">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                            <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                            <polyline points="7 3 7 8 15 8"></polyline>
+                        </svg>
+                        ${t('ct.extension.timetracker.bulkEntry.saveAllEntries')} (${bulkEntryRows.length})
+                    </button>
                 </div>
             </div>
         `;
@@ -2599,8 +2877,11 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
                             id="filter-user"
                             style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;"
                         >
+                            ${user?.id ? `<option value="${user.id}" ${filterUser === user.id.toString() ? 'selected' : ''}>${t('ct.extension.timetracker.entries.myEntries')}</option>` : ''}
+                            <option disabled>──────────</option>
                             <option value="all">${t('ct.extension.timetracker.entries.allUsers')}</option>
-                            ${userList.map((u) => `<option value="${u.id}" ${filterUser === u.id.toString() ? 'selected' : ''}>${u.name}</option>`).join('')}
+                            <option disabled>──────────</option>
+                            ${userList.filter(u => u.id !== user?.id).map((u) => `<option value="${u.id}" ${filterUser === u.id.toString() ? 'selected' : ''}>${u.name}</option>`).join('')}
                         </select>
                     </div>
                     `
@@ -2608,10 +2889,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
             }
                 </div>
                 <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center;">
-                    <button id="bulk-edit-toggle" style="padding: 0.5rem 1rem; background: ${bulkEditMode ? '#dc3545' : '#6c757d'}; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.9rem;">
-                        ${bulkEditMode ? t('ct.extension.timetracker.bulkEdit.deselectAll') : t('ct.extension.timetracker.bulkEdit.selectMode')}
-                    </button>
-                    <button id="export-csv-btn" style="padding: 0.5rem 1rem; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; display: inline-flex; align-items: center; gap: 0.5rem;">
+                    <button id="export-csv-btn" style="padding:0.5rem 1rem; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; display: inline-flex; align-items: center; gap: 0.5rem;">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                             <polyline points="7 10 12 15 17 10"></polyline>
@@ -2642,38 +2920,36 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
 
             ${showAddManualEntry || editingEntry
                 ? `
-                <h1 class="tab-title" style="display: flex; align-items: center; gap: 0.5rem; margin: 0 0 1.5rem 0; padding: 0; font-size: 1.5rem; font-weight: 600; color: #333;">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
-                    <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
-                    <path d="M9 12h6"></path>
-                    <path d="M9 16h6"></path>
-                </svg>
-                ${t('ct.extension.timetracker.timeEntries.addManualEntryTitle')}
-            </h1>
                 <!-- Add/Edit Manual Entry Form -->
-                <div style="background: ${editingEntry ? '#d1ecf1' : '#fff3cd'}; border: 1px solid ${editingEntry ? '#17a2b8' : '#ffc107'}; border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem;">
-                    <h3 style="margin: 0 0 1rem 0; color: #333; display: flex; align-items: center; gap: 0.5rem;">
-                    ${editingEntry
+                <div style="background: #fff3cd; border: 2px solid #ffc107; border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                        <h3 style="margin: 0; font-size: 1.25rem; color: #333; display: flex; align-items: center; gap: 0.75rem;">
+                            ${editingEntry
                     ? `
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-                        </svg>
-                        ${t('ct.extension.timetracker.common.edit')}
-                    `
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                                </svg>
+                                ${t('ct.extension.timetracker.common.edit')}
+                            `
                     : `
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <circle cx="12" cy="12" r="10"></circle>
-                            <polyline points="12 6 12 12 16 14"></polyline>
-                        </svg>
-                        ${t('ct.extension.timetracker.timeEntries.addManualEntryTitle')}
-                    `
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="12" cy="12" r="10"></circle>
+                                    <polyline points="12 6 12 12 16 14"></polyline>
+                                </svg>
+                                ${t('ct.extension.timetracker.timeEntries.addManualEntryTitle')}
+                            `
                 }
-                </h3>
+                        </h3>
+                        <div style="display: flex; gap: 0.5rem;">
+                            <button id="reset-manual-entry-btn" style="padding: 0.5rem 1rem; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer;">${t('ct.extension.timetracker.common.reset')}</button>
+                            <button id="reset-and-close-manual-entry-btn" style="padding: 0.5rem 1rem; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer;">${t('ct.extension.timetracker.common.resetAndClose')}</button>
+                        </div>
+                    </div>
+
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
                         <div>
-                            <label for="manual-start" style="display: block; margin-bottom: 0.5rem; color: #333; font-weight: 500;">Start Date & Time</label>
+                            <label for="manual-start" style="display: block; margin-bottom: 0.5rem; color: #333; font-weight: 500;">${t('ct.extension.timetracker.manualEntry.startDateTime')}</label>
                             <input
                                 type="datetime-local"
                                 id="manual-start"
@@ -2686,7 +2962,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
                             />
                         </div>
                         <div>
-                            <label for="manual-end" style="display: block; margin-bottom: 0.5rem; color: #333; font-weight: 500;">End Date & Time</label>
+                            <label for="manual-end" style="display: block; margin-bottom: 0.5rem; color: #333; font-weight: 500;">${t('ct.extension.timetracker.manualEntry.endDateTime')}</label>
                             <input
                                 type="datetime-local"
                                 id="manual-end"
@@ -2701,7 +2977,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
                     </div>
                     <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 1rem; margin-bottom: 1rem;">
                         <div>
-                            <label for="manual-category" style="display: block; margin-bottom: 0.5rem; color: #333; font-weight: 500;">Category</label>
+                            <label for="manual-category" style="display: block; margin-bottom: 0.5rem; color: #333; font-weight: 500;">${t('ct.extension.timetracker.manualEntry.category')}</label>
                             <select
                                 id="manual-category"
                                 name="manual-category"
@@ -2711,7 +2987,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
                             </select>
                         </div>
                         <div>
-                            <label for="manual-description" style="display: block; margin-bottom: 0.5rem; color: #333; font-weight: 500;">Description</label>
+                            <label for="manual-description" style="display: block; margin-bottom: 0.5rem; color: #333; font-weight: 500;">${t('ct.extension.timetracker.manualEntry.description')}</label>
                             <input
                                 type="text"
                                 id="manual-description"
@@ -2720,27 +2996,23 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
                                 autocomplete="off"
                                 data-lpignore="true"
                                 data-1p-ignore="true"
-                                placeholder="What did you work on?"
+                                placeholder="${t('ct.extension.timetracker.manualEntry.descriptionPlaceholder')}"
                                 style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;"
                             />
                         </div>
                     </div>
                     <label style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem; cursor: pointer; text-align: left;">
                         <input type="checkbox" id="manual-is-break" ${editingEntry && editingEntry.isBreak ? 'checked' : ''} style="width: 18px; height: 18px; cursor: pointer;" />
-                        <span style="color: #666; font-size: 0.95rem;">This is a break/pause (won't count towards work hours)</span>
+                        <span style="color: #666; font-size: 0.95rem;">${t('ct.extension.timetracker.manualEntry.isBreakLabel')}</span>
                     </label>
-                    <div style="display: flex; gap: 0.5rem;">
-                        <button id="save-manual-entry-btn" style="padding: 0.5rem 1rem; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; display: inline-flex; align-items: center; gap: 0.5rem;">
+                    <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
+                        <button id="save-manual-entry-btn" style="padding: 0.5rem 1.5rem; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; display: inline-flex; align-items: center; gap: 0.5rem;">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
                                 <polyline points="17 21 17 13 7 13 7 21"></polyline>
                                 <polyline points="7 3 7 8 15 8"></polyline>
                             </svg>
-                            ${editingEntry ? 'Update Entry' : 'Save Entry'}
-                        </button>
-                        <button id="cancel-manual-entry-btn" style="padding: 0.5rem 1rem; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer;">Cancel</button>
-                        <button id="reset-manual-entry-btn" style="padding: 0.5rem 1rem; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer;">
-                            ${t('ct.extension.timetracker.common.reset')}
+                            ${editingEntry ? t('ct.extension.timetracker.manualEntry.updateEntry') : t('ct.extension.timetracker.manualEntry.saveEntry')}
                         </button>
                     </div>
                 </div>
@@ -2751,17 +3023,26 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
             <!-- Entries List -->
             <div style="background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-                    <h2 style="margin: 0; font-size: 1.2rem; color: #333;">Time Entries (${getFilteredEntries().length})</h2>
-                    ${getFilteredEntries().length > ENTRIES_PER_PAGE
+                    <h2 style="margin: 0; font-size: 1.2rem; color: #333;">${t('ct.extension.timetracker.timeEntries.title')} (${getFilteredEntries().length})</h2>
+                    <div style="display: flex; gap: 0.5rem; align-items: center;">
+                        <button id="bulk-edit-toggle" style="padding: 0.4rem 0.8rem; background: ${bulkEditMode ? '#dc3545' : '#6c757d'}; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85rem; display: inline-flex; align-items: center; gap: 0.4rem;">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                ${bulkEditMode
+                ? `<line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line>`
+                : `<polyline points="9 11 12 14 22 4"></polyline><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>`
+            }
+                            </svg>
+                            ${bulkEditMode ? t('ct.extension.timetracker.bulkEdit.deselectAll') : t('ct.extension.timetracker.bulkEdit.selectMode')}
+                        </button>
+                        ${getFilteredEntries().length > ENTRIES_PER_PAGE
                 ? `
-                        <div style="display: flex; gap: 0.5rem; align-items: center;">
-                            <span style="color: #666; font-size: 0.9rem;">Page ${entriesPage} of ${Math.ceil(getFilteredEntries().length / ENTRIES_PER_PAGE)}</span>
-                            <button id="entries-prev-page" ${entriesPage === 1 ? 'disabled' : ''} style="padding: 0.25rem 0.5rem; background: ${entriesPage === 1 ? '#e9ecef' : '#007bff'}; color: ${entriesPage === 1 ? '#6c757d' : 'white'}; border: none; border-radius: 3px; cursor: ${entriesPage === 1 ? 'not-allowed' : 'pointer'};">‹ Prev</button>
-                            <button id="entries-next-page" ${entriesPage >= Math.ceil(getFilteredEntries().length / ENTRIES_PER_PAGE) ? 'disabled' : ''} style="padding: 0.25rem 0.5rem; background: ${entriesPage >= Math.ceil(getFilteredEntries().length / ENTRIES_PER_PAGE) ? '#e9ecef' : '#007bff'}; color: ${entriesPage >= Math.ceil(getFilteredEntries().length / ENTRIES_PER_PAGE) ? '#6c757d' : 'white'}; border: none; border-radius: 3px; cursor: ${entriesPage >= Math.ceil(getFilteredEntries().length / ENTRIES_PER_PAGE) ? 'not-allowed' : 'pointer'};">Next ›</button>
-                        </div>
-                    `
+                            <span style="color: #666; font-size: 0.9rem;">${t('ct.extension.timetracker.common.page')} ${entriesPage} ${t('ct.extension.timetracker.common.of')} ${Math.ceil(getFilteredEntries().length / ENTRIES_PER_PAGE)}</span>
+                            <button id="entries-prev-page" ${entriesPage === 1 ? 'disabled' : ''} style="padding: 0.25rem 0.5rem; background: ${entriesPage === 1 ? '#e9ecef' : '#007bff'}; color: ${entriesPage === 1 ? '#6c757d' : 'white'}; border: none; border-radius: 3px; cursor: ${entriesPage === 1 ? 'not-allowed' : 'pointer'};">‹ ${t('ct.extension.timetracker.common.back')}</button>
+                            <button id="entries-next-page" ${entriesPage >= Math.ceil(getFilteredEntries().length / ENTRIES_PER_PAGE) ? 'disabled' : ''} style="padding: 0.25rem 0.5rem; background: ${entriesPage >= Math.ceil(getFilteredEntries().length / ENTRIES_PER_PAGE) ? '#e9ecef' : '#007bff'}; color: ${entriesPage >= Math.ceil(getFilteredEntries().length / ENTRIES_PER_PAGE) ? '#6c757d' : 'white'}; border: none; border-radius: 3px; cursor: ${entriesPage >= Math.ceil(getFilteredEntries().length / ENTRIES_PER_PAGE) ? 'not-allowed' : 'pointer'};">${t('ct.extension.timetracker.common.next')} ›</button>
+                        `
                 : ''
             }
+                    </div>
                 </div>
                 ${renderEntriesList(getFilteredEntries())}
             </div>
@@ -3000,7 +3281,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
                                     : ''
                                 }
                                             <td style="padding: 0.5rem;">${start.toLocaleTimeString()}</td>
-                                            <td style="padding: 0.5rem;">${entry.endTime ? end.toLocaleTimeString() : '<span style="color: #28a745; font-weight: 600;">Active</span>'}</td>
+                                            <td style="padding: 0.5rem;">${entry.endTime ? end.toLocaleTimeString() : `<span style="color: #28a745; font-weight: 600;">${t('ct.extension.timetracker.common.active')}</span>`}</td>
                                             <td style="padding: 0.5rem; font-weight: 600;">${duration}</td>
                                             <td style="padding: 0.5rem;">
                                                 <span style="background: ${category?.color || '#6c757d'}; color: white; padding: 0.2rem 0.4rem; border-radius: 3px; font-size: 0.8rem;">
@@ -3551,7 +3832,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
                                             <line x1="12" y1="9" x2="12" y2="13"></line>
                                             <line x1="12" y1="17" x2="12.01" y2="17"></line>
                                         </svg>
-                                        Close to Target
+                                        ${t('ct.extension.timetracker.reports.closeToTarget')}
                                     </span>
                                 `
                             : `
@@ -3561,7 +3842,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
                                             <line x1="15" y1="9" x2="9" y2="15"></line>
                                             <line x1="9" y1="9" x2="15" y2="15"></line>
                                         </svg>
-                                        Below Target
+                                        ${t('ct.extension.timetracker.reports.belowTarget')}
                                     </span>
                                 `
                     }
@@ -3569,7 +3850,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
                             <div style="color: ${isOverTarget ? '#155724' : percentage >= 80 ? '#856404' : '#721c24'}; font-size: 0.9rem;">
                                 ${isOverTarget
                         ? `${t('ct.extension.timetracker.reports.targetAchievedMessage').replace('{hours}', parseFloat(stats.overtime).toFixed(0) + 'h ' + Math.round((parseFloat(stats.overtime) % 1) * 60) + 'm')}`
-                        : `You need to work ${formatDecimalHours(Math.abs(parseFloat(stats.overtime)))} more to reach your target.`
+                        : t('ct.extension.timetracker.reports.needMoreHours').replace('{hours}', formatDecimalHours(Math.abs(parseFloat(stats.overtime))))
                     }
                             </div>
                         </div>
@@ -3711,6 +3992,15 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
             refreshBtn.style.opacity = '1';
             showNotification('Data refreshed successfully!', 'success');
         });
+
+        // Admin panel button handler
+        const adminPanelBtn = element.querySelector('#admin-panel-btn');
+        if (adminPanelBtn) {
+            adminPanelBtn.addEventListener('click', () => {
+                // Navigate to admin entry point using ChurchTools extension route
+                window.location.href = window.location.origin + '/extensions/timetracker/?ep=admin';
+            });
+        }
 
         // View switchers
         const viewDashboard = element.querySelector('#view-dashboard') as HTMLButtonElement;
@@ -3996,13 +4286,9 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
 
             render();
         });
-
         // Manual entry
         const addManualEntryBtn = element.querySelector(
             '#add-manual-entry-btn'
-        ) as HTMLButtonElement;
-        const cancelManualEntryBtn = element.querySelector(
-            '#cancel-manual-entry-btn'
         ) as HTMLButtonElement;
         const saveManualEntryBtn = element.querySelector(
             '#save-manual-entry-btn'
@@ -4016,14 +4302,22 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
             render();
         });
 
-        cancelManualEntryBtn?.addEventListener('click', () => {
-            showAddManualEntry = false;
-            editingEntry = null;
-            showBulkEntry = false;
-            render();
-        });
+        // Auto-fill end time for new entries
+        const endInput = element.querySelector('#manual-end') as HTMLInputElement;
 
-        // Reset manual entry form
+        if (endInput && !editingEntry) {
+            // Auto-fill with current time for new entries
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const day = String(now.getDate()).padStart(2, '0');
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            endInput.value = `${year}-${month}-${day}T${hours}:${minutes}`;
+        }
+
+
+        // Reset manual entry form (clears fields, auto-fills end time with NOW)
         const resetManualEntryBtn = element.querySelector('#reset-manual-entry-btn');
         resetManualEntryBtn?.addEventListener('click', () => {
             // Clear all form fields
@@ -4034,12 +4328,53 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
             const isBreakCheckbox = element.querySelector('#manual-is-break') as HTMLInputElement;
 
             if (startInput) startInput.value = '';
-            if (endInput) endInput.value = '';
+            // Auto-fill end time with current date/time instead of clearing
+            if (endInput) {
+                const now = new Date();
+                const year = now.getFullYear();
+                const month = String(now.getMonth() + 1).padStart(2, '0');
+                const day = String(now.getDate()).padStart(2, '0');
+                const hours = String(now.getHours()).padStart(2, '0');
+                const minutes = String(now.getMinutes()).padStart(2, '0');
+                endInput.value = `${year}-${month}-${day}T${hours}:${minutes}`;
+            }
             if (categorySelect && categorySelect.options.length > 0) categorySelect.selectedIndex = 0;
             if (descriptionInput) descriptionInput.value = '';
             if (isBreakCheckbox) isBreakCheckbox.checked = false;
 
             editingEntry = null;
+        });
+
+        // Reset and close manual entry form (clears fields, auto-fills end time with NOW, then closes)
+        const resetAndCloseManualEntryBtn = element.querySelector('#reset-and-close-manual-entry-btn');
+        resetAndCloseManualEntryBtn?.addEventListener('click', () => {
+            // Clear all form fields
+            const startInput = element.querySelector('#manual-start') as HTMLInputElement;
+            const endInput = element.querySelector('#manual-end') as HTMLInputElement;
+            const categorySelect = element.querySelector('#manual-category') as HTMLSelectElement;
+            const descriptionInput = element.querySelector('#manual-description') as HTMLInputElement;
+            const isBreakCheckbox = element.querySelector('#manual-is-break') as HTMLInputElement;
+
+            if (startInput) startInput.value = '';
+            // Auto-fill end time with current date/time instead of clearing
+            if (endInput) {
+                const now = new Date();
+                const year = now.getFullYear();
+                const month = String(now.getMonth() + 1).padStart(2, '0');
+                const day = String(now.getDate()).padStart(2, '0');
+                const hours = String(now.getHours()).padStart(2, '0');
+                const minutes = String(now.getMinutes()).padStart(2, '0');
+                endInput.value = `${year}-${month}-${day}T${hours}:${minutes}`;
+            }
+            if (categorySelect && categorySelect.options.length > 0) categorySelect.selectedIndex = 0;
+            if (descriptionInput) descriptionInput.value = '';
+            if (isBreakCheckbox) isBreakCheckbox.checked = false;
+
+            editingEntry = null;
+
+            // Close the form
+            showAddManualEntry = false;
+            render();
         });
 
         saveManualEntryBtn?.addEventListener('click', async () => {
@@ -4099,6 +4434,16 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
                         );
                     }
 
+                    // Log activity (non-blocking)
+                    const duration = new Date(updatedEntry.endTime!).getTime() - new Date(updatedEntry.startTime).getTime();
+                    createActivityLog('UPDATE', updatedEntry.startTime, {
+                        oldValue: editingEntry,
+                        newValue: updatedEntry,
+                        categoryName: updatedEntry.categoryName,
+                        description: updatedEntry.description,
+                        duration,
+                    }).catch((err) => console.error('[ActivityLog] Failed to log manual entry update:', err));
+
                     // Update local array
                     const index = timeEntries.findIndex(
                         (e) => e.startTime === editingEntry!.startTime
@@ -4108,6 +4453,10 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
                     }
 
                     editingEntry = null;
+                    showAddManualEntry = false; // Close form after update
+                    await refreshData(); // Full refresh like green button - reloads all data and clears cache
+                    render(); // Refresh UI to show updated entry
+                    showNotification(t('ct.extension.timetracker.common.success') + ': Entry updated!', 'success');
                 } else {
                     // CREATE new entry
                     const newEntry: TimeEntry = {
@@ -4131,6 +4480,15 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
                         moduleId!
                     );
 
+                    // Log activity (non-blocking)
+                    const duration = new Date(newEntry.endTime!).getTime() - new Date(newEntry.startTime).getTime();
+                    createActivityLog('CREATE', newEntry.startTime, {
+                        newValue: newEntry,
+                        categoryName: newEntry.categoryName,
+                        description: newEntry.description,
+                        duration,
+                    }).catch((err) => console.error('[ActivityLog] Failed to log manual entry creation:', err));
+
                     timeEntries.unshift(newEntry);
                     timeEntries.sort(
                         (a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime()
@@ -4147,9 +4505,6 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
         });
 
         // Bulk entry
-        const closeBulkEntryBtn = element.querySelector(
-            '#close-bulk-entry-btn'
-        ) as HTMLButtonElement;
         const addBulkRowBtn = element.querySelector('#add-bulk-row-btn') as HTMLButtonElement;
         const bulkAddEntriesBtn = element.querySelector(
             '#bulk-add-entries-btn'
@@ -4179,12 +4534,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
             render();
         });
 
-        closeBulkEntryBtn?.addEventListener('click', () => {
-            showBulkEntry = false;
-            render();
-        });
-
-        // Reset bulk entries
+        // Reset bulk entries (clears entries only)
         const resetBulkEntriesBtn = element.querySelector('#reset-bulk-entries-btn');
         resetBulkEntriesBtn?.addEventListener('click', () => {
             bulkEntryRows = [];
@@ -4192,6 +4542,14 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
             addBulkEntryRow();
             addBulkEntryRow();
             addBulkEntryRow();
+            render();
+        });
+
+        // Reset and close bulk entries (clears entries + closes)
+        const resetAndCloseBulkEntryBtn = element.querySelector('#reset-and-close-bulk-entry-btn');
+        resetAndCloseBulkEntryBtn?.addEventListener('click', () => {
+            bulkEntryRows = [];
+            showBulkEntry = false;
             render();
         });
 
@@ -4327,47 +4685,20 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
 
             if (editingAbsence) {
                 await updateAbsence(editingAbsence.id, data);
+                await refreshData(); // Full refresh like green button
+                render();
             } else {
                 await createAbsence(data);
+                await refreshData(); // Full refresh like green button
+                render();
             }
         });
 
-        // Edit/Delete absence buttons (using event delegation)
-        const editAbsenceBtns = element.querySelectorAll('.edit-absence-btn');
-        editAbsenceBtns.forEach((btn) => {
-            btn.addEventListener('click', (e) => {
-                const target = e.target as HTMLElement;
-                const absenceId = parseInt(target.dataset.absenceId || '0');
-                const absence = absences.find((a) => a.id === absenceId);
-                if (absence) {
-                    editingAbsence = absence;
-                    showAddAbsence = false;
-                    render();
-                }
-            });
-        });
-
-        const deleteAbsenceBtns = element.querySelectorAll('.delete-absence-btn');
-        deleteAbsenceBtns.forEach((btn) => {
-            btn.addEventListener('click', (e) => {
-                const target = e.target as HTMLElement;
-                const absenceId = parseInt(target.dataset.absenceId || '0');
-                const absence = absences.find((a) => a.id === absenceId);
-
-                if (
-                    absence &&
-                    confirm(
-                        `${t('ct.extension.timetracker.absences.deleteConfirm')}\n\n${t('ct.extension.timetracker.reports.from')}: ${new Date(absence.startDate).toLocaleDateString()}\n${t('ct.extension.timetracker.reports.to')}: ${new Date(absence.endDate).toLocaleDateString()}\n${t('ct.extension.timetracker.absences.reason')}: ${absence.absenceReason?.nameTranslated || absence.absenceReason?.name}`
-                    )
-                ) {
-                    deleteAbsence(absenceId);
-                }
-            });
-        });
+        // Absences edit/delete buttons now handled via event delegation below
     }
 
     // Setup event delegation for edit/delete entry buttons (only once)
-    element.addEventListener('click', (e) => {
+    element.addEventListener('click', async (e) => {
         const target = e.target as HTMLElement;
 
         // Check if clicked element is an edit button
@@ -4377,7 +4708,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
             const entry = timeEntries.find((e) => e.startTime === startTime);
             if (entry) {
                 editingEntry = entry;
-                showAddManualEntry = false;
+                showAddManualEntry = true; // Open manual entry form
                 currentView = 'entries'; // Switch to entries view to show edit form
                 render();
             }
@@ -4390,13 +4721,59 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
             const startTime = deleteBtn.dataset.entryStart;
             const entry = timeEntries.find((e) => e.startTime === startTime);
 
-            if (
-                entry &&
-                confirm(
-                    `${t('ct.extension.timetracker.timeEntries.deleteConfirm')}\n\n${t('ct.extension.timetracker.timeEntries.startTime')}: ${new Date(entry.startTime).toLocaleString()}\n${t('ct.extension.timetracker.timeEntries.endTime')}: ${entry.endTime ? new Date(entry.endTime).toLocaleString() : 'N/A'}\n${t('ct.extension.timetracker.dashboard.category')}: ${entry.categoryName}${entry.isBreak ? ` (${t('ct.extension.timetracker.timeEntries.break')})` : ''}`
-                )
-            ) {
-                deleteTimeEntry(startTime!);
+            if (entry) {
+                // Use custom modal instead of native confirm
+                const entryDetails = `${t('ct.extension.timetracker.timeEntries.startTime')}: ${new Date(entry.startTime).toLocaleString()}\n${t('ct.extension.timetracker.timeEntries.endTime')}: ${entry.endTime ? new Date(entry.endTime).toLocaleString() : 'N/A'}\n${t('ct.extension.timetracker.dashboard.category')}: ${entry.categoryName}${entry.isBreak ? ` (${t('ct.extension.timetracker.timeEntries.break')})` : ''}`;
+
+                showConfirmModal({
+                    title: t('ct.extension.timetracker.modal.deleteEntry.title'),
+                    message: `${t('ct.extension.timetracker.modal.deleteEntry.message')}\n\n${entryDetails}`,
+                    confirmText: t('ct.extension.timetracker.modal.deleteButton'),
+                    cancelText: t('ct.extension.timetracker.common.cancel'),
+                    confirmButtonStyle: 'danger',
+                }).then((confirmed) => {
+                    if (confirmed) {
+                        deleteTimeEntry(startTime!);
+                    }
+                });
+            }
+            return;
+        }
+
+        // Check if clicked element is an absence edit button
+        const editAbsenceBtn = target.closest('.edit-absence-btn') as HTMLElement;
+        if (editAbsenceBtn) {
+            const absenceId = parseInt(editAbsenceBtn.dataset.absenceId || '0');
+            const absence = absences.find((a) => a.id === absenceId);
+            if (absence) {
+                editingAbsence = absence;
+                showAddAbsence = true; // Open edit form
+                render();
+            }
+            return;
+        }
+
+        // Check if clicked element is an absence delete button
+        const deleteAbsenceBtn = target.closest('.delete-absence-btn') as HTMLElement;
+        if (deleteAbsenceBtn) {
+            const absenceId = parseInt(deleteAbsenceBtn.dataset.absenceId || '0');
+            const absence = absences.find((a) => a.id === absenceId);
+
+            if (absence) {
+                // Use custom modal instead of native confirm
+                const absenceDetails = `${t('ct.extension.timetracker.reports.from')}: ${new Date(absence.startDate).toLocaleDateString()}\n${t('ct.extension.timetracker.reports.to')}: ${new Date(absence.endDate).toLocaleDateString()}\n${t('ct.extension.timetracker.absences.reason')}: ${absence.absenceReason?.nameTranslated || absence.absenceReason?.name}`;
+
+                showConfirmModal({
+                    title: t('ct.extension.timetracker.modal.deleteAbsence.title'),
+                    message: `${t('ct.extension.timetracker.modal.deleteAbsence.message')}\n\n${absenceDetails}`,
+                    confirmText: t('ct.extension.timetracker.modal.deleteButton'),
+                    cancelText: t('ct.extension.timetracker.common.cancel'),
+                    confirmButtonStyle: 'danger',
+                }).then((confirmed) => {
+                    if (confirmed) {
+                        deleteAbsence(absenceId);
+                    }
+                });
             }
             return;
         }
