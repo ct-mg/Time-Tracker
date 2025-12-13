@@ -422,49 +422,22 @@ if (selectedViewUserId !== currentUserId) {
 
 ---
 
-#### Admin-Zugang via Zahnrad-Button
+#### ✅ Admin-Zugang via Zahnrad-Button (COMPLETED 2025-12-14)
 **Problem:** Kein einfacher Zugang zum Admin Panel von main.ts
-**Impact:** User müssen URL manuell ändern (/extensions/timetracker/admin)
-**Status:** Offen
+**Status:** ✅ Vollständig implementiert
 **Aufwand:** Klein
 **Priority:** Mittel-Hoch
 
-**Required:**
-- ✅ Zahnrad-SVG Icon in Navigation (rechts oben, neben Settings)
-- ✅ Permission-basierte Sichtbarkeit (nur für Admins)
-- ✅ onClick: Navigate zu Admin Panel
+**Features:**
+- ✅ Zahnrad-SVG Icon in Navigation (neben Settings)
+- ✅ Permission-basierte Sichtbarkeit (ChurchTools `adminAccess` category)
+- ✅ onClick: Navigate zu Admin Panel (`?ep=admin`)
 - ✅ Tooltip: "Admin Panel" (DE/EN)
+- ✅ Build Fixes & Legacy Build Verification
 
-**Permission Check Options:**
-1. **Via KV-Store Extension Category** (empfohlen):
-   - Neue Category `adminUsers` im KV-Store
-   - Array von User-IDs: `[123, 456, 789]`
-   - Check on mount: `if (adminUsers.includes(currentUserId))`
-   
-2. **Via ChurchTools Group**:
-   - Admin Group ID in settings
-   - Check if user in group
-   - Ähnlich wie Manager Group
+**Git Commit:** `c2b8a10` - fix: resolve build errors in admin.ts and tests
+**Merged:** to develop
 
-**Implementation:**
-```typescript
-// Check admin permission
-const isAdmin = await checkAdminPermission(currentUserId);
-
-if (isAdmin) {
-  // Show gear icon
-  const adminBtn = `
-    <button id="admin-btn" title="Admin Panel">
-      <svg>...</svg> <!-- Zahnrad icon -->
-    </button>
-  `;
-}
-```
-
-**Git Consideration:**
-- KV-Store Category Approach: Flexibler, keine Code-Änderung nötig
-- Kann in Admin Panel selbst konfiguriert werden
-- Backup: Fallback auf Group-basierte Permission
 
 ---
 
