@@ -24,7 +24,7 @@
     },
     {
       "id": "admin",
-      "entryPoint": "index.html",
+      "entryPoint": "admin.html",
       "title": "Time Tracker Settings",
       "description": "Configure work categories, default hours, and overtime rules"
     }

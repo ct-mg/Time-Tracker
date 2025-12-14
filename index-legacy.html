@@ -1,32 +1,39 @@
 <!DOCTYPE html>
 <html lang="en">
-    <head>
-        <meta charset="UTF-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>ChurchTools Extension</title>
-    </head>
-    <body>
-        <div id="app"></div>
-        <script type="module">
-            import { renderExtension, loadEntryPoint } from './src/index.ts';
 
-            (async () => {
-                try {
-                    // Check for entry point in query params
-                    const urlParams = new URLSearchParams(window.location.search);
-                    const ep = urlParams.get('ep') || 'main';
-                    
-                    // Map query param to valid entry point IDs
-                    // If ep is not 'admin', default to 'main'
-                    const entryPointId = ep === 'admin' ? 'admin' : 'main';
-                    
-                    const entryPoint = await loadEntryPoint(entryPointId);
-                    await renderExtension('app', entryPoint, {});
-                } catch (error) {
-                    console.error('Failed to load extension:', error);
-                    document.getElementById('app').innerHTML = `<div style="color: red; padding: 20px;">Error loading extension: ${error.message}</div>`;
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ChurchTools Extension</title>
+</head>
+
+<body>
+    <div id="app"></div>
+    <script type="module">
+        import { renderExtension, loadEntryPoint } from './src/index.ts';
+
+        (async () => {
+            try {
+                // Determine entry point ID based on filename or query param
+                let entryPointId = 'main';
+
+                const pathname = window.location.pathname;
+                const urlParams = new URLSearchParams(window.location.search);
+
+                if (pathname.endsWith('admin.html') || urlParams.get('ep') === 'admin') {
+                    entryPointId = 'admin';
                 }
-            })();
-        </script>
-    </body>
+
+                console.log(`[TimeTracker] Loading entry point: ${entryPointId}`);
+
+                const entryPoint = await loadEntryPoint(entryPointId);
+                await renderExtension('app', entryPoint, {});
+            } catch (error) {
+                console.error('Failed to load extension:', error);
+                document.getElementById('app').innerHTML = `<div style="color: red; padding: 20px;">Error loading extension: ${error.message}</div>`;
+            }
+        })();
+    </script>
+</body>
+
 </html>

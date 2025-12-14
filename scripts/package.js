@@ -71,6 +71,18 @@ try {
         fs.unlinkSync(archivePath);
     }
 
+    // Create admin.html by copying index.html
+    // This allows ChurchTools to serve a distinct file for the admin entry point
+    const indexHtmlPath = path.join(distDir, 'index.html');
+    const adminHtmlPath = path.join(distDir, 'admin.html');
+    if (fs.existsSync(indexHtmlPath)) {
+        fs.copyFileSync(indexHtmlPath, adminHtmlPath);
+        console.log('✓ Created admin.html from index.html');
+    } else {
+        console.error('❌ Error: index.html not found in dist. Cannot create admin.html.');
+        process.exit(1);
+    }
+
     // Create ZIP archive using system zip command
     const zipCommand = `cd "${distDir}" && zip -r "${archivePath}" . -x "*.map" "*.DS_Store"`;
     execSync(zipCommand, { stdio: 'inherit' });
