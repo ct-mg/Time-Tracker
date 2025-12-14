@@ -10,13 +10,21 @@
         <script type="module">
             import { renderExtension, loadEntryPoint } from './src/index.ts';
 
-            // Load and render the main entry point
             (async () => {
                 try {
-                    const entryPoint = await loadEntryPoint('main');
+                    // Check for entry point in query params
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const ep = urlParams.get('ep') || 'main';
+                    
+                    // Map query param to valid entry point IDs
+                    // If ep is not 'admin', default to 'main'
+                    const entryPointId = ep === 'admin' ? 'admin' : 'main';
+                    
+                    const entryPoint = await loadEntryPoint(entryPointId);
                     await renderExtension('app', entryPoint, {});
                 } catch (error) {
                     console.error('Failed to load extension:', error);
+                    document.getElementById('app').innerHTML = `<div style="color: red; padding: 20px;">Error loading extension: ${error.message}</div>`;
                 }
             })();
         </script>
