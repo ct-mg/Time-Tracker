@@ -18,13 +18,13 @@
   "extensionPoints": [
     {
       "id": "main",
-      "entryPoint": "main",
+      "entryPoint": "index.html",
       "title": "Time Tracker",
       "description": "Track working hours, view reports, and manage time entries"
     },
     {
       "id": "admin",
-      "entryPoint": "admin",
+      "entryPoint": "index.html",
       "title": "Time Tracker Settings",
       "description": "Configure work categories, default hours, and overtime rules"
     }
