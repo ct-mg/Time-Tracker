@@ -14,13 +14,23 @@
 
         (async () => {
             try {
-                // Determine entry point ID based on filename or query param
+                // Determine entry point ID based on hash or query param or filename
                 let entryPointId = 'main';
 
                 const pathname = window.location.pathname;
+                const hash = window.location.hash;
                 const urlParams = new URLSearchParams(window.location.search);
 
-                if (pathname.endsWith('admin.html') || urlParams.get('ep') === 'admin') {
+                // Check hash first (preferred)
+                if (hash === '#admin') {
+                    entryPointId = 'admin';
+                }
+                // Fallback to filename (legacy)
+                else if (pathname.endsWith('admin.html')) {
+                    entryPointId = 'admin';
+                }
+                // Fallback to query param (legacy)
+                else if (urlParams.get('ep') === 'admin') {
                     entryPointId = 'admin';
                 }
 

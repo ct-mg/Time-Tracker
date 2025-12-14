@@ -3997,11 +3997,9 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
         const adminPanelBtn = element.querySelector('#admin-panel-btn');
         if (adminPanelBtn) {
             adminPanelBtn.addEventListener('click', () => {
-                // Navigate to admin entry point (admin.html)
-                // We use a relative path 'admin.html' which works because we are at /extensions/timetracker/index.html
-                // Or absolute path construction to be safe
-                // Note: In ChurchTools, the base path is usually /extensions/<key>/
-                const adminUrl = window.location.origin + '/extensions/timetracker/admin.html';
+                // Navigate to admin entry point using Hash Routing
+                // This avoids server-side 500 errors with query params or missing files
+                const adminUrl = window.location.origin + '/extensions/timetracker/index.html#admin';
                 window.location.href = adminUrl;
             });
         }
