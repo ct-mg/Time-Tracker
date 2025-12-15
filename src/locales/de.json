@@ -321,5 +321,7 @@
     "ct.extension.timetracker.modal.deleteAbsence.title": "Abwesenheit löschen?",
     "ct.extension.timetracker.modal.deleteAbsence.message": "Möchten Sie diese Abwesenheit wirklich löschen?\n\nDiese Aktion kann nicht rückgängig gemacht werden.",
     "ct.extension.timetracker.modal.confirmButton": "Bestätigen",
-    "ct.extension.timetracker.modal.deleteButton": "Löschen"
+    "ct.extension.timetracker.modal.deleteButton": "Löschen",
+    "ct.extension.timetracker.common.user": "Benutzer",
+    "ct.extension.timetracker.manualEntry.creatingFor": "Erstelle Eintrag für"
 }

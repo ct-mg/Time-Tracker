@@ -8,7 +8,7 @@
 
 ## Aktueller Status
 
-**Letztes Update:** 2025-11-29
+**Letztes Update:** 2025-12-15
 **Aktuelle Phase:** Phase 5 - Polish & Testing
 **Nächste Phase:** Kontinuierliche Verbesserungen
 
@@ -146,6 +146,18 @@
 ## Phase 3: Performance & UX ✅ ABGESCHLOSSEN
 
 ### 🔴 Alle kritischen Punkte erledigt ✅
+
+#### ✅ Admin SPA Restoration (COMPLETED 2025-12-15)
+**Problem:** Admin View and Gear Icon missing in local dev
+**Lösung:** Restored integration of Admin SPA into main app
+**Status:** ✅ Implementiert
+**Git Commit:** feat(admin): restore spa integration and gear button
+
+#### ✅ Manager UX Improvements (COMPLETED 2025-12-15)
+**Problem:** Manager filter redirected to "My Entries" + UX confusion
+**Lösung:** Fixed filter logic, added User column, restricted creation
+**Status:** ✅ Implementiert
+**Git Commit:** fix(manager): improve ux and filter logic
 
 #### ✅ User Namen zeigen "User [ID]" statt echte Namen - GELÖST
 **Problem:** Im Admin-Panel bei Employee SOLL Hours Config zeigen User "User [ID]" statt "Vorname Nachname"  

@@ -1,6 +1,6 @@
 /**
  * Unified Confirmation Modal
- * 
+ *
  * Beautiful, modern confirmation dialog to replace native confirm()
  * Features:
  * - Dark mode support via CSS variables
@@ -222,19 +222,24 @@ function formatMessage(message: string): string {
     // Split by double newlines to separate paragraphs
     const parts = message.split('\n\n');
 
-    return parts.map((part, index) => {
-        // Escape HTML first
-        let formatted = escapeHtml(part);
+    return parts
+        .map((part, index) => {
+            // Escape HTML first
+            let formatted = escapeHtml(part);
 
-        // Highlight labels (text ending with colon)
-        // Pattern: "Label: value" becomes "<strong>Label:</strong> value"
-        formatted = formatted.replace(/^([^:]+:)/gm, '<strong style="color: var(--text-primary, #333); font-weight: 600;">$1</strong>');
+            // Highlight labels (text ending with colon)
+            // Pattern: "Label: value" becomes "<strong>Label:</strong> value"
+            formatted = formatted.replace(
+                /^([^:]+:)/gm,
+                '<strong style="color: var(--text-primary, #333); font-weight: 600;">$1</strong>'
+            );
 
-        // Replace newlines with <br> for line breaks
-        formatted = formatted.replace(/\n/g, '<br>');
+            // Replace newlines with <br> for line breaks
+            formatted = formatted.replace(/\n/g, '<br>');
 
-        // Wrap in paragraph with appropriate margin
-        const marginTop = index === 0 ? '0' : '1rem';
-        return `<p style="margin: ${marginTop} 0 0 0;">${formatted}</p>`;
-    }).join('');
+            // Wrap in paragraph with appropriate margin
+            const marginTop = index === 0 ? '0' : '1rem';
+            return `<p style="margin: ${marginTop} 0 0 0;">${formatted}</p>`;
+        })
+        .join('');
 }

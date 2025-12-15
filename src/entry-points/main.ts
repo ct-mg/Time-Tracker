@@ -12,6 +12,7 @@ import {
     deleteCustomDataValue,
 } from '../utils/kv-store';
 import { initI18n, detectBrowserLanguage, t } from '../utils/i18n';
+import { renderAdmin } from './admin';
 import { showConfirmModal } from '../utils/confirmModal';
 
 /**
@@ -126,7 +127,8 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
     let absences: Absence[] = [];
     let absenceReasons: AbsenceReason[] = [];
     let userList: Array<{ id: number; name: string }> = []; // All users for dropdown (managers only)
-    let isManager = false; // Does current user have manager/admin permissions?
+    let isManager = false; // Does current user have manager permissions?
+    let isAdmin = false; // Does current user have admin permissions?
     let isLoading = true;
     let errorMessage = '';
     let moduleId: number | null = null;
@@ -222,10 +224,10 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
     }
 
     // UI state
-    let currentView: 'dashboard' | 'entries' | 'absences' | 'reports' = 'dashboard';
+    let currentView: 'dashboard' | 'entries' | 'absences' | 'reports' | 'admin' = 'dashboard';
     let showAddManualEntry = false;
     let editingEntry: TimeEntry | null = null;
-    let selectedEntryIds: Set<string> = new Set(); // Track selected entry IDs (using startTime)
+    const selectedEntryIds: Set<string> = new Set(); // Track selected entry IDs (using startTime)
     let bulkEditMode = false; // Toggle bulk edit UI
     let showBulkEntry = false;
     let reportPeriod: 'week' | 'month' | 'year' | 'custom' = 'week';
@@ -260,8 +262,8 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
     // Virtual scrolling state
     let virtualScrollTop = 0;
     let virtualContainerHeight = 600; // Default viewport height in pixels
-    let virtualItemHeight = 80; // Average height per entry (estimated)
-    let virtualBufferSize = 10; // Number of extra items to render above/below viewport
+    const virtualItemHeight = 80; // Average height per entry (estimated)
+    const virtualBufferSize = 10; // Number of extra items to render above/below viewport
     let scrollDebounceTimer: number | null = null;
 
     // Refresh data
@@ -343,9 +345,10 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
             const logEntry: ActivityLog = {
                 timestamp: Date.now(),
                 userId: user?.id || 0,
-                userName: user?.firstName && user?.lastName
-                    ? `${user.firstName} ${user.lastName}`
-                    : `User ${user?.id || 'Unknown'}`,
+                userName:
+                    user?.firstName && user?.lastName
+                        ? `${user.firstName} ${user.lastName}`
+                        : `User ${user?.id || 'Unknown'}`,
                 action,
                 entityType: 'TIME_ENTRY',
                 entityId,
@@ -383,7 +386,8 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
                 activityLogCategory = await getCustomDataCategory<object>('activityLog');
             }
             if (!activityLogArchiveCategory) {
-                activityLogArchiveCategory = await getCustomDataCategory<object>('activityLogArchive');
+                activityLogArchiveCategory =
+                    await getCustomDataCategory<object>('activityLogArchive');
                 if (!activityLogArchiveCategory) {
                     activityLogArchiveCategory = await createCustomDataCategory(
                         {
@@ -459,7 +463,9 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
             await loadAbsenceReasons();
 
             // Check if user has manager permissions
+            // Check if user has manager permissions
             isManager = await checkManagerRole();
+            isAdmin = isManager; // Default admin access to managers for restoration
 
             // Load user list if manager
             if (isManager) {
@@ -537,9 +543,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
 
         try {
             // Get user's groups from ChurchTools
-            const userGroups = (await churchtoolsClient.get(
-                `/persons/${user.id}/groups`
-            )) as Array<{ id: number }>;
+            const userGroups = (await churchtoolsClient.get(`/persons/${user.id}/groups`)) as any[];
             const groupIds = userGroups.map((g: { id: number }) => g.id);
 
             // Check if user is in either employee or volunteer group
@@ -769,9 +773,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
     // Check if user is in a specific ChurchTools group
     async function userIsInGroup(userId: number, groupId: number): Promise<boolean> {
         try {
-            const groupMembers = (await churchtoolsClient.get(
-                `/groups/${groupId}/members`
-            )) as any[];
+            const groupMembers = (await churchtoolsClient.get(`/groups/${groupId}/members`)) as any[];
             return groupMembers.some(
                 (member: { personId?: number; id?: number }) =>
                     (member.personId || member.id) === userId
@@ -1012,10 +1014,14 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
             // Try using delete method (standard REST API)
             // If not available, this will fall back to deleteApi in the catch
             if (typeof (churchtoolsClient as any).delete === 'function') {
-                await (churchtoolsClient as any).delete(`/persons/${user.id}/absences/${absenceId}`);
+                await (churchtoolsClient as any).delete(
+                    `/persons/${user.id}/absences/${absenceId}`
+                );
             } else {
                 // Fallback to deleteApi (used by KV store)
-                await (churchtoolsClient as any).deleteApi(`/persons/${user.id}/absences/${absenceId}`);
+                await (churchtoolsClient as any).deleteApi(
+                    `/persons/${user.id}/absences/${absenceId}`
+                );
             }
 
             await refreshData();
@@ -1114,7 +1120,9 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
             );
 
             // Log activity (non-blocking)
-            const duration = new Date(currentEntry.endTime!).getTime() - new Date(currentEntry.startTime).getTime();
+            const duration =
+                new Date(currentEntry.endTime).getTime() -
+                new Date(currentEntry.startTime).getTime();
             createActivityLog('UPDATE', currentEntry.startTime, {
                 oldValue: { ...existingValue, endTime: null },
                 newValue: currentEntry,
@@ -1166,7 +1174,8 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
 
             // Log activity BEFORE deletion (non-blocking)
             const duration = existingValue.endTime
-                ? new Date(existingValue.endTime).getTime() - new Date(existingValue.startTime).getTime()
+                ? new Date(existingValue.endTime).getTime() -
+                new Date(existingValue.startTime).getTime()
                 : 0;
             createActivityLog('DELETE', startTime, {
                 oldValue: existingValue,
@@ -1246,15 +1255,24 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
 
                         // Log activity (non-blocking)
                         const duration = entry.endTime
-                            ? new Date(entry.endTime).getTime() - new Date(entry.startTime).getTime()
+                            ? new Date(entry.endTime).getTime() -
+                            new Date(entry.startTime).getTime()
                             : 0;
                         createActivityLog('UPDATE', entry.startTime, {
-                            oldValue: { categoryId: entry.categoryId, categoryName: entry.categoryName },
-                            newValue: { categoryId: updatedEntry.categoryId, categoryName: updatedEntry.categoryName },
+                            oldValue: {
+                                categoryId: entry.categoryId,
+                                categoryName: entry.categoryName,
+                            },
+                            newValue: {
+                                categoryId: updatedEntry.categoryId,
+                                categoryName: updatedEntry.categoryName,
+                            },
                             categoryName: updatedEntry.categoryName,
                             description: entry.description,
                             duration,
-                        }).catch((err) => console.error('[ActivityLog] Failed to log bulk update:', err));
+                        }).catch((err) =>
+                            console.error('[ActivityLog] Failed to log bulk update:', err)
+                        );
 
                         // Update local array
                         const index = timeEntries.findIndex((e) => e.startTime === entry.startTime);
@@ -1345,14 +1363,17 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
 
                         // Log activity BEFORE removal from local array (non-blocking)
                         const duration = entry.endTime
-                            ? new Date(entry.endTime).getTime() - new Date(entry.startTime).getTime()
+                            ? new Date(entry.endTime).getTime() -
+                            new Date(entry.startTime).getTime()
                             : 0;
                         createActivityLog('DELETE', entry.startTime, {
                             oldValue: entry,
                             categoryName: entry.categoryName,
                             description: entry.description,
                             duration,
-                        }).catch((err) => console.error('[ActivityLog] Failed to log bulk delete:', err));
+                        }).catch((err) =>
+                            console.error('[ActivityLog] Failed to log bulk delete:', err)
+                        );
 
                         // Remove from local array
                         const index = timeEntries.findIndex((e) => e.startTime === entry.startTime);
@@ -1495,7 +1516,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
             for (const row of bulkEntryRows) {
                 const category = workCategories.find((c) => c.id === row.categoryId);
                 const newEntry: TimeEntry = {
-                    userId: user?.id!,
+                    userId: user?.id,
                     startTime: new Date(`${row.startDate}T${row.startTime}`).toISOString(),
                     endTime: new Date(`${row.endDate}T${row.endTime}`).toISOString(),
                     categoryId: row.categoryId,
@@ -1504,7 +1525,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
                     isManual: true,
                     isBreak: row.isBreak,
                     createdAt: new Date().toISOString(),
-                    settingsSnapshot: createSettingsSnapshot(user?.id!), // Preserve settings at time of bulk entry creation
+                    settingsSnapshot: createSettingsSnapshot(user?.id), // Preserve settings at time of bulk entry creation
                 };
 
                 console.log('[TimeTracker] Saving bulk entry:', newEntry);
@@ -1518,7 +1539,8 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
                 );
 
                 // Log activity (non-blocking)
-                const duration = new Date(newEntry.endTime!).getTime() - new Date(newEntry.startTime).getTime();
+                const duration =
+                    new Date(newEntry.endTime!).getTime() - new Date(newEntry.startTime).getTime();
                 createActivityLog('CREATE', newEntry.startTime, {
                     newValue: newEntry,
                     categoryName: newEntry.categoryName,
@@ -1606,7 +1628,9 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
         window.dispatchEvent(
             new CustomEvent('notification:show', {
                 detail: {
-                    message: t('ct.extension.timetracker.export.success') || 'Excel exported successfully!',
+                    message:
+                        t('ct.extension.timetracker.export.success') ||
+                        'Excel exported successfully!',
                     type: 'success',
                     duration: 3000,
                 },
@@ -2309,6 +2333,9 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
                     ${t('ct.extension.timetracker.dashboard.welcome').replace('{name}', user?.firstName || 'User')}
                 </div>            </div>
                             <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; flex: 0 1 auto;">
+                                <button id="admin-view-btn" style="padding: 0.5rem; border: 1px solid #ddd; background: #fff; color: #666; border-radius: 4px; cursor: pointer; display: ${isAdmin ? 'flex' : 'none'}; align-items: center; justify-content: center;" title="${t('ct.extension.timetracker.admin.title')}">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.38a2 2 0 0 0-.73-2.73l-.15-.1a2 2 0 0 1-1-1.72v-.51a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                                </button>
                                 <button id="refresh-data-btn" style="padding: 0.5rem; border: 1px solid #28a745; background: #fff; color: #28a745; border-radius: 4px; cursor: pointer; display: flex; align-items: center; justify-content: center;" title="Refresh data">
                                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                         <polyline points="23 4 23 10 17 10"></polyline>
@@ -2359,6 +2386,38 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
                 return renderAbsences();
             case 'reports':
                 return renderReports();
+            case 'admin':
+                setTimeout(() => {
+                    const container = document.getElementById('admin-spa-container');
+                    if (container) {
+                        container.innerHTML = '';
+                        renderAdmin({
+                            element: container,
+                            churchtoolsClient,
+                            user,
+                            KEY,
+                            data: {
+                                extensionInfo: { name: 'Time Tracker', description: 'Admin Panel' },
+                            } as any,
+                            on: () => { },
+                            off: () => { },
+                            emit: (event: string, payload: any) => {
+                                if (event === 'notification:show') {
+                                    showNotification(payload.message, payload.type);
+                                }
+                            },
+                        });
+                    }
+                }, 0);
+                return `
+                    <div style="margin-bottom: 1rem;">
+                        <button id="back-to-dashboard-btn" style="padding: 0.5rem 1rem; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer; display: flex; align-items: center; gap: 0.5rem; font-weight: 500;">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+                            ${t('ct.extension.timetracker.dashboard.title')}
+                        </button>
+                    </div>
+                    <div id="admin-spa-container"></div>
+                `;
             default:
                 return '';
         }
@@ -2827,9 +2886,15 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
                         >
                             ${user?.id ? `<option value="${user.id}" ${filterUser === user.id.toString() ? 'selected' : ''}>${t('ct.extension.timetracker.entries.myEntries')}</option>` : ''}
                             <option disabled>──────────</option>
-                            <option value="all">${t('ct.extension.timetracker.entries.allUsers')}</option>
+                            <option value="all" ${filterUser === 'all' ? 'selected' : ''}>${t('ct.extension.timetracker.entries.allUsers')}</option>
                             <option disabled>──────────</option>
-                            ${userList.filter(u => u.id !== user?.id).map((u) => `<option value="${u.id}" ${filterUser === u.id.toString() ? 'selected' : ''}>${u.name}</option>`).join('')}
+                            ${userList
+                    .filter((u) => u.id !== user?.id)
+                    .map(
+                        (u) =>
+                            `<option value="${u.id}" ${filterUser === u.id.toString() ? 'selected' : ''}>${u.name}</option>`
+                    )
+                    .join('')}
                         </select>
                     </div>
                     `
@@ -2845,6 +2910,8 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
                         </svg>
                         ${t('ct.extension.timetracker.reports.exportCSV')}
                     </button>
+                    ${!isManager || !filterUser || filterUser === user?.id.toString()
+                ? `
                     <button id="add-manual-entry-btn" style="padding: 0.5rem 1rem; background: #ffc107; color: #333; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; display: inline-flex; align-items: center; gap: 0.5rem;">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <line x1="12" y1="5" x2="12" y2="19"></line>
@@ -2854,13 +2921,16 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
                     </button>
                     <button id="bulk-add-entries-btn" style="padding: 0.5rem 1rem; background: #6f42c1; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; display: inline-flex; align-items: center; gap: 0.5rem;">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
+                            <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2-2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
                             <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
                             <line x1="12" y1="11" x2="12" y2="17"></line>
                             <line x1="9" y1="14" x2="15" y2="14"></line>
                         </svg>
                         ${t('ct.extension.timetracker.timeEntries.bulkAddEntries')}
                     </button>
+                    `
+                : ''
+            }
                 </div>
             </div>
 
@@ -3051,8 +3121,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
         }
 
         // Calculate visible range for virtual scrolling
-        const { visibleEntries, topPadding, bottomPadding } =
-            calculateVisibleRange(entries);
+        const { visibleEntries, topPadding, bottomPadding } = calculateVisibleRange(entries);
 
         // Get user-specific hours
         const userHours = getUserHours();
@@ -3198,6 +3267,10 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
                         : ''
                     }
                                     <th style="padding: 0.5rem; text-align: left; font-weight: 600; color: #495057; font-size: 0.85rem;">${t('ct.extension.timetracker.timeEntries.startTime')}</th>
+                                    ${isManager && filterUser === 'all'
+                        ? `<th style="padding: 0.5rem; text-align: left; font-weight: 600; color: #495057; font-size: 0.85rem;">${t('ct.extension.timetracker.common.user')}</th>`
+                        : ''
+                    }
                                     <th style="padding: 0.5rem; text-align: left; font-weight: 600; color: #495057; font-size: 0.85rem;">${t('ct.extension.timetracker.timeEntries.endTime')}</th>
                                     <th style="padding: 0.5rem; text-align: left; font-weight: 600; color: #495057; font-size: 0.85rem;">${t('ct.extension.timetracker.timeEntries.duration')}</th>
                                     <th style="padding: 0.5rem; text-align: left; font-weight: 600; color: #495057; font-size: 0.85rem;">${t('ct.extension.timetracker.dashboard.category')}</th>
@@ -3229,6 +3302,12 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
                                     : ''
                                 }
                                             <td style="padding: 0.5rem;">${start.toLocaleTimeString()}</td>
+                                            ${isManager && filterUser === 'all'
+                                    ? `<td style="padding: 0.5rem;">
+                                                    <span style="font-weight: 500; color: #333;">${getUserNameFromId(entry.userId)}</span>
+                                                </td>`
+                                    : ''
+                                }
                                             <td style="padding: 0.5rem;">${entry.endTime ? end.toLocaleTimeString() : `<span style="color: #28a745; font-weight: 600;">${t('ct.extension.timetracker.common.active')}</span>`}</td>
                                             <td style="padding: 0.5rem; font-weight: 600;">${duration}</td>
                                             <td style="padding: 0.5rem;">
@@ -3273,7 +3352,10 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
                                                     `
                                     : ''
                                 }
-                                                    ${isManager && userList.length > 1 && entry.userId !== user?.id
+                                    ${isManager &&
+                                    filterUser !== 'all' &&
+                                    userList.length > 1 &&
+                                    entry.userId !== user?.id
                                     ? `
                                                         <span style="background: #e8f4f8; color: #0066cc; padding: 0.15rem 0.4rem; border-radius: 3px; font-size: 0.75rem; font-weight: 600; border: 1px solid #99ccee;">
                                                             <span style="display: inline-flex; align-items: center; gap: 0.25rem;">
@@ -3798,7 +3880,14 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
                             <div style="color: ${isOverTarget ? '#155724' : percentage >= 80 ? '#856404' : '#721c24'}; font-size: 0.9rem;">
                                 ${isOverTarget
                         ? `${t('ct.extension.timetracker.reports.targetAchievedMessage').replace('{hours}', parseFloat(stats.overtime).toFixed(0) + 'h ' + Math.round((parseFloat(stats.overtime) % 1) * 60) + 'm')}`
-                        : t('ct.extension.timetracker.reports.needMoreHours').replace('{hours}', formatDecimalHours(Math.abs(parseFloat(stats.overtime))))
+                        : t(
+                            'ct.extension.timetracker.reports.needMoreHours'
+                        ).replace(
+                            '{hours}',
+                            formatDecimalHours(
+                                Math.abs(parseFloat(stats.overtime))
+                            )
+                        )
                     }
                             </div>
                         </div>
@@ -3946,7 +4035,23 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
         const viewEntries = element.querySelector('#view-entries') as HTMLButtonElement;
         const viewAbsences = element.querySelector('#view-absences') as HTMLButtonElement;
         const viewReports = element.querySelector('#view-reports') as HTMLButtonElement;
+        const viewAdmin = element.querySelector('#admin-view-btn') as HTMLButtonElement;
         const viewAllEntries = element.querySelector('#view-all-entries') as HTMLButtonElement;
+
+        // Dynamic binding for back button (since it's re-rendered)
+        element.addEventListener('click', (e) => {
+            const target = e.target as HTMLElement;
+            const backBtn = target.closest('#back-to-dashboard-btn');
+            if (backBtn) {
+                currentView = 'dashboard';
+                render();
+            }
+        });
+
+        viewAdmin?.addEventListener('click', () => {
+            currentView = 'admin';
+            render();
+        });
 
         viewDashboard?.addEventListener('click', () => {
             currentView = 'dashboard';
@@ -4003,8 +4108,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
         const autoApplyFilters = () => {
             const fromInput = element.querySelector<HTMLInputElement>('#filter-date-from');
             const toInput = element.querySelector<HTMLInputElement>('#filter-date-to');
-            const categorySelect =
-                element.querySelector<HTMLSelectElement>('#filter-category');
+            const categorySelect = element.querySelector<HTMLSelectElement>('#filter-category');
             const searchInput = element.querySelector<HTMLInputElement>('#filter-search');
             const userSelect = element.querySelector<HTMLSelectElement>('#filter-user');
 
@@ -4255,7 +4359,6 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
             endInput.value = `${year}-${month}-${day}T${hours}:${minutes}`;
         }
 
-
         // Reset manual entry form (clears fields, auto-fills end time with NOW)
         const resetManualEntryBtn = element.querySelector('#reset-manual-entry-btn');
         resetManualEntryBtn?.addEventListener('click', () => {
@@ -4263,7 +4366,9 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
             const startInput = element.querySelector('#manual-start') as HTMLInputElement;
             const endInput = element.querySelector('#manual-end') as HTMLInputElement;
             const categorySelect = element.querySelector('#manual-category') as HTMLSelectElement;
-            const descriptionInput = element.querySelector('#manual-description') as HTMLInputElement;
+            const descriptionInput = element.querySelector(
+                '#manual-description'
+            ) as HTMLInputElement;
             const isBreakCheckbox = element.querySelector('#manual-is-break') as HTMLInputElement;
 
             if (startInput) startInput.value = '';
@@ -4277,7 +4382,8 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
                 const minutes = String(now.getMinutes()).padStart(2, '0');
                 endInput.value = `${year}-${month}-${day}T${hours}:${minutes}`;
             }
-            if (categorySelect && categorySelect.options.length > 0) categorySelect.selectedIndex = 0;
+            if (categorySelect && categorySelect.options.length > 0)
+                categorySelect.selectedIndex = 0;
             if (descriptionInput) descriptionInput.value = '';
             if (isBreakCheckbox) isBreakCheckbox.checked = false;
 
@@ -4285,13 +4391,17 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
         });
 
         // Reset and close manual entry form (clears fields, auto-fills end time with NOW, then closes)
-        const resetAndCloseManualEntryBtn = element.querySelector('#reset-and-close-manual-entry-btn');
+        const resetAndCloseManualEntryBtn = element.querySelector(
+            '#reset-and-close-manual-entry-btn'
+        );
         resetAndCloseManualEntryBtn?.addEventListener('click', () => {
             // Clear all form fields
             const startInput = element.querySelector('#manual-start') as HTMLInputElement;
             const endInput = element.querySelector('#manual-end') as HTMLInputElement;
             const categorySelect = element.querySelector('#manual-category') as HTMLSelectElement;
-            const descriptionInput = element.querySelector('#manual-description') as HTMLInputElement;
+            const descriptionInput = element.querySelector(
+                '#manual-description'
+            ) as HTMLInputElement;
             const isBreakCheckbox = element.querySelector('#manual-is-break') as HTMLInputElement;
 
             if (startInput) startInput.value = '';
@@ -4305,7 +4415,8 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
                 const minutes = String(now.getMinutes()).padStart(2, '0');
                 endInput.value = `${year}-${month}-${day}T${hours}:${minutes}`;
             }
-            if (categorySelect && categorySelect.options.length > 0) categorySelect.selectedIndex = 0;
+            if (categorySelect && categorySelect.options.length > 0)
+                categorySelect.selectedIndex = 0;
             if (descriptionInput) descriptionInput.value = '';
             if (isBreakCheckbox) isBreakCheckbox.checked = false;
 
@@ -4374,14 +4485,18 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
                     }
 
                     // Log activity (non-blocking)
-                    const duration = new Date(updatedEntry.endTime!).getTime() - new Date(updatedEntry.startTime).getTime();
+                    const duration =
+                        new Date(updatedEntry.endTime!).getTime() -
+                        new Date(updatedEntry.startTime).getTime();
                     createActivityLog('UPDATE', updatedEntry.startTime, {
                         oldValue: editingEntry,
                         newValue: updatedEntry,
                         categoryName: updatedEntry.categoryName,
                         description: updatedEntry.description,
                         duration,
-                    }).catch((err) => console.error('[ActivityLog] Failed to log manual entry update:', err));
+                    }).catch((err) =>
+                        console.error('[ActivityLog] Failed to log manual entry update:', err)
+                    );
 
                     // Update local array
                     const index = timeEntries.findIndex(
@@ -4395,11 +4510,14 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
                     showAddManualEntry = false; // Close form after update
                     await refreshData(); // Full refresh like green button - reloads all data and clears cache
                     render(); // Refresh UI to show updated entry
-                    showNotification(t('ct.extension.timetracker.common.success') + ': Entry updated!', 'success');
+                    showNotification(
+                        t('ct.extension.timetracker.common.success') + ': Entry updated!',
+                        'success'
+                    );
                 } else {
                     // CREATE new entry
                     const newEntry: TimeEntry = {
-                        userId: user?.id!,
+                        userId: user?.id,
                         startTime: start.toISOString(),
                         endTime: end.toISOString(),
                         categoryId: categorySelect.value,
@@ -4408,7 +4526,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
                         isManual: true,
                         isBreak: isBreakCheckbox?.checked || false,
                         createdAt: new Date().toISOString(),
-                        settingsSnapshot: createSettingsSnapshot(user?.id!), // Preserve settings at time of manual entry creation
+                        settingsSnapshot: createSettingsSnapshot(user?.id), // Preserve settings at time of manual entry creation
                     };
 
                     await createCustomDataValue(
@@ -4420,13 +4538,17 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
                     );
 
                     // Log activity (non-blocking)
-                    const duration = new Date(newEntry.endTime!).getTime() - new Date(newEntry.startTime).getTime();
+                    const duration =
+                        new Date(newEntry.endTime!).getTime() -
+                        new Date(newEntry.startTime).getTime();
                     createActivityLog('CREATE', newEntry.startTime, {
                         newValue: newEntry,
                         categoryName: newEntry.categoryName,
                         description: newEntry.description,
                         duration,
-                    }).catch((err) => console.error('[ActivityLog] Failed to log manual entry creation:', err));
+                    }).catch((err) =>
+                        console.error('[ActivityLog] Failed to log manual entry creation:', err)
+                    );
 
                     timeEntries.unshift(newEntry);
                     timeEntries.sort(
