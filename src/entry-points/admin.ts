@@ -80,7 +80,7 @@ interface SettingsBackup {
 const MAX_BACKUPS = 5;
 const CURRENT_SCHEMA_VERSION = 2; // Bumped from 1 to 2 for HR/Manager Dashboard feature
 
-const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) => {
+export const renderAdmin: EntryPoint<AdminData> = ({ data, emit, element, KEY }) => {
     let moduleId: number | null = null;
     let workCategoriesCategory: CustomModuleDataCategory | null = null;
     let settingsCategory: CustomModuleDataCategory | null = null;
@@ -171,7 +171,7 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
     let hasUnsavedActivityLogChanges = false;
     let originalActivityLogSettings = { ...settings.activityLogSettings };
     let activityLogCategory: any | null = null;
-    let activityLogArchiveCategory: any | null = null;
+
 
     // Browser warning for unsaved changes
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
@@ -227,7 +227,7 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                 autoDetected: detectBrowserLanguage(),
                 finalLanguage: languageToUse,
             });
-            await initI18n(languageToUse as Language);
+            await initI18n(languageToUse);
 
             // Load work categories and backups
             await Promise.all([
@@ -673,9 +673,7 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
             render();
 
             // Get members of the group from ChurchTools API
-            const groupMembers = (await churchtoolsClient.get(
-                `/groups/${groupId}/members`
-            )) as any[];
+            const groupMembers = (await churchtoolsClient.get(`/groups/${groupId}/members`)) as any[];
 
             // Extract user IDs from current group
             const currentGroupUserIds = new Set(
@@ -788,12 +786,10 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
             render();
 
             // Get members of the group from ChurchTools API
-            const groupMembers = (await churchtoolsClient.get(
-                `/groups/${groupId}/members`
-            )) as any[];
+            const groupMembers = await churchtoolsClient.get(`/groups/${groupId}/members`);
 
             // Build manager list from group members
-            managersList = groupMembers
+            managersList = (groupMembers as any[])
                 .map(
                     (member: {
                         personId?: number;
@@ -1194,9 +1190,7 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
         }
 
         // Read current checkbox states (live from DOM)
-        const checkboxes = element.querySelectorAll(
-            '.manager-employee-checkbox'
-        ) as NodeListOf<HTMLInputElement>;
+        const checkboxes = element.querySelectorAll('.manager-employee-checkbox');
         if (checkboxes.length === 0) {
             // No checkboxes yet, compare with original
             return (originalManagerSettings.managerAssignments || []).length > 0;
@@ -1205,10 +1199,11 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
         // Build current assignments from checkbox states
         const currentAssignmentsMap = new Map<number, Set<number>>();
         checkboxes.forEach((checkbox) => {
-            const managerId = parseInt(checkbox.dataset.managerId || '0');
-            const employeeId = parseInt(checkbox.dataset.employeeId || '0');
+            const input = checkbox as HTMLInputElement;
+            const managerId = parseInt(input.dataset.managerId || '0');
+            const employeeId = parseInt(input.dataset.employeeId || '0');
 
-            if (checkbox.checked) {
+            if (input.checked) {
                 if (!currentAssignmentsMap.has(managerId)) {
                     currentAssignmentsMap.set(managerId, new Set());
                 }
@@ -1310,10 +1305,10 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
 
         // Calculate statistics
         const todayTimestamp = new Date().setHours(0, 0, 0, 0);
-        const actionsToday = filteredLogs.filter(log => log.timestamp >= todayTimestamp).length;
-        const createCount = filteredLogs.filter(log => log.action === 'CREATE').length;
-        const updateCount = filteredLogs.filter(log => log.action === 'UPDATE').length;
-        const deleteCount = filteredLogs.filter(log => log.action === 'DELETE').length;
+        const actionsToday = filteredLogs.filter((log) => log.timestamp >= todayTimestamp).length;
+        const createCount = filteredLogs.filter((log) => log.action === 'CREATE').length;
+        const updateCount = filteredLogs.filter((log) => log.action === 'UPDATE').length;
+        const deleteCount = filteredLogs.filter((log) => log.action === 'DELETE').length;
 
         return `
             <!-- Activity Log Section -->
@@ -1396,10 +1391,12 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                         <label style="display: block; margin-bottom: 0.25rem; font-size: 0.9rem; color: #666;">${t('ct.extension.timetracker.admin.activityLog.filterUser')}</label>
                         <select id="log-filter-user" style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;">
                             <option value="all">${t('ct.extension.timetracker.entries.allUsers')}</option>
-                            ${[...new Set(activityLogs.map(log => log.userId))].map(userId => {
-            const log = activityLogs.find(l => l.userId === userId);
-            return `<option value="${userId}" ${logFilterUser === userId.toString() ? 'selected' : ''}>${log?.userName || `User ${userId}`}</option>`;
-        }).join('')}
+                            ${[...new Set(activityLogs.map((log) => log.userId))]
+                .map((userId) => {
+                    const log = activityLogs.find((l) => l.userId === userId);
+                    return `<option value="${userId}" ${logFilterUser === userId.toString() ? 'selected' : ''}>${log?.userName || `User ${userId}`}</option>`;
+                })
+                .join('')}
                         </select>
                     </div>
                     <div>
@@ -1424,7 +1421,8 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                 </div>
 
                 <!-- Log Table -->
-                ${pageLog.length > 0 ? `
+                ${pageLog.length > 0
+                ? `
                     <div style="overflow-x: auto; margin-bottom: 1rem;">
                         <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
                             <thead>
@@ -1436,10 +1434,16 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                                 </tr>
                             </thead>
                             <tbody>
-                                ${pageLog.map(log => {
-            const actionColor = log.action === 'CREATE' ? '#28a745' : log.action === 'UPDATE' ? '#ffc107' : '#dc3545';
-            const date = new Date(log.timestamp);
-            return `
+                                ${pageLog
+                    .map((log) => {
+                        const actionColor =
+                            log.action === 'CREATE'
+                                ? '#28a745'
+                                : log.action === 'UPDATE'
+                                    ? '#ffc107'
+                                    : '#dc3545';
+                        const date = new Date(log.timestamp);
+                        return `
                                         <tr style="border-bottom: 1px solid #eee;">
                                             <td style="padding: 0.75rem;">${date.toLocaleString()}</td>
                                             <td style="padding: 0.75rem;">${log.userName}</td>
@@ -1451,13 +1455,15 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                                             </td>
                                         </tr>
                                     `;
-        }).join('')}
+                    })
+                    .join('')}
                             </tbody>
                         </table>
                     </div>
 
                     <!-- Pagination -->
-                    ${totalPages > 1 ? `
+                    ${totalPages > 1
+                    ? `
                         <div style="display: flex; justify-content: space-between; align-items: center; padding: 1rem 0;">
                             <div style="font-size: 0.9rem; color: #666;">
                                 ${t('ct.extension.timetracker.admin.activityLog.showingEntries')
@@ -1483,12 +1489,16 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                                 </button>
                             </div>
                         </div>
-                    ` : ''}
-                ` : `
+                    `
+                    : ''
+                }
+                `
+                : `
                     <div style="padding: 2rem; text-align: center; color: #999;">
                         ${t('ct.extension.timetracker.admin.activityLog.noLogs')}
                     </div>
-                `}
+                `
+            }
             </div>
         `;
     }
@@ -1586,7 +1596,8 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
         `;
 
         if (!isLoading && !errorMessage) {
-            attachEventHandlers();
+            attachGeneralHandlers();
+            attachActivityLogHandlers();
             // Initialize button states after render
             setTimeout(() => updateSaveButtonState(), 0);
         }
@@ -2424,8 +2435,8 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
         `;
     }
 
-    // Attach event handlers
-    function attachEventHandlers() {
+    // Attach General Settings Handlers
+    function attachGeneralHandlers() {
         // General Settings
         const saveSettingsBtn = element.querySelector('#save-settings-btn') as HTMLButtonElement;
 
@@ -2694,18 +2705,17 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
             saveBtn.innerHTML = saveIconHTML + 'Saving...';
 
             // Collect all manager assignments from checkboxes
-            const checkboxes = element.querySelectorAll(
-                '.manager-employee-checkbox'
-            ) as NodeListOf<HTMLInputElement>;
+            const checkboxes = element.querySelectorAll('.manager-employee-checkbox');
 
             // Build manager assignments map
             const assignmentsMap = new Map<number, Set<number>>();
 
             checkboxes.forEach((checkbox) => {
-                const managerId = parseInt(checkbox.dataset.managerId || '0');
-                const employeeId = parseInt(checkbox.dataset.employeeId || '0');
+                const input = checkbox as HTMLInputElement;
+                const managerId = parseInt(input.dataset.managerId || '0');
+                const employeeId = parseInt(input.dataset.employeeId || '0');
 
-                if (checkbox.checked) {
+                if (input.checked) {
                     if (!assignmentsMap.has(managerId)) {
                         assignmentsMap.set(managerId, new Set());
                     }
@@ -2817,12 +2827,11 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
 
             // Collect work week days from checkboxes
             const workWeekDays: number[] = [];
-            const workWeekCheckboxes = element.querySelectorAll(
-                '.work-week-day-checkbox'
-            ) as NodeListOf<HTMLInputElement>;
+            const workWeekCheckboxes = element.querySelectorAll('.work-week-day-checkbox');
             workWeekCheckboxes.forEach((checkbox) => {
-                if (checkbox.checked) {
-                    const day = parseInt(checkbox.getAttribute('data-day') || '0');
+                const input = checkbox as HTMLInputElement;
+                if (input.checked) {
+                    const day = parseInt(input.getAttribute('data-day') || '0');
                     workWeekDays.push(day);
                 }
             });
@@ -2965,29 +2974,39 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
 
             // Collect global work week days
             const globalWorkWeekDays: number[] = [];
-            const globalWorkWeekCheckboxes = element.querySelectorAll(
-                '.global-work-week-checkbox'
-            ) as NodeListOf<HTMLInputElement>;
+            const globalWorkWeekCheckboxes = element.querySelectorAll('.global-work-week-checkbox');
             globalWorkWeekCheckboxes.forEach((checkbox) => {
-                if (checkbox.checked) {
-                    globalWorkWeekDays.push(parseInt(checkbox.getAttribute('data-day') || '0'));
+                const input = checkbox as HTMLInputElement;
+                if (input.checked) {
+                    globalWorkWeekDays.push(parseInt(input.getAttribute('data-day') || '0'));
                 }
             });
             globalWorkWeekDays.sort((a, b) => a - b);
 
             // Collect individual employee hours from table
             const userHoursConfig: UserHoursConfig[] = [];
-            const employeeHoursDayInputs = element.querySelectorAll(
-                '.employee-hours-day'
-            ) as NodeListOf<HTMLInputElement>;
-            const employeeHoursWeekInputs = element.querySelectorAll(
-                '.employee-hours-week'
-            ) as NodeListOf<HTMLInputElement>;
+            const employeeHoursDayInputs = element.querySelectorAll('.employee-hours-day');
+            const employeeHoursWeekInputs = element.querySelectorAll('.employee-hours-week');
+            const workWeekCheckboxes = element.querySelectorAll('.user-work-week-checkbox');
 
+            // Collect checkboxes by userId
+            const workWeekMap = new Map<number, number[]>();
+            workWeekCheckboxes.forEach((checkbox) => {
+                const input = checkbox as HTMLInputElement;
+                if (input.checked) {
+                    const userId = parseInt(input.dataset.userId || '0');
+                    const day = parseInt(input.dataset.day || '0');
+                    if (!workWeekMap.has(userId)) workWeekMap.set(userId, []);
+                    workWeekMap.get(userId)!.push(day);
+                }
+            });
+
+            // Collect hours config
             employeeHoursDayInputs.forEach((dayInput, index) => {
-                const userId = parseInt(dayInput.dataset.userId || '0');
-                const hoursPerDay = parseFloat(dayInput.value);
-                const hoursPerWeek = parseFloat(employeeHoursWeekInputs[index]?.value || '0');
+                const input = dayInput as HTMLInputElement;
+                const userId = parseInt(input.dataset.userId || '0');
+                const hoursPerDay = parseFloat(input.value);
+                const hoursPerWeek = parseFloat((employeeHoursWeekInputs[index] as HTMLInputElement)?.value || '0');
 
                 if (userId > 0) {
                     // Get current userName from employeesList (not from old data-attribute)
@@ -2998,10 +3017,11 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                     const workWeekDays: number[] = [];
                     const userCheckboxes = element.querySelectorAll(
                         `.user-work-week-checkbox[data-user-id="${userId}"]`
-                    ) as NodeListOf<HTMLInputElement>;
+                    );
                     userCheckboxes.forEach((checkbox) => {
-                        if (checkbox.checked) {
-                            const day = parseInt(checkbox.getAttribute('data-day') || '0');
+                        const input = checkbox as HTMLInputElement;
+                        if (input.checked) {
+                            const day = parseInt(input.getAttribute('data-day') || '0');
                             workWeekDays.push(day);
                         }
                     });
@@ -3082,7 +3102,7 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
     // Generate a valid category ID from a name
     function generateCategoryId(name: string): string {
         // Convert to lowercase, remove special chars, replace spaces with nothing
-        let id = name
+        const id = name
             .toLowerCase()
             .replace(/[^a-z0-9\s]/g, '') // Remove special characters
             .replace(/\s+/g, ''); // Remove spaces
@@ -3179,19 +3199,31 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
         }
     }
 
-    // This function will attach all event handlers to the DOM elements
-    function attachEventHandlers() {
+    // Attach Activity Log Handlers
+    function attachActivityLogHandlers() {
         // Activity Log Event Handlers
-        const activityLogEnabled = element.querySelector('#activity-log-enabled') as HTMLInputElement;
+        const activityLogEnabled = element.querySelector(
+            '#activity-log-enabled'
+        ) as HTMLInputElement;
         const activityLogCreate = element.querySelector('#activity-log-create') as HTMLInputElement;
         const activityLogUpdate = element.querySelector('#activity-log-update') as HTMLInputElement;
         const activityLogDelete = element.querySelector('#activity-log-delete') as HTMLInputElement;
-        const activityLogArchiveDays = element.querySelector('#activity-log-archive-days') as HTMLInputElement;
-        const saveActivityLogSettingsBtn = element.querySelector('#save-activity-log-settings-btn') as HTMLButtonElement;
+        const activityLogArchiveDays = element.querySelector(
+            '#activity-log-archive-days'
+        ) as HTMLInputElement;
+        const saveActivityLogSettingsBtn = element.querySelector(
+            '#save-activity-log-settings-btn'
+        ) as HTMLButtonElement;
         const logFilterUserSelect = element.querySelector('#log-filter-user') as HTMLSelectElement;
-        const logFilterActionSelect = element.querySelector('#log-filter-action') as HTMLSelectElement;
-        const logFilterDateFromInput = element.querySelector('#log-filter-date-from') as HTMLInputElement;
-        const logFilterDateToInput = element.querySelector('#log-filter-date-to') as HTMLInputElement;
+        const logFilterActionSelect = element.querySelector(
+            '#log-filter-action'
+        ) as HTMLSelectElement;
+        const logFilterDateFromInput = element.querySelector(
+            '#log-filter-date-from'
+        ) as HTMLInputElement;
+        const logFilterDateToInput = element.querySelector(
+            '#log-filter-date-to'
+        ) as HTMLInputElement;
         const logPrevPageBtn = element.querySelector('#log-prev-page') as HTMLButtonElement;
         const logNextPageBtn = element.querySelector('#log-next-page') as HTMLButtonElement;
 
@@ -3208,16 +3240,30 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
                 currentSettings?.archiveAfterDays !== original?.archiveAfterDays;
 
             if (saveActivityLogSettingsBtn) {
-                saveActivityLogSettingsBtn.style.background = hasUnsavedActivityLogChanges ? '#dc3545' : '#28a745';
+                saveActivityLogSettingsBtn.style.background = hasUnsavedActivityLogChanges
+                    ? '#dc3545'
+                    : '#28a745';
             }
         }
 
         activityLogEnabled?.addEventListener('change', () => {
-            if (!settings.activityLogSettings) settings.activityLogSettings = { enabled: true, logCreate: true, logUpdate: true, logDelete: true, archiveAfterDays: 90 };
+            if (!settings.activityLogSettings)
+                settings.activityLogSettings = {
+                    enabled: true,
+                    logCreate: true,
+                    logUpdate: true,
+                    logDelete: true,
+                    archiveAfterDays: 90,
+                };
             settings.activityLogSettings.enabled = activityLogEnabled.checked;
 
             // Enable/disable sub-checkboxes
-            [activityLogCreate, activityLogUpdate, activityLogDelete, activityLogArchiveDays].forEach(el => {
+            [
+                activityLogCreate,
+                activityLogUpdate,
+                activityLogDelete,
+                activityLogArchiveDays,
+            ].forEach((el) => {
                 if (el) el.disabled = !activityLogEnabled.checked;
             });
 
@@ -3225,12 +3271,15 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
             render();
         });
 
-        [activityLogCreate, activityLogUpdate, activityLogDelete].forEach(checkbox => {
+        [activityLogCreate, activityLogUpdate, activityLogDelete].forEach((checkbox) => {
             checkbox?.addEventListener('change', () => {
                 if (!settings.activityLogSettings) return;
-                if (checkbox === activityLogCreate) settings.activityLogSettings.logCreate = checkbox.checked;
-                if (checkbox === activityLogUpdate) settings.activityLogSettings.logUpdate = checkbox.checked;
-                if (checkbox === activityLogDelete) settings.activityLogSettings.logDelete = checkbox.checked;
+                if (checkbox === activityLogCreate)
+                    settings.activityLogSettings.logCreate = checkbox.checked;
+                if (checkbox === activityLogUpdate)
+                    settings.activityLogSettings.logUpdate = checkbox.checked;
+                if (checkbox === activityLogDelete)
+                    settings.activityLogSettings.logDelete = checkbox.checked;
                 checkActivityLogChanges();
             });
         });
@@ -3318,6 +3367,8 @@ const adminEntryPoint: EntryPoint<AdminData> = ({ data, emit, element, KEY }) =>
         // No cleanup needed
     };
 };
+
+const adminEntryPoint = renderAdmin;
 
 // Named export for simple mode
 export { adminEntryPoint };

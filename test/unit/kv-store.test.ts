@@ -15,8 +15,8 @@ import {
 } from '../helpers/mocks';
 import {
     sampleCustomDataValues,
-    sampleParsedDataValue,
-    sampleCustomDataValue,
+    // sampleParsedDataValue,
+    // sampleCustomDataValue,
 } from '../fixtures/sample-data';
 
 // Mock the churchtoolsClient module

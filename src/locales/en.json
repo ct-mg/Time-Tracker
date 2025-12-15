@@ -321,5 +321,7 @@
     "ct.extension.timetracker.modal.deleteAbsence.title": "Delete Absence?",
     "ct.extension.timetracker.modal.deleteAbsence.message": "Are you sure you want to delete this absence?\n\nThis action cannot be undone.",
     "ct.extension.timetracker.modal.confirmButton": "Confirm",
-    "ct.extension.timetracker.modal.deleteButton": "Delete"
+    "ct.extension.timetracker.modal.deleteButton": "Delete",
+    "ct.extension.timetracker.common.user": "User",
+    "ct.extension.timetracker.manualEntry.creatingFor": "Creating entry for"
 }

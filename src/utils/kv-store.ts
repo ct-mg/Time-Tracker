@@ -211,7 +211,7 @@ export async function getCustomDataValues<T extends object>(
             throw new Error(`Custom data value ${val.id} has null or undefined 'value' field.`);
         }
 
-        let parsedData = safeParseJSON(value, {} as T);
+        const parsedData = safeParseJSON(value, {} as T);
 
         // Metadata (id, dataCategoryId) comes AFTER parsedData to ensure
         // KV store fields are not overwritten by data fields
