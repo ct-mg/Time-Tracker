@@ -17,11 +17,11 @@
 ## 🔜 Refactoring Backlog (Separate Branch)
 
 ### Notification System Centralization
-- [ ] Create centralized notification utility (`src/utils/notifications.ts`)
-- [ ] Expose `showSuccess()`, `showError()`, `showWarning()` helpers
-- [ ] Replace all `emit('notification:show')` calls across codebase
-- [ ] Benefits: DRY, single source of truth, clean API
-- [ ] **Branch:** `refactor/centralize-notifications`
+- [x] Create centralized notification utility (`src/utils/notifications.ts`)
+- [x] Expose `showSuccess()`, `showError()`, `showWarning()` helpers
+- [x] Replace all `emit('notification:show')` calls across codebase
+- [x] Benefits: DRY, single source of truth, clean API
+- [x] **Branch:** `feature/notification-refactor` (Merged 2025-12-19)
 
 ---
 
@@ -328,10 +328,11 @@
 
 ### 🟡 Priorität: Mittel
 
-#### Bulk Edit für Time Entries ⏳ IN PROGRESS
+#### ✅ Bulk Edit für Time Entries (COMPLETED)
 **Use Case:** User hat 10 Einträge mit falscher Kategorie
 **Feature:** Multi-Select + Bulk Delete + Kategorie-Änderung für mehrere Einträge
-**Status:** In Progress (Branch: feature/bulk-edit)
+**Status:** ✅ Implementiert
+**Datum:** Vor 2025-12-15
 **Aufwand:** Mittel
 
 **Implementierungs-Schritte:**
@@ -339,18 +340,15 @@
 2. ✅ "Select All" Toggle
 3. ✅ Bulk-Action Bar mit Kategorie-Dropdown
 4. ✅ "Update Selected" Button
-5. ⏳ Bulk Delete Button + Confirmation Dialog
-6. ⏳ Testing
+5. ✅ Bulk Delete Button + Confirmation Dialog
 
 ---
 
-#### Time Filter Presets
+#### ✅ Time Filter Presets (COMPLETED)
 **Use Case:** User möchte schnell Zeiträume filtern ohne Datum manuell einzugeben
 **Feature:** Vordefinierte Zeitfilter für Time Entries
-**Status:** Geplant (Separate Branch)
-**Aufwand:** Klein
-**Priority:** Mittel
-
+**Status:** ✅ Implementiert
+**Datum:** Vor 2025-12-15
 **Gewünschte Filter:**
 - Dieser Monat
 - Letzter Monat
@@ -509,12 +507,10 @@
 
 ---
 
-#### Admin Activity Log
+#### ✅ Admin Activity Log (COMPLETED)
 **Feature:** Log-System für Admin zur Nachverfolgung von Änderungen
-**Status:** Geplant
-**Aufwand:** Mittel
-**Priority:** Hoch
-
+**Status:** ✅ Implementiert
+**Datum:** Vor 2025-12-15
 **Anforderungen:**
 - Log aller wichtigen Aktionen (Create, Update, Delete von Einträgen)
 - Timestamp, User, Action, Affected Data

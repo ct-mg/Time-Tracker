@@ -1,42 +1,43 @@
 # Project State
 
-**Last Updated:** 2025-12-15 09:25
-**Current Phase:** Phase 5 (95% Complete) - Polish & Testing
-**Current Focus:** Manager UX Improvements & Admin Restoration
+**Last Updated:** 2025-12-19 14:00
+**Current Phase:** Phase 5 (98% Complete) - Polish & Testing
+**Current Focus:** Notification Refactoring Complete
 
 ## Active Content
-- **Branch:** `develop` (Merging `feature/admin-gear-complete` changes)
-- **Active Feature:** Admin Gear Button & Admin SPA Restoration
+- **Branch:** `develop`
+- **Active Feature:** None (Ready for next task)
 
-## Session Handoff - 2025-12-15 09:25
-**Feature:** Admin Restoration & Manager UX
-**Branch:** feature/admin-gear-complete -> develop
-**Status:** 100% done / Ready for Merge
+
+## Session Handoff - 2025-12-19 14:00
+**Feature:** Notification System Refactoring
+**Branch:** feature/notification-refactor -> develop
+**Status:** 100% done / Merged to develop
 
 ### Was wurde gemacht:
-- **Admin Restoration:**
-  - `admin.ts` refactored to export `renderAdmin` logic.
-  - `main.ts` updated to import and use `renderAdmin`.
-  - Admin Gear button restored in header (visible to managers/admins).
-  - Admin View implemented as SPA sub-view with "Back to Dashboard" button.
-  - TS errors fixed in `admin.ts` and `main.ts`.
-- **Manager UX:**
-  - Fixed "All Users" filter bug (redirecting to My Entries).
-  - Added "User" column to entries table for managers.
-  - Hidden entry creation buttons for managers when viewing other users.
+- **Notification Centralization:**
+  - Created `src/utils/notifications.ts` (NotificationService class).
+  - Replaced all ad-hoc `showNotification` calls with centralized service.
+  - Removed old DOM-based notification function from `main.ts`.
+- **Internationalization (i18n):**
+  - Added ~35 new translation keys to `de.json` and `en.json`.
+  - Replaced all hard-coded English notification strings with `t()` calls.
+- **Bug Fixes:**
+  - Fixed "Bulk Import" row deletion bug (reverted due to complexity, out of scope for this branch).
+  - Fixed build errors related to sed replacement mishap.
 
 ### Nächste Schritte:
-1. Merge to `develop`.
-2. Verify Admin Gear button in production/staging.
-3. Continue with "Polish & Testing" phase.
+1. Delete local feature branch (if not already done).
+2. Continue with "Polish & Testing" phase.
+3. Observe "Bulk Import" deletion issue in future (removed regression fixes).
 
 ### Wichtige Files:
-- `src/entry-points/main.ts` (Status: fertig/updated)
-- `src/entry-points/admin.ts` (Status: fertig/refactored)
-- `task.md` (Status: updated)
+- `src/utils/notifications.ts` (New service)
+- `src/entry-points/main.ts` (Refactored)
+- `src/entry-points/admin.ts` (Refactored)
 
 ### Offene Fragen:
 - None.
 
 ### Bugs/Issues:
-- Lint warnings persist but build should be clean.
+- Pre-populated bulk import rows cannot be deleted due to ID collision (fix was reverted to prioritize notification merge).

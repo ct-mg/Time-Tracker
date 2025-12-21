@@ -53,19 +53,26 @@ export function detectBrowserLanguage(): Language {
 /**
  * Translate a key to the current language
  * @param key - Translation key in format "ct.extension.timetracker.namespace.key"
+ * @param params - Optional parameters to replace in the translation string (e.g., { name: 'John' })
  * @returns Translated string or key if translation not found
  */
-export function t(key: string): string {
+export function t(key: string, params?: Record<string, string | number>): string {
     if (!translations) {
         console.warn('[i18n] Translations not loaded, returning key:', key);
         return key;
     }
 
-    const translation = translations[key];
+    let translation = translations[key];
 
     if (translation === undefined) {
-        console.warn('[i18n] Translation key not found:', key);
+        // console.warn('[i18n] Translation key not found:', key);
         return key;
+    }
+
+    if (params) {
+        Object.entries(params).forEach(([paramKey, value]) => {
+            translation = translation.replace(new RegExp(`{${paramKey}}`, 'g'), String(value));
+        });
     }
 
     return translation;

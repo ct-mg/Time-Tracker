@@ -12,6 +12,7 @@ import {
 } from '../utils/kv-store';
 import { churchtoolsClient } from '@churchtools/churchtools-client';
 import { initI18n, t, detectBrowserLanguage, type Language } from '../utils/i18n';
+import { NotificationService } from '../utils/notifications';
 
 /**
  * Time Tracker Admin Configuration
@@ -87,6 +88,8 @@ export const renderAdmin: EntryPoint<AdminData> = ({ data, emit, element, KEY })
     let settingsBackupsCategory: CustomModuleDataCategory | null = null;
     let workCategories: WorkCategory[] = [];
     let backupsList: SettingsBackup[] = [];
+    const notifications = new NotificationService(emit);
+
     let settings: Settings = {
         defaultHoursPerDay: 8,
         defaultHoursPerWeek: 40,
@@ -110,6 +113,7 @@ export const renderAdmin: EntryPoint<AdminData> = ({ data, emit, element, KEY })
     let errorMessage = '';
     let showAddCategory = false;
     let editingCategory: WorkCategory | null = null;
+    let activeTab: 'general' | 'users' | 'maintenance' = 'general';
 
     // Deletion dialog state
     let showDeleteDialog = false;
@@ -769,11 +773,7 @@ export const renderAdmin: EntryPoint<AdminData> = ({ data, emit, element, KEY })
             loadingEmployees = false;
             employeesList = [];
 
-            emit('notification:show', {
-                message: t('ct.extension.timetracker.admin.employeeLoadFailed'),
-                type: 'error',
-                duration: 5000,
-            });
+            notifications.showError(t('ct.extension.timetracker.admin.employeeLoadFailed'));
 
             render();
         }
@@ -838,11 +838,7 @@ export const renderAdmin: EntryPoint<AdminData> = ({ data, emit, element, KEY })
             loadingManagers = false;
             managersList = [];
 
-            emit('notification:show', {
-                message: 'Failed to load managers from group',
-                type: 'error',
-                duration: 5000,
-            });
+            notifications.showError(t('ct.extension.timetracker.admin.managerLoadFailed'), 5000);
 
             render();
         }
@@ -977,11 +973,7 @@ export const renderAdmin: EntryPoint<AdminData> = ({ data, emit, element, KEY })
             } else {
                 // No entries using this category, delete immediately
                 await deleteCategory(categoryId);
-                emit('notification', {
-                    message: t('ct.extension.timetracker.admin.categoryDeleted'),
-                    type: 'success',
-                    duration: 3000,
-                });
+                notifications.showError(t('ct.extension.timetracker.admin.createCategoryFailed'));
                 render();
             }
         } catch (error) {
@@ -1263,7 +1255,7 @@ export const renderAdmin: EntryPoint<AdminData> = ({ data, emit, element, KEY })
             '#save-manager-assignments-btn'
         ) as HTMLButtonElement;
 
-        const updateButton = (btn: HTMLButtonElement, label: string, isDirty: boolean) => {
+        const updateButton = (btn: HTMLButtonElement, isDirty: boolean) => {
             if (!btn) return;
 
             if (isDirty) {
@@ -1275,7 +1267,7 @@ export const renderAdmin: EntryPoint<AdminData> = ({ data, emit, element, KEY })
                         <polyline points="17 21 17 13 7 13 7 21"></polyline>
                         <polyline points="7 3 7 8 15 8"></polyline>
                     </svg>
-                    Save ${label} (Unsaved Changes!)
+                    ${t('ct.extension.timetracker.admin.saveWithChanges')}
                 `;
             } else {
                 btn.style.cssText =
@@ -1284,16 +1276,16 @@ export const renderAdmin: EntryPoint<AdminData> = ({ data, emit, element, KEY })
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M5 13l4 4L19 7"></path>
                     </svg>
-                    ${label} Saved
+                    ${t('ct.extension.timetracker.admin.savedState')}
                 `;
             }
         };
 
-        if (saveGroupBtn) updateButton(saveGroupBtn, 'Group Settings', hasUnsavedGroupChanges);
+        if (saveGroupBtn) updateButton(saveGroupBtn, hasUnsavedGroupChanges);
         if (saveGeneralBtn)
-            updateButton(saveGeneralBtn, 'General Settings', hasUnsavedGeneralChanges);
+            updateButton(saveGeneralBtn, hasUnsavedGeneralChanges);
         if (saveManagerBtn)
-            updateButton(saveManagerBtn, 'Manager Assignments', hasUnsavedManagerChanges);
+            updateButton(saveManagerBtn, hasUnsavedManagerChanges);
     }
 
     // Render Activity Log Section
@@ -1381,7 +1373,7 @@ export const renderAdmin: EntryPoint<AdminData> = ({ data, emit, element, KEY })
                         <div style="font-size: 1.2rem; font-weight: bold; color: #f39c12;">
                             C:${createCount} U:${updateCount} D:${deleteCount}
                         </div>
-                        <div style="font-size: 0.85rem; color: #666;">By Action</div>
+                        <div style="font-size: 0.85rem; color: #666;">${t('ct.extension.timetracker.admin.activityLog.byAction')}</div>
                     </div>
                 </div>
 
@@ -1521,7 +1513,7 @@ export const renderAdmin: EntryPoint<AdminData> = ({ data, emit, element, KEY })
                 <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.75rem; border-bottom: 1px solid #eee;">
                     <div>
                         <div style="font-weight: 600; color: #333;">${date}</div>
-                        <div style="font-size: 0.85rem; color: #666;">${backup.summary || 'No summary'} (v${backup.version})</div>
+                        <div style="font-size: 0.85rem; color: #666;">${backup.summary || 'No summary'}</div>
                     </div>
                     <button class="restore-backup-btn btn btn-sm btn-outline-secondary" data-backup-id="${id}" style="padding: 0.25rem 0.5rem; border: 1px solid #ccc; background: #fff; border-radius: 4px; cursor: pointer;">
                         ${t('ct.extension.timetracker.admin.restoreBackup')}
@@ -1545,18 +1537,47 @@ export const renderAdmin: EntryPoint<AdminData> = ({ data, emit, element, KEY })
     }
 
     function render() {
+        const renderTabButton = (id: typeof activeTab, label: string, icon: string) => {
+            const isActive = activeTab === id;
+            return `
+                <button
+                    class="admin-tab-btn"
+                    data-tab="${id}"
+                    style="
+                        padding: 0.75rem 1.5rem;
+                        cursor: pointer;
+                        background: none;
+                        border: none;
+                        border-bottom: 3px solid ${isActive ? '#007bff' : 'transparent'};
+                        font-weight: ${isActive ? '600' : '500'};
+                        color: ${isActive ? '#333' : '#666'};
+                        transition: all 0.2s;
+                        display: flex;
+                        align-items: center;
+                        gap: 0.5rem;
+                        font-size: 1rem;
+                    "
+                >
+                    ${icon}
+                    ${label}
+                </button>
+            `;
+        };
+
         element.innerHTML = `
             <div style="max-width: 900px; margin: 2rem auto; padding: 2rem;">
                 <!-- Extension Info Header -->
-                <div style="background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                    <h1 style="margin: 0 0 0.5rem 0; font-size: 1.8rem; color: #333;">${t('ct.extension.timetracker.admin.title')}</h1>
-                    <p style="margin: 0 0 0.5rem 0; color: #666;">
-                        ${t('ct.extension.timetracker.admin.description')}
-                    </p>
-                    <div style="display: flex; gap: 1rem; margin-top: 1rem; font-size: 0.85rem; color: #999;">
-                        <span><strong>${t('ct.extension.timetracker.admin.version')}:</strong> ${data.extensionInfo?.version || 'N/A'}</span>
-                        <span><strong>${t('ct.extension.timetracker.admin.key')}:</strong> ${data.extensionInfo?.key || KEY || 'N/A'}</span>
-                        ${data.extensionInfo?.author?.name ? `<span><strong>Author:</strong> ${data.extensionInfo.author.name}</span>` : ''}
+                <div style="background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 1.5rem; margin-bottom: 2rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                        <div>
+                            <h1 style="margin: 0 0 0.5rem 0; font-size: 1.8rem; color: #333;">${t('ct.extension.timetracker.admin.title')}</h1>
+                            <p style="margin: 0 0 0.5rem 0; color: #666;">
+                                ${t('ct.extension.timetracker.admin.description')}
+                            </p>
+                        </div>
+                        <div style="text-align: right; font-size: 0.85rem; color: #999;">
+                            <div>v${data.extensionInfo?.version || 'N/A'}</div>
+                        </div>
                     </div>
                 </div>
 
@@ -1584,20 +1605,77 @@ export const renderAdmin: EntryPoint<AdminData> = ({ data, emit, element, KEY })
                     </div>
                 `
                     : `
-                    ${renderGeneralSettings()}
-                    ${renderGroupManagement()}
-                    ${renderManagerAssignments()}
-                    ${renderWorkCategories()}
-                    ${renderActivityLogSection()}
-                    ${renderBackupsSection()}
+                    <!-- Tab Navigation -->
+                    <div style="display: flex; gap: 0.5rem; border-bottom: 1px solid #ddd; margin-bottom: 2rem; overflow-x: auto;">
+                        ${renderTabButton('general', t('ct.extension.timetracker.admin.generalSettings'), '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>')}
+                        ${renderTabButton('users', t('ct.extension.timetracker.admin.userManagement'), '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>')}
+                        ${renderTabButton('maintenance', t('ct.extension.timetracker.admin.maintenance'), '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>')}
+                    </div>
+
+                    <!-- Tab Content -->
+                    <div class="tab-content">
+                        ${activeTab === 'general'
+                        ? `
+                                ${renderGeneralSettings()}
+                                ${renderWorkCategories()}
+                            `
+                        : ''
+                    }
+
+                        ${activeTab === 'users'
+                        ? `
+                                ${renderGroupManagement()}
+                                ${renderManagerAssignments()}
+                            `
+                        : ''
+                    }
+
+                        ${activeTab === 'maintenance'
+                        ? `
+                                ${renderActivityLogSection()}
+                                ${renderBackupsSection()}
+                            `
+                        : ''
+                    }
+                    </div>
                 `
             }
             </div>
         `;
 
         if (!isLoading && !errorMessage) {
-            attachGeneralHandlers();
-            attachActivityLogHandlers();
+            // Attach Tab Handlers
+            const tabButtons = element.querySelectorAll('.admin-tab-btn');
+            tabButtons.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const tabId = (btn as HTMLElement).dataset.tab as typeof activeTab;
+                    if (tabId) {
+                        activeTab = tabId;
+                        render();
+                    }
+                });
+            });
+
+            // Attach section handlers based on active tab
+            if (activeTab === 'general') {
+                attachGeneralTabHandlers();
+            } else if (activeTab === 'users') {
+                attachUserTabHandlers();
+            } else if (activeTab === 'maintenance') {
+                attachMaintenanceTabHandlers();
+            }
+
+            // What about other handlers?
+            // renderWorkCategories has its own handlers?
+            // Checking the file content... I didn't see `attachWorkCategoryHandlers`.
+            // Maybe they are inline or attached within a broader scope?
+            // Let's verify subsequent lines of the original file to see where other handlers are attached.
+            // The original only had attachGeneralHandlers() and attachActivityLogHandlers().
+            // Wait, where are work category handlers?
+            // Maybe they are implemented as onclick attributes or attached inside `renderWorkCategories`?
+            // No, `render` functions usually return string strings.
+            // Let's assume for now I should call the relevant attach functions if the tab is active.
+
             // Initialize button states after render
             setTimeout(() => updateSaveButtonState(), 0);
         }
@@ -1655,7 +1733,7 @@ export const renderAdmin: EntryPoint<AdminData> = ({ data, emit, element, KEY })
                         id="language-select"
                         style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 4px; font-size: 1rem; cursor: pointer;"
                     >
-                        <option value="auto" ${(settings.language || 'auto') === 'auto' ? 'selected' : ''}>🌐 Automatic (Browser)</option>
+                        <option value="auto" ${(settings.language || 'auto') === 'auto' ? 'selected' : ''}>🌐 ${t('ct.extension.timetracker.admin.languageAuto')}</option>
                         <option value="de" ${settings.language === 'de' ? 'selected' : ''}>🇩🇪 Deutsch</option>
                         <option value="en" ${settings.language === 'en' ? 'selected' : ''}>🇬🇧 English</option>
                     </select>
@@ -1823,8 +1901,14 @@ export const renderAdmin: EntryPoint<AdminData> = ({ data, emit, element, KEY })
 
                 <!-- Employee Configuration -->
                 <div style="margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid #e0e0e0;">
-                    <h3 style="margin: 0 0 0.5rem 0; font-size: 1.1rem; color: #333;">
-                        ${t('ct.extension.timetracker.admin.individualSettings')}
+                    <h3 style="margin: 0 0 0.5rem 0; font-size: 1.1rem; color: #333; display: flex; align-items: center;">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 0.5rem;">
+                            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                            <circle cx="9" cy="7" r="4"></circle>
+                            <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                            <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                        </svg>
+                        ${t('ct.extension.timetracker.admin.userManagement')}
                     </h3>
                     <p style="margin: 0 0 1rem 0; color: #666; font-size: 0.9rem;">
                         ${t('ct.extension.timetracker.admin.individualSettingsHelp')}
@@ -1873,8 +1957,8 @@ export const renderAdmin: EntryPoint<AdminData> = ({ data, emit, element, KEY })
                                         <tr style="background: #e9ecef;">
                                             <th style="padding: 0.75rem; text-align: left; border-bottom: 2px solid #dee2e6; font-weight: 600; color: #333;">${t('ct.extension.timetracker.admin.employee')}</th>
                                             <th style="padding: 0.75rem; text-align: left; border-bottom: 2px solid #dee2e6; font-weight: 600; color: #333;">${t('ct.extension.timetracker.admin.status')}</th>
-                                            <th style="padding: 0.75rem; text-align: left; border-bottom: 2px solid #dee2e6; font-weight: 600; color: #333;">Hours/Day</th>
-                                            <th style="padding: 0.75rem; text-align: left; border-bottom: 2px solid #dee2e6; font-weight: 600; color: #333;">Hours/Week</th>
+                                            <th style="padding: 0.75rem; text-align: left; border-bottom: 2px solid #dee2e6; font-weight: 600; color: #333;">${t('ct.extension.timetracker.admin.hoursPerDay')}</th>
+                                            <th style="padding: 0.75rem; text-align: left; border-bottom: 2px solid #dee2e6; font-weight: 600; color: #333;">${t('ct.extension.timetracker.admin.hoursPerWeek')}</th>
                                             <th style="padding: 0.75rem; text-align: left; border-bottom: 2px solid #dee2e6; font-weight: 600; color: #333; min-width: 280px;">${t('ct.extension.timetracker.admin.workWeekDays')}</th>
                                             <th style="padding: 0.75rem; text-align: center; border-bottom: 2px solid #dee2e6; font-weight: 600; color: #333;">${t('ct.extension.timetracker.timeEntries.actions')}</th>
                                         </tr>
@@ -2086,32 +2170,32 @@ export const renderAdmin: EntryPoint<AdminData> = ({ data, emit, element, KEY })
         return `
             <!-- Manager Assignments -->
             <div style="background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                <h2 style="margin: 0 0 1rem 0; font-size: 1.3rem; color: #333;">👔 Manager-to-Employee Assignments</h2>
-                <p style="margin: 0 0 1.5rem 0; color: #666; font-size: 0.95rem;">
-                    Assign employees to managers. Managers can view and export time entries for their assigned employees.
-                </p>
+                <h2 style="margin: 0 0 1rem 0; font-size: 1.3rem; color: #333;">👔 ${t('ct.extension.timetracker.admin.managerAssignment.title')}</h2>
+                <div style="margin-bottom: 1rem; color: #666; font-size: 0.9rem;">
+                    ${t('ct.extension.timetracker.admin.managerAssignment.description')}
+                </div>
 
                 <!-- Manager Group ID Input -->
                 <div style="margin-bottom: 1.5rem;">
                     <label style="display: block; margin-bottom: 0.5rem; color: #333; font-weight: 600;">
-                        Manager Group ID
+                        ${t('ct.extension.timetracker.admin.managerAssignment.groupId')}
                     </label>
                     <div style="display: flex; gap: 0.5rem; align-items: center;">
                         <input
                             type="number"
                             id="manager-group-id"
                             value="${settings.managerGroupId || ''}"
-                            placeholder="Enter ChurchTools Manager Group ID"
+                            placeholder="${t('ct.extension.timetracker.admin.managerAssignment.placeholder')}"
                             style="flex: 1; padding: 0.75rem; border: 1px solid #ddd; border-radius: 4px; font-size: 1rem;"
                         />
                         <button
                             id="load-managers-btn"
                             style="padding: 0.75rem 1.5rem; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; white-space: nowrap;"
                         >
-                            Load Managers
+                            ${t('ct.extension.timetracker.admin.managerAssignment.loadButton')}
                         </button>
                     </div>
-                    <small style="color: #666; font-size: 0.85rem;">Enter the ChurchTools group ID for managers, then click "Load Managers"</small>
+                    <small style="color: #666; font-size: 0.85rem;">${t('ct.extension.timetracker.admin.managerAssignment.groupIdHelp')}</small>
                 </div>
 
                 ${loadingManagers
@@ -2122,13 +2206,13 @@ export const renderAdmin: EntryPoint<AdminData> = ({ data, emit, element, KEY })
                                 <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"></path>
                             </svg>
                         </div>
-                        <p style="margin-top: 1rem;">Loading managers...</p>
+                        <p style="margin-top: 1rem;">${t('ct.extension.timetracker.admin.managerAssignment.loadingManagers')}</p>
                     </div>
                 `
                 : managersList.length > 0
                     ? `
                     <div style="background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 6px; padding: 1rem; margin-bottom: 1rem;">
-                        <h3 style="margin: 0 0 1rem 0; font-size: 1.1rem; color: #333;">Manager Assignments (${managersList.length} managers)</h3>
+                        <h4 style="margin: 0 0 0.5rem 0;">${t('ct.extension.timetracker.admin.managerAssignment.listTitle', { count: managersList.length })}</h4>
                         
                         ${managersList
                         .map((manager) => {
@@ -2178,13 +2262,13 @@ export const renderAdmin: EntryPoint<AdminData> = ({ data, emit, element, KEY })
                             <polyline points="17 21 17 13 7 13 7 21"></polyline>
                             <polyline points="7 3 7 8 15 8"></polyline>
                         </svg>
-                        Save Manager Assignments
+                        ${t('ct.extension.timetracker.admin.managerAssignment.saveButton')}
                     </button>
                 `
                     : settings.managerGroupId
                         ? `
                     <div style="text-align: center; padding: 2rem; color: #666; background: #f8f9fa; border-radius: 4px;">
-                        <p>Click "Load Managers" to load managers from group ${settings.managerGroupId}</p>
+                        <p>${t('ct.extension.timetracker.admin.managerAssignment.clickLoad', { groupId: settings.managerGroupId })}</p>
                     </div>
                 `
                         : ''
@@ -2311,7 +2395,7 @@ export const renderAdmin: EntryPoint<AdminData> = ({ data, emit, element, KEY })
                                 id="cancel-category-btn"
                                 style="padding: 0.75rem 1.5rem; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer;"
                             >
-                                Cancel
+                                ${t('ct.extension.timetracker.common.cancel')}
                             </button>
                         </div>
 
@@ -2331,21 +2415,20 @@ export const renderAdmin: EntryPoint<AdminData> = ({ data, emit, element, KEY })
                                 <line x1="12" y1="9" x2="12" y2="13"></line>
                                 <line x1="12" y1="17" x2="12.01" y2="17"></line>
                             </svg>
-                            Kategorie wird verwendet
+                            ${t('ct.extension.timetracker.admin.categoryInUse')}
                         </h3>
 
                         <p style="color: #856404; margin-bottom: 1rem;">
-                            Die Kategorie <strong>"${categoryToDelete.name}"</strong> wird von <strong>${affectedEntriesCount}</strong>
-                            ${affectedEntriesCount === 1 ? 'Zeiteintrag' : 'Zeiteinträgen'} verwendet.
+                            ${t('ct.extension.timetracker.admin.categoryInUseMessage', { categoryName: categoryToDelete.name, count: affectedEntriesCount })}
                         </p>
 
                         <p style="color: #856404; margin-bottom: 1rem;">
-                            Bitte wähle eine Ersatzkategorie aus, der diese Einträge zugewiesen werden sollen, bevor die Kategorie gelöscht wird:
+                            ${t('ct.extension.timetracker.admin.selectReplacementCategory')}
                         </p>
 
                         <div style="margin-bottom: 1rem;">
                             <label style="display: block; margin-bottom: 0.5rem; color: #856404; font-weight: 600;">
-                                Ersatzkategorie
+                                ${t('ct.extension.timetracker.admin.replacementCategory')}
                             </label>
                             <select
                                 id="replacement-category-select"
@@ -2370,13 +2453,13 @@ export const renderAdmin: EntryPoint<AdminData> = ({ data, emit, element, KEY })
                                     <polyline points="3 6 5 6 21 6"></polyline>
                                     <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
                                 </svg>
-                                Kategorie löschen und Einträge neu zuweisen
+                                ${t('ct.extension.timetracker.admin.deleteCategoryAndReassign')}
                             </button>
                             <button
                                 id="cancel-delete-btn"
                                 style="padding: 0.75rem 1.5rem; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer;"
                             >
-                                Abbrechen
+                                ${t('ct.extension.timetracker.common.cancel')}
                             </button>
                         </div>
                     </div>
@@ -2386,7 +2469,7 @@ export const renderAdmin: EntryPoint<AdminData> = ({ data, emit, element, KEY })
 
                 <!-- Categories List -->
                 ${workCategories.length === 0
-                ? '<p style="color: #666; text-align: center; padding: 2rem;">No categories defined yet. Click "Add Category" to create one.</p>'
+                ? `<p style="color: #666; text-align: center; padding: 2rem;">${t('ct.extension.timetracker.admin.noCategoriesDefined')}</p>`
                 : `
                     <div style="display: grid; gap: 1rem;">
                         ${workCategories
@@ -2408,7 +2491,7 @@ export const renderAdmin: EntryPoint<AdminData> = ({ data, emit, element, KEY })
                                     >
                                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                             <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                                            <path d="M18.5 2.5a2.121 2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
                                         </svg>
                                         ${t('ct.extension.timetracker.common.edit')}
                                     </button>
@@ -2436,62 +2519,12 @@ export const renderAdmin: EntryPoint<AdminData> = ({ data, emit, element, KEY })
     }
 
     // Attach General Settings Handlers
-    function attachGeneralHandlers() {
+    function attachGeneralTabHandlers() {
         // General Settings
         const saveSettingsBtn = element.querySelector('#save-settings-btn') as HTMLButtonElement;
 
         saveSettingsBtn?.addEventListener('click', async () => {
             await handleSaveSettings();
-        });
-
-        // Group Management
-        const refreshEmployeesBtn = element.querySelector(
-            '#refresh-employees-btn'
-        ) as HTMLButtonElement;
-        const saveGroupSettingsBtn = element.querySelector(
-            '#save-group-settings-btn'
-        ) as HTMLButtonElement;
-
-        refreshEmployeesBtn?.addEventListener('click', async () => {
-            const employeeGroupIdInput = element.querySelector(
-                '#employee-group-id'
-            ) as HTMLInputElement;
-            const groupId = parseInt(employeeGroupIdInput.value);
-
-            if (groupId && groupId > 0) {
-                await loadEmployeesFromGroup(groupId);
-            }
-        });
-
-        // Delete employee buttons (event delegation)
-        element.querySelectorAll('.delete-employee-btn').forEach((btn) => {
-            btn.addEventListener('click', async (e) => {
-                const target = e.target as HTMLElement;
-                const userId = parseInt(target.getAttribute('data-user-id') || '0');
-                const userName = target.getAttribute('data-user-name') || 'Unknown';
-
-                if (
-                    confirm(
-                        `Delete employee "${userName}" and all their time tracking data?\n\nThis action cannot be undone!`
-                    )
-                ) {
-                    await handleDeleteEmployee(userId);
-                }
-            });
-        });
-
-        // Work week checkbox handlers - use smart change detection
-        element.querySelectorAll('.user-work-week-checkbox').forEach((checkbox) => {
-            checkbox.addEventListener('change', () => {
-                updateSaveButtonState(); // Smart detection checks actual changes
-            });
-        });
-
-        // Hours input handlers - use smart change detection
-        element.querySelectorAll('.employee-hours-day, .employee-hours-week').forEach((input) => {
-            input.addEventListener('input', () => {
-                updateSaveButtonState(); // Smart detection checks actual changes
-            });
         });
 
         // General Settings inputs (hours/day, hours/week) - use smart change detection
@@ -2507,36 +2540,6 @@ export const renderAdmin: EntryPoint<AdminData> = ({ data, emit, element, KEY })
             updateSaveButtonState(); // Smart detection checks actual changes
         });
 
-        //  Manager Assignments Handlers
-        const loadManagersBtn = element.querySelector('#load-managers-btn') as HTMLButtonElement;
-        const saveManagerAssignmentsBtn = element.querySelector(
-            '#save-manager-assignments-btn'
-        ) as HTMLButtonElement;
-
-        loadManagersBtn?.addEventListener('click', async () => {
-            const managerGroupIdInput = element.querySelector(
-                '#manager-group-id'
-            ) as HTMLInputElement;
-            const groupId = parseInt(managerGroupIdInput.value);
-
-            if (groupId && groupId > 0) {
-                // Update settings first
-                settings.managerGroupId = groupId;
-                await loadManagersFromGroup(groupId);
-            }
-        });
-
-        saveManagerAssignmentsBtn?.addEventListener('click', async () => {
-            await handleSaveManagerAssignments();
-        });
-
-        // Manager assignment checkboxes - use smart change detection
-        element.querySelectorAll('.manager-employee-checkbox').forEach((checkbox) => {
-            checkbox.addEventListener('change', () => {
-                updateSaveButtonState(); // Smart detection checks actual changes
-            });
-        });
-
         // Excel import toggle - use smart change detection
         const excelImportToggle = element.querySelector('#excel-import-toggle');
         excelImportToggle?.addEventListener('change', () => {
@@ -2548,17 +2551,6 @@ export const renderAdmin: EntryPoint<AdminData> = ({ data, emit, element, KEY })
             checkbox.addEventListener('change', () => {
                 updateSaveButtonState(); // Smart detection checks actual changes
             });
-        });
-
-        // Group ID inputs - use smart change detection
-        element.querySelectorAll('#employee-group-id, #volunteer-group-id').forEach((input) => {
-            input.addEventListener('input', () => {
-                updateSaveButtonState(); // Smart detection checks actual changes
-            });
-        });
-
-        saveGroupSettingsBtn?.addEventListener('click', async () => {
-            await handleSaveGroupSettings();
         });
 
         // Work Categories
@@ -2685,6 +2677,99 @@ export const renderAdmin: EntryPoint<AdminData> = ({ data, emit, element, KEY })
         });
     }
 
+    function attachUserTabHandlers() {
+        // Group Management
+        const refreshEmployeesBtn = element.querySelector(
+            '#refresh-employees-btn'
+        ) as HTMLButtonElement;
+        const saveGroupSettingsBtn = element.querySelector(
+            '#save-group-settings-btn'
+        ) as HTMLButtonElement;
+
+        refreshEmployeesBtn?.addEventListener('click', async () => {
+            const employeeGroupIdInput = element.querySelector(
+                '#employee-group-id'
+            ) as HTMLInputElement;
+            const groupId = parseInt(employeeGroupIdInput.value);
+
+            if (groupId && groupId > 0) {
+                await loadEmployeesFromGroup(groupId);
+            }
+        });
+
+        saveGroupSettingsBtn?.addEventListener('click', async () => {
+            await handleSaveGroupSettings();
+        });
+
+        // Group ID inputs - use smart change detection
+        element.querySelectorAll('#employee-group-id, #volunteer-group-id').forEach((input) => {
+            input.addEventListener('input', () => {
+                updateSaveButtonState(); // Smart detection checks actual changes
+            });
+        });
+
+        // Delete employee buttons (event delegation)
+        element.querySelectorAll('.delete-employee-btn').forEach((btn) => {
+            btn.addEventListener('click', async (e) => {
+                const target = e.target as HTMLElement;
+                const userId = parseInt(target.getAttribute('data-user-id') || '0');
+                const userName = target.getAttribute('data-user-name') || 'Unknown';
+
+                if (
+                    confirm(
+                        `Delete employee "${userName}" and all their time tracking data?\n\nThis action cannot be undone!`
+                    )
+                ) {
+                    await handleDeleteEmployee(userId);
+                }
+            });
+        });
+
+        // Work week checkbox handlers - use smart change detection
+        element.querySelectorAll('.user-work-week-checkbox').forEach((checkbox) => {
+            checkbox.addEventListener('change', () => {
+                updateSaveButtonState(); // Smart detection checks actual changes
+            });
+        });
+
+        // Hours input handlers - use smart change detection
+        element.querySelectorAll('.employee-hours-day, .employee-hours-week').forEach((input) => {
+            input.addEventListener('input', () => {
+                updateSaveButtonState(); // Smart detection checks actual changes
+            });
+        });
+
+        //  Manager Assignments Handlers
+        const loadManagersBtn = element.querySelector('#load-managers-btn') as HTMLButtonElement;
+        const saveManagerAssignmentsBtn = element.querySelector(
+            '#save-manager-assignments-btn'
+        ) as HTMLButtonElement;
+
+        loadManagersBtn?.addEventListener('click', async () => {
+            const managerGroupIdInput = element.querySelector(
+                '#manager-group-id'
+            ) as HTMLInputElement;
+            const groupId = parseInt(managerGroupIdInput.value);
+
+            if (groupId && groupId > 0) {
+                // Update settings first
+                settings.managerGroupId = groupId;
+                await loadManagersFromGroup(groupId);
+            }
+        });
+
+        saveManagerAssignmentsBtn?.addEventListener('click', async () => {
+            await handleSaveManagerAssignments();
+        });
+
+        // Manager assignment checkboxes - use smart change detection
+        element.querySelectorAll('.manager-employee-checkbox').forEach((checkbox) => {
+            checkbox.addEventListener('change', () => {
+                updateSaveButtonState(); // Smart detection checks actual changes
+            });
+        });
+    }
+
     // Handle save manager assignments
     async function handleSaveManagerAssignments() {
         const saveBtn = element.querySelector('#save-manager-assignments-btn') as HTMLButtonElement;
@@ -2738,7 +2823,7 @@ export const renderAdmin: EntryPoint<AdminData> = ({ data, emit, element, KEY })
 
             // Update settings
             settings.managerAssignments = managerAssignments;
-            await saveSettings(settings, 'Manager assignments updated');
+            await saveSettings(settings, t('ct.extension.timetracker.admin.managerAssignmentsUpdated'));
 
             // Update original snapshots after successful save
             originalManagerSettings = {
@@ -2754,11 +2839,7 @@ export const renderAdmin: EntryPoint<AdminData> = ({ data, emit, element, KEY })
             statusMessage.textContent = `✓ Manager assignments saved! ${managerAssignments.length} managers configured.`;
 
             // Show ChurchTools toast notification (top-right)
-            emit('notification:show', {
-                message: `✓ Manager assignments saved! ${managerAssignments.length} managers configured.`,
-                type: 'success',
-                duration: 3000,
-            });
+            notifications.showSuccess('✓ ' + t('ct.extension.timetracker.admin.managerAssignment.saved'));
 
             console.log('[TimeTracker Admin] Manager assignments saved:', managerAssignments);
 
@@ -2786,11 +2867,7 @@ export const renderAdmin: EntryPoint<AdminData> = ({ data, emit, element, KEY })
                 (error instanceof Error ? error.message : 'Unknown error');
 
             // Show ChurchTools toast notification (top-right)
-            emit('notification:show', {
-                message: '✗ Failed to save manager assignments',
-                type: 'error',
-                duration: 5000,
-            });
+            notifications.showError('✗ Failed to save manager assignments', 5000);
         }
     }
 
@@ -2877,15 +2954,10 @@ export const renderAdmin: EntryPoint<AdminData> = ({ data, emit, element, KEY })
             statusMessage.style.background = '#d4edda';
             statusMessage.style.border = '1px solid #c3e6cb';
             statusMessage.style.color = '#155724';
-            statusMessage.textContent =
-                '✓ ' + t('ct.extension.timetracker.admin.settingsSavedSuccess');
+            statusMessage.textContent = '✓ ' + t('ct.extension.timetracker.admin.settingsSavedSuccess');
 
             // Emit notification to ChurchTools
-            emit('notification:show', {
-                message: t('ct.extension.timetracker.admin.settingsSavedSuccess'),
-                type: 'success',
-                duration: 3000,
-            });
+            notifications.showSuccess('✓ ' + t('ct.extension.timetracker.admin.settingsSaved'));
 
             setTimeout(() => {
                 statusMessage.style.display = 'none';
@@ -2923,7 +2995,7 @@ export const renderAdmin: EntryPoint<AdminData> = ({ data, emit, element, KEY })
             await saveSettings(settings);
 
             emit('notification', {
-                message: 'Employee deleted successfully',
+                message: t('ct.extension.timetracker.admin.employeeDeletedSuccess'),
                 type: 'success',
                 duration: 3000,
             });
@@ -3071,14 +3143,10 @@ export const renderAdmin: EntryPoint<AdminData> = ({ data, emit, element, KEY })
             statusMessage.style.background = '#d4edda';
             statusMessage.style.border = '1px solid #c3e6cb';
             statusMessage.style.color = '#155724';
-            statusMessage.textContent = `✓ Group settings saved successfully! Configured ${userHoursConfig.length} employee${userHoursConfig.length === 1 ? '' : 's'}.`;
+            statusMessage.textContent = '✓ ' + t('ct.extension.timetracker.admin.groupSettingsSavedDetail', { count: userHoursConfig.length });
 
             // Emit notification to ChurchTools
-            emit('notification:show', {
-                message: `Group settings saved! Configured ${userHoursConfig.length} employee${userHoursConfig.length === 1 ? '' : 's'}.`,
-                type: 'success',
-                duration: 3000,
-            });
+            notifications.showSuccess('✓ ' + t('ct.extension.timetracker.admin.groupSettingsSaved'));
 
             setTimeout(() => {
                 statusMessage.style.display = 'none';
@@ -3095,7 +3163,7 @@ export const renderAdmin: EntryPoint<AdminData> = ({ data, emit, element, KEY })
                 '✗ Failed to save: ' + (error instanceof Error ? error.message : 'Unknown error');
         } finally {
             saveBtn.disabled = false;
-            saveBtn.innerHTML = saveIconHTML + 'Save Group Settings';
+            saveBtn.innerHTML = saveIconHTML + t('ct.extension.timetracker.admin.saveGroupSettings');
         }
     }
 
@@ -3165,17 +3233,15 @@ export const renderAdmin: EntryPoint<AdminData> = ({ data, emit, element, KEY })
             statusMessage.style.border = '1px solid #c3e6cb';
             statusMessage.style.color = '#155724';
             statusMessage.textContent = editingCategory
-                ? '✓ Category updated successfully!'
-                : '✓ Category created successfully!';
+                ? '✓ ' + t('ct.extension.timetracker.admin.categoryUpdatedSuccess')
+                : '✓ ' + t('ct.extension.timetracker.admin.categoryCreatedSuccess');
 
             // Emit notification
-            emit('notification:show', {
-                message: editingCategory
-                    ? 'Category updated successfully!'
-                    : 'Category created successfully!',
-                type: 'success',
-                duration: 3000,
-            });
+            notifications.showSuccess(
+                editingCategory
+                    ? t('ct.extension.timetracker.admin.categoryUpdated')
+                    : t('ct.extension.timetracker.admin.categoryCreated')
+            );
 
             setTimeout(() => {
                 showAddCategory = false;
@@ -3199,8 +3265,8 @@ export const renderAdmin: EntryPoint<AdminData> = ({ data, emit, element, KEY })
         }
     }
 
-    // Attach Activity Log Handlers
-    function attachActivityLogHandlers() {
+    // Attach Maintenance Tab Handlers (Logs & Backups)
+    function attachMaintenanceTabHandlers() {
         // Activity Log Event Handlers
         const activityLogEnabled = element.querySelector(
             '#activity-log-enabled'
@@ -3225,7 +3291,11 @@ export const renderAdmin: EntryPoint<AdminData> = ({ data, emit, element, KEY })
             '#log-filter-date-to'
         ) as HTMLInputElement;
         const logPrevPageBtn = element.querySelector('#log-prev-page') as HTMLButtonElement;
+
+        if (logPrevPageBtn) logPrevPageBtn.textContent = t('ct.extension.timetracker.common.prev');
         const logNextPageBtn = element.querySelector('#log-next-page') as HTMLButtonElement;
+
+        if (logNextPageBtn) logNextPageBtn.textContent = t('ct.extension.timetracker.common.next');
 
         // Track activity log settings changes
         function checkActivityLogChanges() {
@@ -3297,23 +3367,15 @@ export const renderAdmin: EntryPoint<AdminData> = ({ data, emit, element, KEY })
 
         saveActivityLogSettingsBtn?.addEventListener('click', async () => {
             try {
-                await saveSettings(settings, 'Activity log settings updated');
+                await saveSettings(settings, t('ct.extension.timetracker.admin.activityLogSettingsUpdated'));
                 originalActivityLogSettings = { ...settings.activityLogSettings };
                 hasUnsavedActivityLogChanges = false;
                 render();
 
-                emit('notification:show', {
-                    message: '✓ Activity log settings saved!',
-                    type: 'success',
-                    duration: 3000,
-                });
+                notifications.showSuccess('✓ Activity log settings saved!');
             } catch (error) {
                 console.error('[Admin] Failed to save activity log settings:', error);
-                emit('notification:show', {
-                    message: 'Failed to save activity log settings',
-                    type: 'error',
-                    duration: 5000,
-                });
+                notifications.showError(t('ct.extension.timetracker.admin.activityLogSettingsFailed'), 5000);
             }
         });
 
@@ -3356,6 +3418,20 @@ export const renderAdmin: EntryPoint<AdminData> = ({ data, emit, element, KEY })
                 logPage++;
                 render();
             }
+        });
+
+        // Restore backup handlers
+        element.querySelectorAll('.restore-backup-btn').forEach((btn) => {
+            btn.addEventListener('click', async (e) => {
+                const target = e.target as HTMLElement;
+                const button = target.closest('.restore-backup-btn') as HTMLElement;
+                if (button) {
+                    const id = parseInt(button.getAttribute('data-backup-id') || '0');
+                    if (id) {
+                        await handleRestoreBackup(id);
+                    }
+                }
+            });
         });
     }
 

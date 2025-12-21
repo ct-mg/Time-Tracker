@@ -14,6 +14,7 @@ import {
 import { initI18n, detectBrowserLanguage, t } from '../utils/i18n';
 import { renderAdmin } from './admin';
 import { showConfirmModal } from '../utils/confirmModal';
+import { NotificationService } from '../utils/notifications';
 
 /**
  * Time Tracker Main Module
@@ -113,7 +114,7 @@ interface ActivityLog {
     };
 }
 
-const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient, user, KEY }) => {
+const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient, user, KEY, emit }) => {
     // State
     let timeEntries: TimeEntry[] = [];
     let workCategories: WorkCategory[] = [];
@@ -132,6 +133,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
     let isLoading = true;
     let errorMessage = '';
     let moduleId: number | null = null;
+    const notifications = new NotificationService(emit);
 
     // Activity Log categories
     let activityLogCategory: any | null = null;
@@ -297,7 +299,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
             }
         } catch (error) {
             console.error('[TimeTracker] Refresh error:', error);
-            showNotification('Failed to refresh data. Please try again.', 'error');
+            notifications.showNotification('Failed to refresh data. Please try again.', 'error');
         }
     }
 
@@ -960,10 +962,10 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
             await loadAbsences();
             showAddAbsence = false;
             render();
-            showNotification('Absence created successfully!', 'success');
+            notifications.showNotification(t('ct.extension.timetracker.notifications.absenceCreated'), 'success');
         } catch (error) {
             console.error('[TimeTracker] Failed to create absence:', error);
-            showNotification('Failed to create absence. Please try again.', 'error');
+            notifications.showNotification(t('ct.extension.timetracker.notifications.absenceCreateFailed'), 'error');
         }
     }
 
@@ -999,10 +1001,10 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
             await loadAbsences();
             editingAbsence = null;
             render();
-            showNotification('Absence updated successfully!', 'success');
+            notifications.showNotification(t('ct.extension.timetracker.notifications.absenceUpdated'), 'success');
         } catch (error) {
             console.error('[TimeTracker] Failed to update absence:', error);
-            showNotification('Failed to update absence. Please try again.', 'error');
+            notifications.showNotification(t('ct.extension.timetracker.notifications.absenceUpdateFailed'), 'error');
         }
     }
 
@@ -1025,10 +1027,10 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
             }
 
             await refreshData();
-            showNotification(t('ct.extension.timetracker.common.success'), 'success');
+            notifications.showNotification(t('ct.extension.timetracker.common.success'), 'success');
         } catch (error) {
             console.error('[TimeTracker] Failed to delete absence:', error);
-            showNotification(t('ct.extension.timetracker.common.error'), 'error');
+            notifications.showNotification(t('ct.extension.timetracker.common.error'), 'error');
         }
     }
 
@@ -1069,7 +1071,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
             render();
         } catch (error) {
             console.error('[TimeTracker] Clock in failed:', error);
-            showNotification('Failed to clock in. Please try again.', 'error');
+            notifications.showNotification(t('ct.extension.timetracker.notifications.clockInFailed'), 'error');
         }
     }
 
@@ -1144,7 +1146,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
             render();
         } catch (error) {
             console.error('[TimeTracker] Clock out failed:', error);
-            showNotification('Failed to clock out. Please try again.', 'error');
+            notifications.showNotification(t('ct.extension.timetracker.notifications.clockOutFailed'), 'error');
             // Reload to get fresh state
             await loadTimeEntries();
             currentEntry =
@@ -1192,7 +1194,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
             render();
         } catch (error) {
             console.error('[TimeTracker] Delete entry failed:', error);
-            showNotification('Failed to delete entry. Please try again.', 'error');
+            notifications.showNotification(t('ct.extension.timetracker.notifications.deleteEntryFailed'), 'error');
         }
     }
 
@@ -1204,7 +1206,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
             const category = workCategories.find((c) => c.id === newCategoryId);
             if (!category) {
                 console.error('[TimeTracker] Category not found:', newCategoryId);
-                showNotification('Category not found', 'error');
+                notifications.showNotification(t('ct.extension.timetracker.notifications.categoryNotFound'), 'error');
                 return;
             }
 
@@ -1301,7 +1303,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
             );
 
             if (successCount > 0) {
-                showNotification(
+                notifications.showNotification(
                     t('ct.extension.timetracker.bulkEdit.success').replace(
                         '{count}',
                         successCount.toString()
@@ -1309,7 +1311,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
                     'success'
                 );
             } else {
-                showNotification('No entries were updated', 'warning');
+                notifications.showNotification(t('ct.extension.timetracker.notifications.noEntriesUpdated'), 'warning');
             }
 
             // Reset bulk edit state
@@ -1318,7 +1320,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
             render();
         } catch (error) {
             console.error('[TimeTracker] Bulk update failed:', error);
-            showNotification('Bulk update failed: ' + (error as Error).message, 'error');
+            notifications.showNotification(`${t('ct.extension.timetracker.notifications.bulkUpdateFailed')}: ${(error as Error).message}`, 'error');
         }
     }
 
@@ -1402,7 +1404,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
             );
 
             if (successCount > 0) {
-                showNotification(
+                notifications.showNotification(
                     t('ct.extension.timetracker.bulkEdit.deleteSuccess').replace(
                         '{count}',
                         successCount.toString()
@@ -1410,7 +1412,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
                     'success'
                 );
             } else {
-                showNotification('No entries were deleted', 'warning');
+                notifications.showNotification(t('ct.extension.timetracker.notifications.noEntriesDeleted'), 'warning');
             }
 
             // Reset bulk edit state and clear cache
@@ -1420,7 +1422,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
             render();
         } catch (error) {
             console.error('[TimeTracker] Bulk delete failed:', error);
-            showNotification('Bulk delete failed: ' + (error as Error).message, 'error');
+            notifications.showNotification(`${t('ct.extension.timetracker.notifications.bulkDeleteFailed')}: ${(error as Error).message}`, 'error');
         }
     }
 
@@ -1457,7 +1459,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
 
     async function saveBulkEntries() {
         if (bulkEntryRows.length === 0) {
-            showNotification('No entries to save.', 'warning');
+            notifications.showNotification(t('ct.extension.timetracker.notifications.noEntriesToSave'), 'warning');
             return;
         }
 
@@ -1470,7 +1472,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
 
             // Check required fields
             if (!row.startDate || !row.startTime || !row.endDate || !row.endTime) {
-                showNotification('All date and time fields are required.', 'error');
+                notifications.showNotification(t('ct.extension.timetracker.notifications.allFieldsRequired'), 'error');
                 return;
             }
 
@@ -1479,7 +1481,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
             const end = new Date(`${row.endDate}T${row.endTime}`);
 
             if (end <= start) {
-                showNotification('End time must be after start time for all entries.', 'error');
+                notifications.showNotification(t('ct.extension.timetracker.notifications.endAfterStart'), 'error');
                 return;
             }
 
@@ -1496,7 +1498,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
         // If there are invalid categories, show error
         if (invalidRows.length > 0) {
             const availableCategoryIds = workCategories.map((c) => `"${c.id}"`).join(', ');
-            showNotification(
+            notifications.showNotification(
                 `Invalid category IDs in row(s) ${invalidRows.join(', ')}: ${invalidCategories.join(', ')}. Available: ${availableCategoryIds}`,
                 'error',
                 7000
@@ -1562,23 +1564,23 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
 
             // Only show success message if entries were actually saved
             if (savedCount > 0) {
-                showNotification(
+                notifications.showNotification(
                     `Successfully saved ${savedCount} ${savedCount === 1 ? 'entry' : 'entries'}!`,
                     'success'
                 );
             } else {
-                showNotification('No entries were saved.', 'warning');
+                notifications.showNotification(t('ct.extension.timetracker.notifications.noEntriesSaved'), 'warning');
             }
         } catch (error) {
             console.error('[TimeTracker] Failed to save bulk entries:', error);
-            showNotification('Failed to save entries. Please try again.', 'error');
+            notifications.showNotification(t('ct.extension.timetracker.notifications.saveEntriesFailed'), 'error');
         }
     }
 
     // Download Excel template
     function downloadExcelTemplate() {
         if (workCategories.length === 0) {
-            showNotification(
+            notifications.showNotification(
                 'No categories available. Please create categories in the Admin panel first.',
                 'error'
             );
@@ -1636,7 +1638,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
                 },
             })
         );
-        showNotification(
+        notifications.showNotification(
             'Excel template downloaded! Check the "Available Categories" sheet for valid category IDs.',
             'success',
             5000
@@ -1660,7 +1662,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
                 const dataRows = rows.slice(1);
 
                 if (dataRows.length === 0) {
-                    showNotification('No data found in Excel file.', 'error');
+                    notifications.showNotification(t('ct.extension.timetracker.notifications.noDataInExcel'), 'error');
                     return;
                 }
 
@@ -1766,20 +1768,20 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
                 render();
 
                 if (skippedCount > 0) {
-                    showNotification(
+                    notifications.showNotification(
                         `Successfully imported ${importedCount} entries. ${skippedCount} rows were skipped due to missing required fields.`,
                         'success',
                         5000
                     );
                 } else {
-                    showNotification(
+                    notifications.showNotification(
                         `Successfully imported ${importedCount} entries from Excel!`,
                         'success'
                     );
                 }
             } catch (error) {
                 console.error('[TimeTracker] Failed to import Excel:', error);
-                showNotification(
+                notifications.showNotification(
                     'Failed to import Excel file. Please make sure it uses the correct template format.',
                     'error'
                 );
@@ -1787,131 +1789,13 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
         };
 
         reader.onerror = () => {
-            showNotification('Failed to read Excel file. Please try again.', 'error');
+            notifications.showNotification('Failed to read Excel file. Please try again.', 'error');
         };
 
         reader.readAsBinaryString(file);
     }
 
-    // Show notification toast
-    function showNotification(
-        message: string,
-        type: 'success' | 'error' | 'warning' = 'success',
-        duration: number = 3000
-    ) {
-        // Create or get notification container
-        let container = document.getElementById('notification-container');
-        if (!container) {
-            container = document.createElement('div');
-            container.id = 'notification-container';
-            container.style.cssText = `
-                position: fixed;
-                top: 20px;
-                right: 20px;
-                z-index: 10000;
-                display: flex;
-                flex-direction: column;
-                gap: 10px;
-                pointer-events: none;
-            `;
-            document.body.appendChild(container);
-        }
 
-        // Create notification element
-        const notification = document.createElement('div');
-        notification.style.cssText = `
-            padding: 1rem 1.5rem;
-            padding-right: ${type !== 'success' ? '3rem' : '1.5rem'};
-            background: ${type === 'success' ? '#28a745' : type === 'error' ? '#dc3545' : '#ffc107'};
-            color: white;
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-            font-weight: 600;
-            max-width: 400px;
-            animation: slideIn 0.3s ease-out;
-            position: relative;
-            pointer-events: auto;
-        `;
-        // Add close button for errors and warnings
-        if (type !== 'success') {
-            const closeButton = document.createElement('button');
-            closeButton.innerHTML = '✕';
-            closeButton.style.cssText = `
-                position: absolute;
-                top: 0.5rem;
-                right: 0.5rem;
-                background: transparent;
-                border: none;
-                color: white;
-                font-size: 1.2rem;
-                cursor: pointer;
-                padding: 0.25rem 0.5rem;
-                line-height: 1;
-                opacity: 0.8;
-                transition: opacity 0.2s;
-            `;
-            closeButton.onmouseover = () => (closeButton.style.opacity = '1');
-            closeButton.onmouseout = () => (closeButton.style.opacity = '0.8');
-            closeButton.onclick = () => {
-                notification.style.animation = 'slideOut 0.3s ease-out';
-                setTimeout(() => {
-                    if (container?.contains(notification)) {
-                        container.removeChild(notification);
-                    }
-                }, 300);
-            };
-            notification.appendChild(closeButton);
-        }
-
-        // Add message text
-        const messageSpan = document.createElement('span');
-        messageSpan.textContent = message;
-        messageSpan.style.cssText = 'display: block;';
-        notification.appendChild(messageSpan);
-
-        // Add animation styles (only once)
-        if (!document.head.querySelector('style[data-notification-styles]')) {
-            const style = document.createElement('style');
-            style.setAttribute('data-notification-styles', 'true');
-            style.textContent = `
-                @keyframes slideIn {
-                    from {
-                        transform: translateX(400px);
-                        opacity: 0;
-                    }
-                    to {
-                        transform: translateX(0);
-                        opacity: 1;
-                    }
-                }
-                @keyframes slideOut {
-                    from {
-                        transform: translateX(0);
-                        opacity: 1;
-                    }
-                    to {
-                        transform: translateX(400px);
-                        opacity: 0;
-                    }
-                }
-            `;
-            document.head.appendChild(style);
-        }
-
-        container.appendChild(notification);
-
-        // Auto-remove only for success messages
-        if (type === 'success') {
-            setTimeout(() => {
-                notification.style.animation = 'slideOut 0.3s ease-out';
-                setTimeout(() => {
-                    if (container?.contains(notification)) {
-                        container.removeChild(notification);
-                    }
-                }, 300);
-            }, duration);
-        }
-    }
 
     // Timer update interval
     let timerInterval: number | null = null;
@@ -2403,7 +2287,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
                             off: () => { },
                             emit: (event: string, payload: any) => {
                                 if (event === 'notification:show') {
-                                    showNotification(payload.message, payload.type);
+                                    notifications.showNotification(payload.message, payload.type);
                                 }
                             },
                         });
@@ -4027,7 +3911,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
             refreshBtn.innerHTML = originalContent;
             refreshBtn.disabled = false;
             refreshBtn.style.opacity = '1';
-            showNotification('Data refreshed successfully!', 'success');
+            notifications.showNotification(t('ct.extension.timetracker.notifications.dataRefreshed'), 'success');
         });
 
         // View switchers
@@ -4437,7 +4321,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
             const isBreakCheckbox = element.querySelector('#manual-is-break') as HTMLInputElement;
 
             if (!startInput.value || !endInput.value) {
-                showNotification('Please fill in both start and end times.', 'error');
+                notifications.showNotification(t('ct.extension.timetracker.common.fillBothTimes'), 'error');
                 return;
             }
 
@@ -4445,7 +4329,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
             const end = new Date(endInput.value);
 
             if (end <= start) {
-                showNotification('End time must be after start time.', 'error');
+                notifications.showNotification(t('ct.extension.timetracker.common.endAfterStart'), 'error');
                 return;
             }
 
@@ -4510,8 +4394,8 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
                     showAddManualEntry = false; // Close form after update
                     await refreshData(); // Full refresh like green button - reloads all data and clears cache
                     render(); // Refresh UI to show updated entry
-                    showNotification(
-                        t('ct.extension.timetracker.common.success') + ': Entry updated!',
+                    notifications.showNotification(
+                        t('ct.extension.timetracker.notifications.entryUpdated'),
                         'success'
                     );
                 } else {
@@ -4561,7 +4445,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
                 render();
             } catch (error) {
                 console.error('[TimeTracker] Failed to save entry:', error);
-                showNotification('Failed to save entry. Please try again.', 'error');
+                notifications.showNotification(t('ct.extension.timetracker.notifications.saveEntryFailed'), 'error');
             }
         });
 
@@ -4725,7 +4609,7 @@ const mainEntryPoint: EntryPoint<MainModuleData> = ({ element, churchtoolsClient
             const allDayCheckbox = element.querySelector('#absence-all-day') as HTMLInputElement;
 
             if (!startDateInput?.value || !endDateInput?.value || !reasonSelect?.value) {
-                showNotification('Please fill in all required fields.', 'error');
+                notifications.showNotification(t('ct.extension.timetracker.notifications.fillAllFields'), 'error');
                 return;
             }
 
