@@ -1,0 +1,9 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Ensure the extension root has position relative for accurate absolute positioning of children */
+#time-tracker-root {
+  position: relative;
+  min-height: 100%;
+}

@@ -9,7 +9,7 @@ import type {
     CustomModuleDataCategoryCreate,
     CustomModuleDataValue,
     CustomModuleDataValueCreate,
-} from './ct-types';
+} from '../types/churchtools';
 
 /**
  * ────────────────────────────────────────────────
@@ -123,7 +123,7 @@ export async function getCustomDataCategories<T extends object>(
  */
 export async function getCustomDataCategory<T extends object>(
     shorty: string
-): Promise<CustomModuleDataCategory | undefined> {
+): Promise<(T & Omit<CustomModuleDataCategory, 'data'>) | undefined> {
     const categories = await getCustomDataCategories<T>();
     return categories.find((category) => category.shorty === shorty);
 }

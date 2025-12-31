@@ -1,0 +1,37 @@
+{
+  "$schema": "./manifest.schema.json",
+  "name": "Time Tracker",
+  "key": "timetracker",
+  "version": "1.0.0",
+  "description": "Comprehensive time tracking tool for church employees with clock in/out, manual entries, reports, and absence integration",
+  "author": {
+    "name": "ChurchTools Innovations GmbH",
+    "email": "info@church.tools",
+    "url": "https://church.tools"
+  },
+  "homepage": "https://github.com/churchtools/timetracker-extension",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/churchtools/timetracker-extension.git"
+  },
+  "license": "MIT",
+  "extensionPoints": [
+    {
+      "id": "main",
+      "entryPoint": "main",
+      "title": "Time Tracker",
+      "description": "Track working hours, view reports, and manage time entries"
+    },
+    {
+      "id": "admin",
+      "entryPoint": "admin",
+      "title": "Time Tracker Settings",
+      "description": "Configure work categories, default hours, and overtime rules"
+    }
+  ],
+  "permissions": [
+    "churchdb view",
+    "churchdb edit"
+  ],
+  "minChurchToolsVersion": "3.0.0"
+}

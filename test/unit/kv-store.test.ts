@@ -4,7 +4,7 @@ import {
     createCustomDataValue,
     updateCustomDataValue,
     deleteCustomDataValue,
-} from '../../src/utils/kv-store';
+} from '../../src/services/kv-store';
 import {
     mockChurchtoolsClient,
     resetMocks,
@@ -36,7 +36,7 @@ vi.mock('../../src/lib/main', () => ({
 
 // Mock getModule function from kv-store
 vi.mock('../../src/utils/kv-store', async () => {
-    const actual = await vi.importActual<typeof import('../../src/utils/kv-store')>(
+    const actual = await vi.importActual<typeof import('../../src/services/kv-store')>(
         '../../src/utils/kv-store'
     );
     return {

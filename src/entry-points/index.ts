@@ -29,7 +29,7 @@ export type EntryPointLoader = () => Promise<{ default: EntryPoint }>;
  */
 export const entryPointRegistry: Record<string, EntryPointLoader> = {
     // Admin configuration entry point
-    admin: () => import('./admin'),
+    // admin: () => import('./admin'),
 
     // Main module entry point
     main: () => import('./main'),
