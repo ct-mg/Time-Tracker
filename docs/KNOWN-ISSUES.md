@@ -12,9 +12,6 @@ Dieses Dokument enthält alle bekannten Probleme der Time Tracker Extension mit 
 
 ---
 
-## ⚠️ Version 2.0 Update
-
-**Hinweis:** Viele der unten genannten Logik-Bugs (wie "Missing State Flag") sind durch die deklarative Natur von Vue 3 obsolet geworden. Die API-spezifischen Probleme (KV-Store ID) bleiben jedoch relevant und müssen beachtet werden.
 
 ---
 
@@ -545,7 +542,6 @@ for (const entry of timeEntries) {
 
 ---
 
-**Letzte Aktualisierung:** 2025-01-22
-**Version:** 1.0
-**Gelöste Probleme:** 4 Critical Issues
+**Letzte Aktualisierung:** 2026-01-08
+**Version:** 2.0.0
 **Status:** ✅ Alle bekannten Issues gelöst

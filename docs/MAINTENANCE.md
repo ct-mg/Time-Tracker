@@ -626,6 +626,5 @@ npm run build
 
 ---
 
-**Maintainer:** Entwickelt mit Claude (Anthropic)
-**Letzte Aktualisierung:** 2025-01-22
-**Version:** 1.0
+**Letzte Aktualisierung:** 2026-01-08
+**Version:** 2.0.0

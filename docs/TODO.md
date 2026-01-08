@@ -238,7 +238,7 @@
 - Übersetzungen für alle UI-Texte
 - Persistence: User kann Sprache manuell wählen (override browser setting)
 
-**Status:** Feature Request aus Claude Code Konversation
+**Status:** Feature Request
 **Aufwand:** Hoch
 **User Impact:** Hoch (internationale Nutzung möglich)
 
@@ -749,6 +749,5 @@ _Keine kritischen technischen Schulden aktuell_
 
 ---
 
-**Maintainer:** Entwickelt mit Claude (Anthropic)
-**Letzte Aktualisierung:** 2025-01-22
-**Version:** 1.0
+**Letzte Aktualisierung:** 2026-01-08
+**Version:** 2.0.0

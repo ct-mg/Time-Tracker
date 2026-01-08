@@ -4,25 +4,26 @@
 
 ---
 
-## ⚠️ Version 2.0: Vue 3 Architecture (Current)
+---
 
-**Seit Januar 2026 ist die Extension komplett auf Vue 3 und Pinia migriert.**
+## Architecture & Design Decisions
 
 ### Core Architecture
 - **Framework:** Vue 3 (Composition API)
 - **State Management:** Pinia Stores (`src/stores/*.ts`)
-- **Styling:** Tailwind CSS (via `index.css`)
+- **Styling:** Tailwind CSS
 - **Build Tool:** Vite
 
 ### Store Structure
-Anstatt globaler Variablen in `main.ts` nutzen wir nun dedizierte Stores:
+Anstatt globaler Variablen nutzen wir dedizierte Stores:
 1.  `time-entries.store.ts`: Verwaltet Einträge, CRUD, Timer-Logik.
 2.  `settings.store.ts`: Verwaltet Settings, Theme, User Configuration.
 3.  `auth.store.ts`: Verwaltet User-Session und Permissions.
 4.  `absences.store.ts`: Verwaltet Abwesenheiten.
 
-### Legacy Context (Version 1.x)
-Die untenstehenden "Critical Design Decisions" stammen aus der v1.x (Vanilla TS) Ära. **Die Prinzipien gelten weiterhin**, insbesondere bezüglich des ChurchTools KV-Store Verhaltens (ID-Bug), aber die Implementierung (File Paths) hat sich geändert.
+---
+
+## Übersicht
 
 ---
 
@@ -525,6 +526,3 @@ Diese Architektur-Entscheidungen folgen bestimmten Prinzipien:
 
 ---
 
-**Letzte Aktualisierung:** 2026-01-08 (Vue 3 Migration Update)  
-**Version:** 2.0.0  
-**Status:** ✅ Dokumentation an Vue 3 / Pinia angepasst

@@ -345,6 +345,5 @@ docs/
 
 ---
 
-**Maintainer:** Entwickelt mit Claude (Anthropic)
 **Letzte Aktualisierung:** 2025-01-22
 **Version:** 2.0 - Modular Structure (7 Project Docs)

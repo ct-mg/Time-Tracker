@@ -35,5 +35,5 @@ Diese Richtlinien definieren das visuelle und funktionale Design der Time Tracke
 
 ---
 
-**Letzte Aktualisierung:** 2026-01-08  
+**Letzte Aktualisierung:** 2026-01-08
 **Status:** ✅ Aktiv
