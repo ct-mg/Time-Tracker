@@ -348,6 +348,6 @@ feat: add internationalization support (i18n)
 
 ---
 
-**Letzte Aktualisierung:** 2025-11-23
+**Letzte Aktualisierung:** 2026-01-08
 **Maintainer:** Entwickelt mit Claude (Anthropic) und Gemini (Google DeepMind)
-**Version:** 1.8.0
+**Version:** 2.0.0

@@ -30,8 +30,9 @@ Die Funktion hat einen Bug: Spread-Operator überschreibt String-IDs mit numeris
 - ✅ Extrahiere kvStoreId separat: `kvStoreId: rawVal.id`
 
 **Wo betroffen:**
-- `main.ts`: `loadWorkCategories()`, `loadTimeEntries()`
-- `admin.ts`: `loadWorkCategories()`
+**Wo betroffen:**
+- `src/stores/time-entries.store.ts`
+- `src/stores/settings.store.ts`
 
 **Wenn du diesen Fehler machst:**
 - Kategorien können nach Reload nicht mehr bearbeitet/gelöscht werden
@@ -617,8 +618,9 @@ npm run build
 5. ✅ Regelmäßig committen - nicht alles auf einmal!
 
 ### Kritische Files
-- `src/entry-points/main.ts` - Hauptlogik (2300+ Zeilen) - VORSICHT!
-- `src/entry-points/admin.ts` - Admin-Panel (900+ Zeilen)
+### Kritische Files
+- `src/stores/*.ts` - Business Logik (State Management)
+- `src/components/**/*.vue` - UI Komponenten
 - `src/utils/kv-store.ts` - **NICHT ÄNDERN** (Hat den ID-Bug)
 - `docs/` - **IMMER AKTUELL HALTEN**
 

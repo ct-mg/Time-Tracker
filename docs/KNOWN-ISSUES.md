@@ -12,6 +12,12 @@ Dieses Dokument enthält alle bekannten Probleme der Time Tracker Extension mit 
 
 ---
 
+## ⚠️ Version 2.0 Update
+
+**Hinweis:** Viele der unten genannten Logik-Bugs (wie "Missing State Flag") sind durch die deklarative Natur von Vue 3 obsolet geworden. Die API-spezifischen Probleme (KV-Store ID) bleiben jedoch relevant und müssen beachtet werden.
+
+---
+
 ## Problem 1: Kategorien nicht löschbar nach Reload
 
 ### Symptome

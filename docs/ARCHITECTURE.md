@@ -4,6 +4,28 @@
 
 ---
 
+## ⚠️ Version 2.0: Vue 3 Architecture (Current)
+
+**Seit Januar 2026 ist die Extension komplett auf Vue 3 und Pinia migriert.**
+
+### Core Architecture
+- **Framework:** Vue 3 (Composition API)
+- **State Management:** Pinia Stores (`src/stores/*.ts`)
+- **Styling:** Tailwind CSS (via `index.css`)
+- **Build Tool:** Vite
+
+### Store Structure
+Anstatt globaler Variablen in `main.ts` nutzen wir nun dedizierte Stores:
+1.  `time-entries.store.ts`: Verwaltet Einträge, CRUD, Timer-Logik.
+2.  `settings.store.ts`: Verwaltet Settings, Theme, User Configuration.
+3.  `auth.store.ts`: Verwaltet User-Session und Permissions.
+4.  `absences.store.ts`: Verwaltet Abwesenheiten.
+
+### Legacy Context (Version 1.x)
+Die untenstehenden "Critical Design Decisions" stammen aus der v1.x (Vanilla TS) Ära. **Die Prinzipien gelten weiterhin**, insbesondere bezüglich des ChurchTools KV-Store Verhaltens (ID-Bug), aber die Implementierung (File Paths) hat sich geändert.
+
+---
+
 ## Übersicht
 
 Dieses Dokument beschreibt die 5 kritischen Architektur-Entscheidungen der Time Tracker Extension. Diese Entscheidungen wurden aus gutem Grund getroffen und dürfen nicht rückgängig gemacht werden, da bereits Workarounds und Fixes implementiert wurden.
@@ -38,9 +60,11 @@ Die KV-Store Helper-Funktion `getCustomDataValues<T>()` in `src/utils/kv-store.t
 
 ### Wo implementiert
 
-- `src/stores/time-entries.store.ts`: `loadWorkCategories()` (Zeilen 60-90)
-- `src/stores/time-entries.store.ts`: `loadTimeEntries()` (Zeilen 93-146)
+### Wo implementiert
+
+- `src/stores/time-entries.store.ts`: `loadTimeEntries()`
 - `src/stores/settings.store.ts`: `loadSettings()`
+- `src/utils/kv-store.ts`: (Helper, aber Vorsicht!)
 
 ### Warum diese Lösung
 
@@ -161,9 +185,9 @@ WorkCategory benötigt zwei verschiedene IDs für unterschiedliche Zwecke.
 
 ### Wo implementiert
 
-- `src/components/base/BaseModal.vue`: Basis-Struktur
-- `src/utils/animations.ts`: Slide-in/out Logik
-- In Vue 3 wird das Notification-Zustand über einen Store oder ein Composable gesteuert (z.B. in `App.vue` für globale Anzeigen).
+- `src/components/base/ToastContainer.vue`: Container für Notifications
+- `src/composables/useNotifications.ts`: Logik für das Anzeigen von Toasts
+- `src/utils/animations.ts`: Animation definitions
 
 ### Warum diese Lösung
 
