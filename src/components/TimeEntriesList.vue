@@ -4,6 +4,7 @@ import { useTimeEntries } from '../composables/useTimeEntries';
 import { useTimeEntriesStore } from '../stores/time-entries.store';
 import { useSettingsStore } from '../stores/settings.store';
 import TimeEntryItem from './TimeEntryItem.vue';
+import BulkActionsToolbar from './BulkActionsToolbar.vue';
 import { listTransition } from '../utils/animations';
 
 const { groupedEntries } = useTimeEntries();
@@ -18,6 +19,38 @@ const emit = defineEmits<{
 
 function handleEdit(entry: any) {
     emit('edit', entry);
+}
+
+// Select All functionality
+const allVisibleEntryIds = computed(() => {
+    const ids: string[] = [];
+    groupedEntries.value.forEach(group => {
+        group.sortedDays.forEach(day => {
+            day.entries.forEach(entry => {
+                if (entry.endTime) { // Only selectable if not active
+                    ids.push(entry.startTime);
+                }
+            });
+        });
+    });
+    return ids;
+});
+
+const allSelected = computed(() => {
+    if (allVisibleEntryIds.value.length === 0) return false;
+    return allVisibleEntryIds.value.every(id => store.selectedEntryIds.includes(id));
+});
+
+const someSelected = computed(() => {
+    return store.selectedEntryIds.length > 0 && !allSelected.value;
+});
+
+function toggleSelectAll() {
+    if (allSelected.value) {
+        store.clearSelection();
+    } else {
+        store.selectAll(allVisibleEntryIds.value);
+    }
 }
 
 async function handleDelete(entry: any) {
@@ -97,6 +130,16 @@ async function handleDelete(entry: any) {
                         <table class="w-full text-left border-collapse">
                             <thead>
                                 <tr class="bg-gray-50/50 dark:bg-gray-800/50 border-b border-gray-100 dark:border-gray-700 text-xs text-gray-500 uppercase tracking-wider">
+                                    <th class="p-3 w-12">
+                                        <input 
+                                            type="checkbox" 
+                                            :checked="allSelected"
+                                            :indeterminate.prop="someSelected"
+                                            @change="toggleSelectAll"
+                                            class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 cursor-pointer"
+                                            title="Select All"
+                                        />
+                                    </th>
                                     <th class="px-3 py-2">Start</th>
                                     <th class="px-3 py-2">End</th>
                                     <th class="px-3 py-2">Duration</th>
@@ -122,5 +165,8 @@ async function handleDelete(entry: any) {
             </div>
             </div>
         </TransitionGroup>
+
+        <!-- Bulk Actions Toolbar -->
+        <BulkActionsToolbar />
     </div>
 </template>

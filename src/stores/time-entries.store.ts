@@ -27,6 +27,9 @@ export const useTimeEntriesStore = defineStore('timeEntries', () => {
     const selectedCategoryIds = ref<string[]>([]);
     const selectedUserIds = ref<number[]>([]);
 
+    // Bulk Actions State
+    const selectedEntryIds = ref<string[]>([]); // Using startTime as unique ID
+
     const settingsStore = useSettingsStore();
     const authStore = useAuthStore();
 
@@ -405,6 +408,80 @@ export const useTimeEntriesStore = defineStore('timeEntries', () => {
         }
     }
 
+    // Bulk Actions
+    function selectEntry(entryId: string) {
+        const index = selectedEntryIds.value.indexOf(entryId);
+        if (index > -1) {
+            selectedEntryIds.value.splice(index, 1);
+        } else {
+            selectedEntryIds.value.push(entryId);
+        }
+    }
+
+    function selectAll(entryIds: string[]) {
+        selectedEntryIds.value = [...entryIds];
+    }
+
+    function clearSelection() {
+        selectedEntryIds.value = [];
+    }
+
+    async function bulkDeleteEntries(moduleId: number, entryIds: string[]) {
+        try {
+            const cat = await getCustomDataCategory<object>('timeentries');
+            if (!cat) throw new Error('Category not found');
+
+            const allValues = await getCustomDataValues<TimeEntry>(cat.id, moduleId);
+
+            for (const entryId of entryIds) {
+                const match = allValues.find(v => v.startTime === entryId);
+                if (match) {
+                    await deleteCustomDataValue(cat.id, (match as any).id, moduleId);
+                }
+            }
+
+            // Remove from local state
+            entries.value = entries.value.filter(e => !entryIds.includes(e.startTime));
+
+            // Clear selection
+            clearSelection();
+        } catch (e) {
+            console.error('Failed to bulk delete entries', e);
+            throw e;
+        }
+    }
+
+    async function bulkUpdateEntries(moduleId: number, entryIds: string[], updates: Partial<TimeEntry>) {
+        try {
+            const cat = await getCustomDataCategory<object>('timeentries');
+            if (!cat) throw new Error('Category not found');
+
+            const allValues = await getCustomDataValues<TimeEntry>(cat.id, moduleId);
+
+            for (const entryId of entryIds) {
+                const match = allValues.find(v => v.startTime === entryId);
+                if (match) {
+                    const updated = { ...match, ...updates };
+                    await updateCustomDataValue(cat.id, (match as any).id, {
+                        value: JSON.stringify(updated)
+                    }, moduleId);
+
+                    // Update local state
+                    const idx = entries.value.findIndex(e => e.startTime === entryId);
+                    if (idx !== -1) {
+                        entries.value[idx] = { ...entries.value[idx], ...updates };
+                    }
+                }
+            }
+
+            // Clear selection
+            clearSelection();
+        } catch (e) {
+            console.error('Failed to bulk update entries', e);
+            throw e;
+        }
+    }
+
     return {
         entries,
         workCategories,
@@ -428,6 +505,13 @@ export const useTimeEntriesStore = defineStore('timeEntries', () => {
         saveWorkCategory,
         deleteWorkCategory,
         loadActivityLogs,
-        cleanOldActivityLogs
+        cleanOldActivityLogs,
+        // Bulk Actions
+        selectedEntryIds,
+        selectEntry,
+        selectAll,
+        clearSelection,
+        bulkDeleteEntries,
+        bulkUpdateEntries
     };
 });

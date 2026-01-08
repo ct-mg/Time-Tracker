@@ -2,6 +2,7 @@
 import { computed } from 'vue';
 import type { TimeEntry, WorkCategory } from '../types/time-tracker';
 import { formatDuration } from '../utils/date';
+import { useTimeEntriesStore } from '../stores/time-entries.store';
 // import { useAuthStore } from '../stores/auth.store';
 
 const props = defineProps<{
@@ -13,6 +14,14 @@ const emit = defineEmits<{
     (e: 'edit', entry: TimeEntry): void;
     (e: 'delete', entry: TimeEntry): void;
 }>();
+
+const store = useTimeEntriesStore();
+
+const isSelected = computed(() => store.selectedEntryIds.includes(props.entry.startTime));
+
+function toggleSelection() {
+    store.selectEntry(props.entry.startTime);
+}
 
 // const authStore = useAuthStore();
 
@@ -35,7 +44,16 @@ const isActive = computed(() => !props.entry.endTime);
 </script>
 
 <template>
-    <tr class="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+    <tr :class="['border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors', isSelected ? 'bg-blue-50 dark:bg-blue-900/20' : '']">
+        <!-- Selection Checkbox -->
+        <td class="p-3 w-12">
+            <input 
+                type="checkbox" 
+                :checked="isSelected"
+                @change="toggleSelection"
+                class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 cursor-pointer"
+            />
+        </td>
         <td class="p-3 text-sm text-gray-700 dark:text-gray-300">
             {{ startTime }}
         </td>
