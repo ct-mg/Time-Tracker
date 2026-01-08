@@ -41,18 +41,6 @@ Die Funktion hat einen Bug: Spread-Operator überschreibt String-IDs mit numeris
 
 ---
 
-### 2. ⚠️ Event Handler bei JEDEM Render neu attachen
-
-**Warum?**
-HTML wird bei jedem Render komplett neu generiert. Event Listener werden dabei entfernt.
-
-**Was zu tun ist:**
-- ✅ Rufe `attachEventHandlers()` IMMER nach `element.innerHTML = ...` auf
-- ✅ Verwende Event Delegation wenn möglich
-
-**Symptom wenn falsch:**
-- Buttons reagieren nicht auf Klicks
-- Edit/Delete funktioniert nur einmal
 
 ---
 
@@ -89,14 +77,14 @@ HTML wird bei jedem Render komplett neu generiert. Event Listener werden dabei e
 
 ---
 
-### 5. ⚠️ Reload nach DB-Änderungen
+### 4. ⚠️ Refresh Store Data nach DB-Updates
 
 **Warum?**
-Lokale State kann out-of-sync mit DB sein.
+Lokaler Store-State kann nach API-Writes out-of-sync mit der DB sein.
 
 **Was zu tun ist:**
-- ✅ Nach jedem Create/Update/Delete: `await load...()` aufrufen
-- ✅ Nach Load: `render()` aufrufen
+- ✅ Nach jedem Create/Update/Delete: Store Action (z.B. `fetchAll()`) aufrufen.
+- ✅ Optimistic UI Updates sind erlaubt, aber sollten verifiziert werden.
 
 ---
 
@@ -513,13 +501,6 @@ npm run build
 
 ---
 
-### Edit/Delete Buttons reagieren nicht
-
-**Diagnose:**
-- Event Handlers nicht attached nach Render
-
-**Fix:**
-- `attachEventHandlers()` nach jedem `render()` aufrufen
 
 ---
 
@@ -545,9 +526,8 @@ npm run build
 4. `render()` aufgerufen nach Import?
 
 **Common Mistakes:**
-- `showBulkEntry = true` vergessen
-- `render()` nicht aufgerufen
-- Category Matching fehlschlägt (case-sensitive)
+- Reactive State wird nicht updated
+- Asynchrone Operationen nichtawaited
 
 ---
 
