@@ -14,8 +14,45 @@ export const useSettingsStore = defineStore('settings', () => {
     const error = ref<string | null>(null);
     const moduleId = ref<number | null>(null);
 
+    // Theme Management
+    const theme = ref<'light' | 'dark' | 'system'>('system');
+
+    function applyTheme() {
+        const isDark = theme.value === 'dark' || (theme.value === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+
+        if (isDark) {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+    }
+
+    function setTheme(newTheme: 'light' | 'dark' | 'system') {
+        theme.value = newTheme;
+        localStorage.setItem('churchtools-tracker-theme', newTheme);
+        applyTheme();
+    }
+
+    function initTheme() {
+        const stored = localStorage.getItem('churchtools-tracker-theme') as any;
+        if (stored && ['light', 'dark', 'system'].includes(stored)) {
+            theme.value = stored;
+        } else {
+            theme.value = 'system';
+        }
+        applyTheme();
+
+        // Listen for system changes
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+            if (theme.value === 'system') {
+                applyTheme();
+            }
+        });
+    }
+
     // Initial load
     async function init(key: string) {
+        initTheme();
         isLoading.value = true;
         try {
             const module = await getModule(key);
@@ -39,9 +76,10 @@ export const useSettingsStore = defineStore('settings', () => {
                 if (values.length > 0) {
                     // Update generic settings, merging with default to ensure new fields are present
                     settings.value = { ...settings.value, ...values[0] };
-
-                    // Handle special cases handled in legacy code (like report period)
-                    // The view will read from this store directly.
+                    // Clean up legacy darkMode if present in local state overlap
+                    if ((settings.value as any).darkMode !== undefined) {
+                        delete (settings.value as any).darkMode;
+                    }
                 }
             }
         } catch (e) {
@@ -83,9 +121,14 @@ export const useSettingsStore = defineStore('settings', () => {
         settings,
         isLoading,
         error,
+        moduleId,
+        // Theme exports
+        theme,
+        setTheme,
+        // Core Actions
         loadSettings,
         saveSettings,
         init,
-        moduleId
+        initTheme,
     };
 });

@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue';
 import type { TimeEntry, WorkCategory } from '../types/time-tracker';
+import { useToastStore } from '../stores/toast.store';
+
+const toastStore = useToastStore();
 
 const props = defineProps<{
     modelValue: boolean; // Is open
@@ -57,7 +60,7 @@ function save() {
     if (!startTime.value || !categoryId.value) return;
 
     if (endTime.value && new Date(startTime.value) > new Date(endTime.value)) {
-        alert('End time cannot be before start time.');
+        toastStore.error('End time cannot be before start time.');
         return;
     }
 

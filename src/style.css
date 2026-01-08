@@ -5,7 +5,10 @@
 /* Ensure the extension root has position relative for accurate absolute positioning of children */
 #time-tracker-root {
   position: relative;
-  min-height: 100vh;
+  width: 100%;
+  height: 100%;
   overflow-y: auto;
   overflow-x: hidden;
+  /* Ensure smooth scrolling on iOS */
+  -webkit-overflow-scrolling: touch;
 }

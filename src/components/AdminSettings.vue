@@ -3,11 +3,13 @@ import { ref, computed } from 'vue';
 import { useSettingsStore } from '../stores/settings.store';
 import { useAuthStore } from '../stores/auth.store';
 import type { UserHoursConfig } from '../types/time-tracker';
+import { useToastStore } from '../stores/toast.store';
 import AdminCategoryManager from './AdminCategoryManager.vue';
 import AdminActivityLogs from './AdminActivityLogs.vue';
 
 const settingsStore = useSettingsStore();
 const authStore = useAuthStore();
+const toastStore = useToastStore();
 
 const activeTab = ref<'general' | 'categories' | 'logs'>('general');
 
@@ -63,6 +65,7 @@ function deleteConfig(userId: number) {
     if (confirm('Remove custom settings for this user?')) {
         userConfigs.value = userConfigs.value.filter(c => c.userId !== userId);
         settings.value.userHoursConfig = userConfigs.value;
+        toastStore.info('Custom user settings removed');
     }
 }
 
@@ -96,9 +99,9 @@ async function saveAllSettings() {
         // Update store state
         settingsStore.settings = settings.value;
         await settingsStore.saveSettings();
-        alert('Settings saved successfully!');
+        toastStore.success('Settings saved successfully!');
     } catch (e) {
-        alert('Failed to save settings.');
+        toastStore.error('Failed to save settings.');
     }
 }
 </script>

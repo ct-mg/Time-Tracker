@@ -38,9 +38,9 @@ Die KV-Store Helper-Funktion `getCustomDataValues<T>()` in `src/utils/kv-store.t
 
 ### Wo implementiert
 
-- `main.ts` Zeilen 150-164: `loadWorkCategories()`
-- `main.ts` Zeilen 200-220: `loadTimeEntries()`
-- `admin.ts` Zeilen 157-184: `loadWorkCategories()`
+- `src/stores/time-entries.store.ts`: `loadWorkCategories()` (Zeilen 60-90)
+- `src/stores/time-entries.store.ts`: `loadTimeEntries()` (Zeilen 93-146)
+- `src/stores/settings.store.ts`: `loadSettings()`
 
 ### Warum diese Lösung
 
@@ -106,8 +106,8 @@ WorkCategory benötigt zwei verschiedene IDs für unterschiedliche Zwecke.
 
 ### Wo implementiert
 
-- `main.ts` Zeilen 260-290: `saveWorkCategory()`
-- `admin.ts` Zeilen 250-300: `saveCategory()`, `deleteCategory()`
+- `src/stores/time-entries.store.ts`: `saveWorkCategory()`, `deleteWorkCategory()`
+- `src/types/time-tracker.ts`: Interfaces `TimeEntry` und `WorkCategory`
 
 ### Warum diese Lösung
 
@@ -161,8 +161,9 @@ WorkCategory benötigt zwei verschiedene IDs für unterschiedliche Zwecke.
 
 ### Wo implementiert
 
-- `main.ts` Zeilen 100-150: `showNotification()` Function
-- `admin.ts` Zeilen 80-130: `showNotification()` Function
+- `src/components/base/BaseModal.vue`: Basis-Struktur
+- `src/utils/animations.ts`: Slide-in/out Logik
+- In Vue 3 wird das Notification-Zustand über einen Store oder ein Composable gesteuert (z.B. in `App.vue` für globale Anzeigen).
 
 ### Warum diese Lösung
 
@@ -232,8 +233,8 @@ User wünscht Dropdown in Excel für Category-Auswahl, aber xlsx Library unterst
 
 ### Wo implementiert
 
-- `main.ts` Zeilen 400-500: `importFromExcel()`
-- `main.ts` Zeilen 550-650: `saveBulkEntries()` mit Validierung
+- `src/components/BulkEntry.vue` (oder äquivalent in Vue 3)
+- Validierungs-Logik in den entsprechenden Actions/Composables.
 
 ### Warum diese Lösung
 
@@ -292,10 +293,7 @@ Bevor eine Kategorie gelöscht wird, müssen alle Zeiteinträge einer anderen Ka
 
 ### Wo implementiert
 
-- `admin.ts` Zeilen 400-450: `initiateDeleteCategory()`
-- `admin.ts` Zeilen 450-500: `countEntriesUsingCategory()`
-- `admin.ts` Zeilen 500-600: `reassignTimeEntries()`
-- `admin.ts` Zeilen 600-650: `confirmDeleteCategory()`
+- `src/stores/time-entries.store.ts`: `deleteWorkCategory()` mit der Logik zum Reassignment der Einträge.
 
 ### Warum diese Lösung
 
@@ -363,9 +361,9 @@ interface UserHoursConfig {
 
 ### Wo implementiert
 
-- `main.ts` Zeilen 244-291: `checkUserAccess()`, `getUserHours()`
-- `admin.ts` Zeilen 282-373: `loadEmployeesFromGroup()`
-- Settings Interface Zeilen 39-62
+- `src/stores/settings.store.ts`: `checkUserAccess()`, `loadSettings()`
+- `src/components/AdminSettings.vue`: UI für die Konfiguration
+- `src/types/time-tracker.ts`: `UserHoursConfig` Interface
 
 ### Warum diese Lösung
 
@@ -424,10 +422,9 @@ Benutzer wollen Pausen erfassen, aber NICHT mit gesetzlichen Regelungen kämpfen
 
 ### Wo implementiert
 
-- TimeEntry Interface Zeile 35: `isBreak: boolean`
-- `main.ts` Clock-In Dialog: Break Checkbox
-- `main.ts` Manual Entry: Break Checkbox
-- `main.ts` getReportStats: Break Hours Calculation (subtracted)
+- `src/types/time-tracker.ts`: `TimeEntry` Interface (`isBreak`)
+- `src/composables/useStatistics.ts`: Berechnung der Arbeitszeit (Break Abzug)
+- UI: Checkboxen in den entsprechenden Erfassungs-Komponenten.
 
 ### Warum diese Lösung
 
@@ -478,6 +475,11 @@ Diese Architektur-Entscheidungen folgen bestimmten Prinzipien:
 - Klare Separation of Concerns
 - Future AI-Assistenten können verstehen warum
 
+### 6. Modern Stack Optimization
+- Vue 3 Reactivity statt manuellem DOM-Update
+- Pinia für konsistentes State Management
+- TypeScript für Typsicherheit in der gesamten App
+
 ---
 
 ## Für KI-Assistenten
@@ -486,7 +488,7 @@ Diese Architektur-Entscheidungen folgen bestimmten Prinzipien:
 
 1. ⚠️ **NIEMALS `getCustomDataValues()` verwenden** - Direkte API-Calls!
 2. ⚠️ **IMMER duale IDs für Categories** - String ID + kvStoreId!
-3. ⚠️ **NIEMALS alert() verwenden** - Nur Custom Toasts!
+3. ⚠️ **NIEMALS nativen `alert()` verwenden** - Nur Custom Toasts/Modals!
 4. ⚠️ **Zwei-Sheet Excel ist OK** - Nicht nach Dropdown suchen!
 5. ⚠️ **Reassignment ist Pflicht** - Nicht einfach löschen!
 
@@ -499,6 +501,6 @@ Diese Architektur-Entscheidungen folgen bestimmten Prinzipien:
 
 ---
 
-**Letzte Aktualisierung:** 2025-11-23
-**Version:** 1.8.0
-**Status:** ✅ Alle Decisions implementiert und getestet (7 Design Decisions)
+**Letzte Aktualisierung:** 2026-01-08 (Vue 3 Migration Update)  
+**Version:** 2.0.0  
+**Status:** ✅ Dokumentation an Vue 3 / Pinia angepasst

@@ -46,6 +46,7 @@ export interface ManagerAssignment {
 export interface Settings {
     defaultHoursPerDay: number;
     defaultHoursPerWeek: number;
+    theme?: 'light' | 'dark' | 'system'; // Replaces simple boolean
     excelImportEnabled: boolean; // Alpha feature toggle
     reportPeriod?: 'week' | 'month' | 'year' | 'custom'; // User's preferred report period
     employeeGroupId?: number; // ChurchTools group ID for employees (with individual SOLL)
@@ -91,3 +92,22 @@ export interface ActivityLog {
 
 export type GroupingMode = 'day' | 'week' | 'month';
 export type DateRange = { start: Date | null; end: Date | null };
+
+export interface Absence {
+    id: number;
+    userId: number;
+    absenceReasonId: number;
+    startDate: string; // ISO Date YYYY-MM-DD
+    endDate: string; // ISO Date YYYY-MM-DD
+    comment: string | null;
+    isFullDay: boolean;
+    startTime: string | null; // ISO time HH:mm
+    endTime: string | null; // ISO time HH:mm
+}
+
+export interface AbsenceCategory {
+    id: number;
+    name: string;
+    color: string;
+    shortName: string;
+}

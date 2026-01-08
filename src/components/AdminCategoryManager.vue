@@ -3,9 +3,11 @@ import { ref, computed } from 'vue';
 import { useTimeEntriesStore } from '../stores/time-entries.store';
 import { useSettingsStore } from '../stores/settings.store';
 import type { WorkCategory } from '../types/time-tracker';
+import { useToastStore } from '../stores/toast.store';
 
 const store = useTimeEntriesStore();
 const settingsStore = useSettingsStore();
+const toastStore = useToastStore();
 
 const categories = computed(() => store.workCategories);
 
@@ -30,8 +32,9 @@ async function handleDelete(cat: WorkCategory) {
         if (!settingsStore.moduleId) return;
         try {
             await store.deleteWorkCategory(settingsStore.moduleId, cat.id);
+            toastStore.success('Category deleted');
         } catch (e) {
-            alert('Failed to delete category');
+            toastStore.error('Failed to delete category');
         }
     }
 }
@@ -43,8 +46,9 @@ async function save() {
         await store.saveWorkCategory(settingsStore.moduleId, editingCategory.value);
         isEditing.value = false;
         editingCategory.value = {};
+        toastStore.success('Category saved');
     } catch (e) {
-        alert('Failed to save category');
+        toastStore.error('Failed to save category');
     }
 }
 </script>

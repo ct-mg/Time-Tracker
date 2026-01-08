@@ -4,6 +4,7 @@ import { churchtoolsClient } from '@churchtools/churchtools-client';
 import type { TimeEntry, WorkCategory, GroupingMode, DateRange, ActivityLog } from '../types/time-tracker';
 import { useSettingsStore } from './settings.store';
 import { useAuthStore } from './auth.store';
+import { parseISO, differenceInMilliseconds, isWithinInterval, startOfDay, endOfDay, format, subDays } from 'date-fns';
 import {
     getCustomDataCategory,
     getCustomDataValues,
@@ -23,9 +24,13 @@ export const useTimeEntriesStore = defineStore('timeEntries', () => {
     // Filter State (Centralized for sharing between Filters vs List components)
     const searchTerm = ref('');
     const groupingMode = ref<GroupingMode>('week');
-    const dateRange = ref<DateRange>({ start: null, end: null });
+    const dateRange = ref<DateRange>({
+        start: subDays(new Date(), 365),
+        end: new Date()
+    });
     const selectedCategoryIds = ref<string[]>([]);
     const selectedUserIds = ref<number[]>([]);
+    const userId = ref<number | undefined>(undefined); // Global user filter (Manager view)
 
     // Bulk Actions State
     const selectedEntryIds = ref<string[]>([]); // Using startTime as unique ID
@@ -38,8 +43,87 @@ export const useTimeEntriesStore = defineStore('timeEntries', () => {
         return entries.value.find(entry => entry.endTime === null && entry.userId === authStore.user?.id) || null;
     });
 
+    const filteredEntries = computed(() => {
+        let result = [...entries.value];
+
+        // Search Term
+        if (searchTerm.value) {
+            const query = searchTerm.value.toLowerCase();
+            result = result.filter(e =>
+                e.description.toLowerCase().includes(query) ||
+                e.categoryName.toLowerCase().includes(query)
+            );
+        }
+
+        // Date Range
+        if (dateRange.value.start && dateRange.value.end) {
+            const start = startOfDay(dateRange.value.start);
+            const end = endOfDay(dateRange.value.end);
+            result = result.filter(e => {
+                const entryDate = parseISO(e.startTime);
+                return isWithinInterval(entryDate, { start, end });
+            });
+        }
+
+        // Categories
+        if (selectedCategoryIds.value.length > 0) {
+            result = result.filter(e => selectedCategoryIds.value.includes(e.categoryId));
+        }
+
+        // Users
+        if (selectedUserIds.value.length > 0) {
+            result = result.filter(e => selectedUserIds.value.includes(e.userId));
+        }
+
+        return result;
+    });
+
     const sortedEntries = computed(() => {
-        return [...entries.value].sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime());
+        return [...filteredEntries.value].sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime());
+    });
+
+    const categoryStats = computed(() => {
+        const stats: Record<string, { id: string; name: string; color: string; totalMs: number; totalHours: number }> = {};
+
+        // Initialize with all work categories
+        workCategories.value.forEach(cat => {
+            stats[cat.id] = {
+                id: cat.id,
+                name: cat.name,
+                color: cat.color,
+                totalMs: 0,
+                totalHours: 0
+            };
+        });
+
+        filteredEntries.value.forEach(entry => {
+            if (entry.isBreak) return; // Don't count breaks
+
+            const start = parseISO(entry.startTime);
+            const end = entry.endTime ? parseISO(entry.endTime) : new Date();
+            const durationMs = differenceInMilliseconds(end, start);
+
+            if (!stats[entry.categoryId]) {
+                stats[entry.categoryId] = {
+                    id: entry.categoryId,
+                    name: entry.categoryName || 'Unknown',
+                    color: '#cccccc',
+                    totalMs: 0,
+                    totalHours: 0
+                };
+            }
+
+            stats[entry.categoryId].totalMs += durationMs;
+        });
+
+        // Convert to array and calc hours
+        return Object.values(stats)
+            .map(s => ({
+                ...s,
+                totalHours: Math.round((s.totalMs / (1000 * 60 * 60)) * 100) / 100
+            }))
+            .filter(s => s.totalMs > 0)
+            .sort((a, b) => b.totalMs - a.totalMs);
     });
 
     // Helper: Create settings snapshot
@@ -117,7 +201,10 @@ export const useTimeEntriesStore = defineStore('timeEntries', () => {
                 if (user) {
                     const permissions = authStore.permissions;
 
-                    if (permissions.canSeeAllEntries) {
+                    if (userId.value) {
+                        // Manager View: Specific user selected
+                        loadedEntries = loadedEntries.filter(e => e.userId === userId.value);
+                    } else if (permissions.canSeeAllEntries) {
                         // show all
                     } else if (permissions.managedEmployeeIds.length > 0) {
                         loadedEntries = loadedEntries.filter(e => e.userId === user.id || permissions.managedEmployeeIds.includes(e.userId));
@@ -369,6 +456,14 @@ export const useTimeEntriesStore = defineStore('timeEntries', () => {
         }
     }
 
+    function setUserIdFilter(id: number) {
+        userId.value = id;
+        const settingsStore = useSettingsStore();
+        if (settingsStore.moduleId) {
+            loadTimeEntries(settingsStore.moduleId);
+        }
+    }
+
     async function loadActivityLogs(moduleId: number) {
         try {
             const cat = await getCustomDataCategory<object>('activitylogs');
@@ -482,6 +577,44 @@ export const useTimeEntriesStore = defineStore('timeEntries', () => {
         }
     }
 
+    function exportToCSV() {
+        if (filteredEntries.value.length === 0) return;
+
+        const headers = ['Date', 'Start', 'End', 'Category', 'Description', 'Duration (h)', 'Is Break', 'Is Manual'];
+        const csvRows = [headers.join(',')];
+
+        filteredEntries.value.forEach(e => {
+            const startDate = parseISO(e.startTime);
+            const endDate = e.endTime ? parseISO(e.endTime) : null;
+            const durationMs = endDate ? differenceInMilliseconds(endDate, startDate) : 0;
+            const durationHours = (durationMs / (1000 * 60 * 60)).toFixed(2);
+
+            const row = [
+                format(startDate, 'yyyy-MM-dd'),
+                format(startDate, 'HH:mm:ss'),
+                endDate ? format(endDate, 'HH:mm:ss') : 'RUNNING',
+                `"${e.categoryName}"`,
+                `"${e.description.replace(/"/g, '""')}"`,
+                durationHours,
+                e.isBreak ? 'Yes' : 'No',
+                e.isManual ? 'Yes' : 'No'
+            ];
+            csvRows.push(row.join(','));
+        });
+
+        const csvContent = csvRows.join('\n');
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+
+        link.setAttribute('href', url);
+        link.setAttribute('download', `time-entries-export-${format(new Date(), 'yyyy-MM-dd-HHmm')}.csv`);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+
     return {
         entries,
         workCategories,
@@ -489,19 +622,23 @@ export const useTimeEntriesStore = defineStore('timeEntries', () => {
         isLoading,
         error,
         activeEntry,
+        filteredEntries,
         sortedEntries,
+        categoryStats,
         loadWorkCategories,
         loadTimeEntries,
         clockIn,
         clockOut,
         deleteTimeEntry,
         saveManualEntry,
+        setUserIdFilter,
         // Filter State exposure
         searchTerm,
         groupingMode,
         dateRange,
         selectedCategoryIds,
         selectedUserIds,
+        userId,
         saveWorkCategory,
         deleteWorkCategory,
         loadActivityLogs,
@@ -512,6 +649,7 @@ export const useTimeEntriesStore = defineStore('timeEntries', () => {
         selectAll,
         clearSelection,
         bulkDeleteEntries,
-        bulkUpdateEntries
+        bulkUpdateEntries,
+        exportToCSV
     };
 });

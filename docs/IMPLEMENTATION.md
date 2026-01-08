@@ -585,89 +585,13 @@ HTML wird bei jedem `render()` komplett neu generiert. Event Listeners gehen ver
 
 ## Notification System
 
-**Siehe ARCHITECTURE.md für Design Decision**
-
-**Implementation Details:**
-
-**Container:**
-- Singleton: Nur ein Container
-- ID: `notification-container`
-- Position: fixed, top: 20px, right: 20px
-- z-index: 10000 (über allem)
-
-**Notification Element:**
-- Classes: `notification notification-{type}`
-- Structure:
-  - Icon: ✓ (success), ⚠ (warning), ✕ (error)
-  - Message Text
-  - Close Button (nur error/warning)
-
-**Styling:**
-- Success: Green background (#4caf50)
-- Error: Red background (#f44336)
-- Warning: Orange background (#ff9800)
-- Info: Blue background (#2196f3)
-- Shadow: 0 2px 5px rgba(0,0,0,0.2)
-- Border-radius: 4px
-- Padding: 12px 16px
-
-**Animation:**
-- Slide-in: translateX(120%) → translateX(0)
-- Slide-out: translateX(0) → translateX(120%)
-- Duration: 300ms
-- Easing: ease-in-out
-
-**Location:**
-- `main.ts` Zeilen 100-150
-- `admin.ts` Zeilen 80-130
+Die Architektur und das Verhalten des Notification Systems (Toasts) sind detailliert in der **[ARCHITECTURE.md #3](ARCHITECTURE.md#3-notification-system)** dokumentiert. Design-Aspekte finden sich in den **[DESIGN_GUIDELINES.md](DESIGN_GUIDELINES.md)**.
 
 ---
 
 ## Best Practices
 
-### 1. Immer direkte API-Calls
-
-**Warum:** KV-Store Bug - siehe [ARCHITECTURE.md #1](ARCHITECTURE.md#1-️-kv-store-id-problematik-sehr-wichtig)
-
-**Pattern:**
-1. `churchtoolsClient.get('/custommodules/...')`
-2. `rawValues.map(v => ({ ...JSON.parse(v.value), kvStoreId: v.id }))`
-
-### 2. Event Handler bei jedem Render
-
-**Warum:** HTML neu generiert, Listener verloren
-
-**Pattern:**
-1. `element.innerHTML = newHTML`
-2. `attachEventHandlers()`
-
-### 3. State Flags korrekt setzen
-
-**Warum:** UI basiert auf State, vergessene Flags = unsichtbare UI
-
-**Pattern:**
-1. Setze alle relevanten Flags
-2. Clear andere Dialog-Flags
-3. `render()`
-
-### 4. Reload nach DB-Changes
-
-**Warum:** Client State kann out-of-sync sein
-
-**Pattern:**
-1. `await dbOperation()`
-2. `await load...()`
-3. `render()`
-4. Toast Notification
-
-### 5. Validation vor Operations
-
-**Warum:** Besseres UX, verhindert inkonsistente Daten
-
-**Pattern:**
-1. Validate ALL inputs
-2. Bei Fehler: Error Toast, return früh
-3. Nur bei Success: DB Operation
+Die wichtigsten technischen Best Practices und kritischen Patterns sind in der **[ARCHITECTURE.md](ARCHITECTURE.md)** (Kapitel "Design Principles" und "Critical Patterns") zusammengefasst.
 
 ---
 

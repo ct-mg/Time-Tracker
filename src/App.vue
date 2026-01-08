@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'; // ref needed
+import { ref, onMounted } from 'vue';
 import { useAuthStore } from './stores/auth.store';
 import { useTimeEntriesStore } from './stores/time-entries.store';
 import { useSettingsStore } from './stores/settings.store';
@@ -10,17 +10,33 @@ import TimeEntryModal from './components/TimeEntryModal.vue';
 import AdminSettings from './components/AdminSettings.vue';
 import StatisticsCards from './components/StatisticsCards.vue';
 import RecentEntries from './components/RecentEntries.vue';
+import AbsenceModal from './components/AbsenceModal.vue';
+import AbsencesList from './components/AbsencesList.vue';
+import ReportsView from './components/ReportsView.vue';
+import UserSettings from './components/UserSettings.vue';
+import ToastContainer from './components/ToastContainer.vue';
+import { useAbsencesStore } from './stores/absences.store';
+import { useToastStore } from './stores/toast.store';
 import { watch } from 'vue';
 import type { TimeEntry } from './types/time-tracker';
 
 const authStore = useAuthStore();
 const settingsStore = useSettingsStore();
 const timeEntriesStore = useTimeEntriesStore();
+const toastStore = useToastStore();
+const absencesStore = useAbsencesStore();
 
-const showModal = ref(false);
 const editingEntry = ref<TimeEntry | null>(null);
+const editingAbsence = ref<any | null>(null);
+const showModal = ref(false);
+const showAbsenceModal = ref(false);
 const currentView = ref<'tracker' | 'admin'>('tracker');
-const activeTab = ref<'dashboard' | 'entries' | 'absences'>('dashboard');
+const activeTab = ref<'dashboard' | 'entries' | 'absences' | 'reports'>('dashboard');
+
+// Initialize Theme
+onMounted(() => {
+    settingsStore.initTheme();
+});
 
 // Watch for module ID readiness to load initial data
 watch(
@@ -29,6 +45,8 @@ watch(
         if (newId) {
             await timeEntriesStore.loadWorkCategories(newId);
             await timeEntriesStore.loadTimeEntries(newId);
+            await absencesStore.loadAbsenceCategories();
+            await absencesStore.loadAbsences();
             await authStore.checkPermissions(); // Ensure permissions are checked
         }
     }
@@ -48,15 +66,49 @@ async function handleSave(entryData: Partial<TimeEntry>) {
     if (settingsStore.moduleId) {
         try {
             await timeEntriesStore.saveManualEntry(settingsStore.moduleId, entryData, editingEntry.value || undefined);
+            toastStore.success('Entry saved successfully');
         } catch (e) {
-            alert('Failed to save entry');
+            toastStore.error('Failed to save entry');
         }
+    }
+}
+
+// Absence Handlers
+function handleAddAbsence() {
+    editingAbsence.value = null;
+    showAbsenceModal.value = true;
+}
+
+function handleEditAbsence(absence: any) {
+    editingAbsence.value = absence;
+    showAbsenceModal.value = true;
+}
+
+async function handleDeleteAbsence(absence: any) {
+    if (confirm('Are you sure you want to delete this absence?')) {
+        try {
+            await absencesStore.deleteAbsence(absence.id);
+            toastStore.success('Absence deleted');
+        } catch (e) {
+            toastStore.error('Failed to delete absence');
+        }
+    }
+}
+
+async function handleSaveAbsence(absenceData: any) {
+    try {
+        await absencesStore.saveAbsence(absenceData);
+        showAbsenceModal.value = false;
+        toastStore.success('Absence saved');
+    } catch (e) {
+        toastStore.error('Failed to save absence');
     }
 }
 </script>
 
 <template>
-  <div class="time-tracker-app p-4 max-w-7xl mx-auto">
+  <div class="time-tracker-app min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
+    <div class="p-4 pb-24 max-w-7xl mx-auto">
     <header class="mb-8 flex justify-between items-center">
       <h1 class="text-2xl font-bold text-gray-900 dark:text-white">ChurchTools Time Tracker</h1>
       
@@ -76,8 +128,9 @@ async function handleSave(entryData: Partial<TimeEntry>) {
               </button>
           </div>
 
-          <div v-if="authStore.user" class="text-sm text-gray-600 dark:text-gray-400">
-            {{ authStore.user.firstName }} {{ authStore.user.lastName }}
+          <!-- User Settings Dropdown -->
+          <div v-if="authStore.user">
+            <UserSettings />
           </div>
       </div>
     </header>
@@ -128,6 +181,20 @@ async function handleSave(entryData: Partial<TimeEntry>) {
                     </svg>
                     Absences
                 </button>
+                <button
+                    @click="activeTab = 'reports'"
+                    :class="[
+                        'py-4 px-1 border-b-2 font-medium text-sm transition-colors flex items-center gap-2',
+                        activeTab === 'reports'
+                            ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                            : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
+                    ]"
+                >
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 8v8m-4-5v5m-4-2v2m-2 4h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                    </svg>
+                    Reports
+                </button>
             </nav>
         </div>
 
@@ -174,13 +241,16 @@ async function handleSave(entryData: Partial<TimeEntry>) {
 
         <!-- Absences Tab -->
         <div v-if="activeTab === 'absences'">
-            <div class="text-center py-12 text-gray-500 dark:text-gray-400">
-                <svg class="w-16 h-16 mx-auto mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-                </svg>
-                <h3 class="text-lg font-medium mb-2">Absences Coming Soon</h3>
-                <p class="text-sm">This feature is currently under development.</p>
-            </div>
+            <AbsencesList 
+                @add="handleAddAbsence"
+                @edit="handleEditAbsence"
+                @delete="handleDeleteAbsence"
+            />
+        </div>
+
+        <!-- Reports Tab -->
+        <div v-if="activeTab === 'reports'">
+            <ReportsView />
         </div>
 
         <!-- Modals -->
@@ -190,10 +260,21 @@ async function handleSave(entryData: Partial<TimeEntry>) {
             :work-categories="timeEntriesStore.workCategories"
             @save="handleSave"
         />
+
+        <AbsenceModal
+            v-model="showAbsenceModal"
+            :absence="editingAbsence"
+            :categories="absencesStore.categories"
+            @save="handleSaveAbsence"
+        />
     </main>
 
     <main v-else-if="currentView === 'admin'">
         <AdminSettings />
     </main>
+
+    <!-- Toast Notifications -->
+    <ToastContainer />
+    </div>
   </div>
 </template>

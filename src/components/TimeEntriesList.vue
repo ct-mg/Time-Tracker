@@ -5,11 +5,13 @@ import { useTimeEntriesStore } from '../stores/time-entries.store';
 import { useSettingsStore } from '../stores/settings.store';
 import TimeEntryItem from './TimeEntryItem.vue';
 import BulkActionsToolbar from './BulkActionsToolbar.vue';
+import { useToastStore } from '../stores/toast.store';
 import { listTransition } from '../utils/animations';
 
 const { groupedEntries } = useTimeEntries();
 const store = useTimeEntriesStore();
 const settingsStore = useSettingsStore();
+const toastStore = useToastStore();
 
 const workCategories = computed(() => store.workCategories);
 
@@ -56,12 +58,13 @@ function toggleSelectAll() {
 async function handleDelete(entry: any) {
     if (confirm('Are you sure you want to delete this entry?')) {
         try {
-            const moduleId = settingsStore.moduleId; // Assuming this is available
+            const moduleId = settingsStore.moduleId;
             if (moduleId) {
                 await store.deleteTimeEntry(moduleId, entry);
+                toastStore.success('Entry deleted');
             }
         } catch (e) {
-            alert('Failed to delete entry');
+            toastStore.error('Failed to delete entry');
         }
     }
 }
@@ -85,7 +88,7 @@ async function handleDelete(entry: any) {
                 class="bg-gray-50 dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 rounded-lg p-4 transition-all duration-200 hover:shadow-md"
             >
             <!-- Group Header (Week/Month/Day) -->
-            <div class="flex justify-between items-center mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">
+            <div v-if="store.groupingMode !== 'day'" class="flex justify-between items-center mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">
                 <h3 class="text-lg font-bold text-gray-800 dark:text-white">
                     {{ group.title }} <span v-if="group.subTitle" class="text-gray-500 font-normal">{{ group.subTitle }}</span>
                 </h3>

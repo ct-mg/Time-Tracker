@@ -135,11 +135,9 @@ export function useTimeEntries() {
                 groupKey = `${year}-${String(month + 1).padStart(2, '0')}`;
                 groupTitle = date.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
             } else {
-                // Day mode: group by Month for cleanliness, but expand all days
-                const month = date.getMonth();
-                const year = date.getFullYear();
-                groupKey = `${year}-${String(month + 1).padStart(2, '0')}`;
-                groupTitle = date.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+                // Day mode: each day is its own group
+                groupKey = dayKey;
+                groupTitle = date.toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
             }
 
             if (!groups.has(groupKey)) {

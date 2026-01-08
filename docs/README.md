@@ -56,6 +56,8 @@ Willkommen zur technischen Dokumentation der Time Tracker Extension für ChurchT
 | Thema | Dokumentiert in |
 |-------|-----------------|
 | Setup & Quick Start | [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) |
+| Design Guidelines (No Emojis!) | [DESIGN_GUIDELINES.md](DESIGN_GUIDELINES.md) |
+| Component Library | [COMPONENT_LIBRARY.md](COMPONENT_LIBRARY.md) |
 | Git Workflow | [MAINTENANCE.md - Git](MAINTENANCE.md#git-commit-workflow) |
 | Testing Checklists | [MAINTENANCE.md - Testing](MAINTENANCE.md#testing--quality-checks) |
 | Pre-Commit Checklist | [MAINTENANCE.md - Pre-Commit](MAINTENANCE.md#pre-commit-checklist) |
@@ -71,6 +73,9 @@ Willkommen zur technischen Dokumentation der Time Tracker Extension für ChurchT
   - Development Workflow
   - Hauptmodule (main.ts, admin.ts)
   - Common Issues (Quick Reference)
+
+- **[DESIGN_GUIDELINES.md](DESIGN_GUIDELINES.md)** ← 🎨 UI Rules (Clean, No Emojis)
+- **[COMPONENT_LIBRARY.md](COMPONENT_LIBRARY.md)** ← 🧩 UI Building Blocks
 
 - **[USER-REQUIREMENTS.md](USER-REQUIREMENTS.md)** ← 🔒 **SACRED DOCUMENT**
   - **UNVERÄNDERLICH!** Nur mit User-Anfrage ändern

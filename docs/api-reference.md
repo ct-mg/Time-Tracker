@@ -2,6 +2,11 @@
 
 Complete API documentation for ChurchTools extensions.
 
+## Official Documentation
+- **OpenAPI / Swagger Definition**: [https://academy-assets.church.tools/system/runtime/swagger/openapi.json](https://academy-assets.church.tools/system/runtime/swagger/openapi.json) (für KI besser geeignet)
+- **Interactive Documentation (Academy)**: [https://academy-assets.church.tools/api](https://academy-assets.church.tools/api) (für Menschen besser geeignet)
+
+
 ## Core Types
 
 ### `EntryPoint<TData>`

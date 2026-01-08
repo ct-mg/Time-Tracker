@@ -4,10 +4,12 @@ import { useTimeEntriesStore } from '../stores/time-entries.store';
 import { useSettingsStore } from '../stores/settings.store';
 import BaseButton from './base/BaseButton.vue';
 import BaseModal from './base/BaseModal.vue';
+import { useToastStore } from '../stores/toast.store';
 import { slideUpTransition } from '../utils/animations';
 
 const store = useTimeEntriesStore();
 const settingsStore = useSettingsStore();
+const toastStore = useToastStore();
 
 const selectedCount = computed(() => store.selectedEntryIds.length);
 const isVisible = computed(() => selectedCount.value > 0);
@@ -42,8 +44,9 @@ async function handleBulkCategoryUpdate() {
             categoryName: category.name
         });
         showCategoryModal.value = false;
+        toastStore.success('Entries updated');
     } catch (e) {
-        alert('Failed to update entries');
+        toastStore.error('Failed to update entries');
     }
 }
 
@@ -57,8 +60,9 @@ async function handleBulkDelete() {
     try {
         await store.bulkDeleteEntries(settingsStore.moduleId, store.selectedEntryIds);
         showDeleteModal.value = false;
+        toastStore.success('Entries deleted');
     } catch (e) {
-        alert('Failed to delete entries');
+        toastStore.error('Failed to delete entries');
     }
 }
 </script>
