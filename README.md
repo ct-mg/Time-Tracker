@@ -113,7 +113,12 @@ This creates a ZIP file that can be uploaded to ChurchTools.
 3. View statistics and category breakdown
 4. Export to CSV if needed
 
-### For Administrators
+### For Administrators & Managers
+
+**Manager Dashboard:**
+1. If you have the manager permission, a "Manager" badge appears in the header.
+2. In "Time Entries" or "Absences", use the user filter in the top right.
+3. Select an employee to view and manage their data.
 
 **Configuring Default Hours:**
 1. Go to Admin settings
@@ -126,6 +131,10 @@ This creates a ZIP file that can be uploaded to ChurchTools.
 2. Edit existing categories by clicking "Edit"
 3. Delete unused categories as needed
 4. Each category requires a unique ID, display name, and color
+
+**User Settings & Theme:**
+1. Click your name/avatar in the top right.
+2. Choose your preferred theme: Light, Dark, or System.
 
 ## Technical Details
 
@@ -189,14 +198,14 @@ interface Settings {
 
 ### 🚧 Future Enhancement Ideas
 - Approval workflow for time entries
-- Team overview and reports for managers
-- Break time tracking
+- Team overview and reports for managers (Partially implemented)
+- Break time tracking refinement
 - Project/task tagging
 - Notifications for forgotten clock-outs
 - Weekly/monthly summary email reports
 - PDF export
 - Mobile-optimized interface
-- Multi-language support
+- Multi-language support (i18n)
 
 ## License
 
