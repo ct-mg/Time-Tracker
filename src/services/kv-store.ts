@@ -230,13 +230,14 @@ export async function getCustomDataValues<T extends object>(
 export async function createCustomDataValue(
     payload: CustomModuleDataValueCreate,
     moduleId?: number
-): Promise<void> {
+): Promise<CustomModuleDataValue> {
     moduleId = await resolveModuleId(moduleId);
-    const newValue: string = await churchtoolsClient.post(
+    const newValue: CustomModuleDataValue = await churchtoolsClient.post(
         `/custommodules/${moduleId}/customdatacategories/${payload.dataCategoryId}/customdatavalues`,
         payload
     );
     console.log(`Created data value in category ${payload.dataCategoryId}:`, newValue);
+    return newValue;
 }
 
 /**

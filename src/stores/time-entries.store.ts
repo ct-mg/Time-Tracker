@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 import { churchtoolsClient } from '@churchtools/churchtools-client';
-import type { TimeEntry, WorkCategory } from '../types/time-tracker';
+import type { TimeEntry, WorkCategory, GroupingMode, DateRange, ActivityLog } from '../types/time-tracker';
 import { useSettingsStore } from './settings.store';
 import { useAuthStore } from './auth.store';
 import {
@@ -18,6 +18,14 @@ export const useTimeEntriesStore = defineStore('timeEntries', () => {
     const workCategories = ref<WorkCategory[]>([]);
     const isLoading = ref(false);
     const error = ref<string | null>(null);
+    const activityLogs = ref<ActivityLog[]>([]);
+
+    // Filter State (Centralized for sharing between Filters vs List components)
+    const searchTerm = ref('');
+    const groupingMode = ref<GroupingMode>('week');
+    const dateRange = ref<DateRange>({ start: null, end: null });
+    const selectedCategoryIds = ref<string[]>([]);
+    const selectedUserIds = ref<number[]>([]);
 
     const settingsStore = useSettingsStore();
     const authStore = useAuthStore();
@@ -256,6 +264,67 @@ export const useTimeEntriesStore = defineStore('timeEntries', () => {
         }
     }
 
+    async function saveWorkCategory(moduleId: number, categoryData: Partial<WorkCategory>) {
+        try {
+            const cat = await getCustomDataCategory<object>('workcategories');
+            if (!cat) throw new Error('Work Categories container not found');
+
+            const payload = {
+                id: categoryData.id || `custom-${Date.now()}`,
+                name: categoryData.name || 'New Category',
+                color: categoryData.color || '#cccccc'
+            };
+
+            // Check if exists (by ID)
+            const existing = workCategories.value.find(c => c.id === payload.id);
+
+            if (existing && existing.kvStoreId) {
+                // Update
+                await updateCustomDataValue(cat.id, existing.kvStoreId, {
+                    value: JSON.stringify(payload)
+                }, moduleId);
+
+                // Update local
+                const idx = workCategories.value.findIndex(c => c.id === payload.id);
+                if (idx !== -1) {
+                    workCategories.value[idx] = { ...workCategories.value[idx], ...payload };
+                }
+            } else {
+                // Create
+                const res = await createCustomDataValue({
+                    dataCategoryId: cat.id,
+                    value: JSON.stringify(payload)
+                }, moduleId);
+
+                // Update local
+                workCategories.value.push({ ...payload, kvStoreId: res.id });
+            }
+        } catch (e) {
+            console.error('Failed to save category', e);
+            throw e;
+        }
+    }
+
+    async function deleteWorkCategory(moduleId: number, categoryId: string) {
+        try {
+            const cat = await getCustomDataCategory<object>('workcategories');
+            if (!cat) throw new Error('Work Categories container not found');
+
+            const category = workCategories.value.find(c => c.id === categoryId);
+            if (!category || !category.kvStoreId) {
+                throw new Error('Category not found or cannot be deleted');
+            }
+
+            await deleteCustomDataValue(cat.id, category.kvStoreId, moduleId);
+
+            // Update local
+            workCategories.value = workCategories.value.filter(c => c.id !== categoryId);
+        } catch (e) {
+            console.error('Failed to delete category', e);
+            throw e;
+        }
+    }
+
     // Helper: Map KV ID to entry for easier updates (Refactor needed later for optimization)
     // For now we do the lookup in delete/update
 
@@ -297,9 +366,49 @@ export const useTimeEntriesStore = defineStore('timeEntries', () => {
         }
     }
 
+    async function loadActivityLogs(moduleId: number) {
+        try {
+            const cat = await getCustomDataCategory<object>('activitylogs');
+            if (cat) {
+                const rawValues = await getCustomDataValues<ActivityLog>(cat.id, moduleId);
+                // Sort by newest first
+                activityLogs.value = rawValues.sort((a, b) => b.timestamp - a.timestamp);
+            } else {
+                activityLogs.value = [];
+            }
+        } catch (e) {
+            console.error('Failed to load activity logs', e);
+        }
+    }
+
+    async function cleanOldActivityLogs(moduleId: number, daysToKeep: number) {
+        try {
+            const cat = await getCustomDataCategory<object>('activitylogs');
+            if (!cat) return;
+
+            const cutoff = Date.now() - (daysToKeep * 24 * 60 * 60 * 1000);
+            const rawValues = await getCustomDataValues<ActivityLog>(cat.id, moduleId);
+
+            const toDelete = rawValues.filter(l => l.timestamp < cutoff);
+
+            for (const log of toDelete) {
+                // Iterate and delete (could be slow but safe for now)
+                if ((log as any).id) {
+                    await deleteCustomDataValue(cat.id, (log as any).id, moduleId);
+                }
+            }
+
+            // Refresh
+            await loadActivityLogs(moduleId);
+        } catch (e) {
+            console.error('Failed to clean logs', e);
+        }
+    }
+
     return {
         entries,
         workCategories,
+        activityLogs,
         isLoading,
         error,
         activeEntry,
@@ -309,6 +418,16 @@ export const useTimeEntriesStore = defineStore('timeEntries', () => {
         clockIn,
         clockOut,
         deleteTimeEntry,
-        saveManualEntry
+        saveManualEntry,
+        // Filter State exposure
+        searchTerm,
+        groupingMode,
+        dateRange,
+        selectedCategoryIds,
+        selectedUserIds,
+        saveWorkCategory,
+        deleteWorkCategory,
+        loadActivityLogs,
+        cleanOldActivityLogs
     };
 });

@@ -3,9 +3,13 @@ import { ref, computed } from 'vue';
 import { useSettingsStore } from '../stores/settings.store';
 import { useAuthStore } from '../stores/auth.store';
 import type { UserHoursConfig } from '../types/time-tracker';
+import AdminCategoryManager from './AdminCategoryManager.vue';
+import AdminActivityLogs from './AdminActivityLogs.vue';
 
 const settingsStore = useSettingsStore();
 const authStore = useAuthStore();
+
+const activeTab = ref<'general' | 'categories' | 'logs'>('general');
 
 // Local state for editing
 const settings = ref({ ...settingsStore.settings });
@@ -100,8 +104,34 @@ async function saveAllSettings() {
 </script>
 
 <template>
-    <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-        <h2 class="text-xl font-bold mb-6 text-gray-900 dark:text-white">General Settings</h2>
+    <div>
+        <!-- Admin Tabs -->
+        <div class="flex border-b border-gray-200 dark:border-gray-700 mb-6">
+            <button 
+                @click="activeTab = 'general'"
+                :class="['px-6 py-3 font-medium text-sm border-b-2 transition-colors', 
+                         activeTab === 'general' ? 'border-blue-600 text-blue-600 dark:text-blue-400' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400']"
+            >
+                General Settings
+            </button>
+            <button 
+                @click="activeTab = 'categories'"
+                :class="['px-6 py-3 font-medium text-sm border-b-2 transition-colors', 
+                         activeTab === 'categories' ? 'border-blue-600 text-blue-600 dark:text-blue-400' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400']"
+            >
+                Work Categories
+            </button>
+            <button 
+                @click="activeTab = 'logs'"
+                :class="['px-6 py-3 font-medium text-sm border-b-2 transition-colors', 
+                         activeTab === 'logs' ? 'border-blue-600 text-blue-600 dark:text-blue-400' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400']"
+            >
+                Activity Logs
+            </button>
+        </div>
+
+        <div v-show="activeTab === 'general'" class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+            <h2 class="text-xl font-bold mb-6 text-gray-900 dark:text-white">General Settings</h2>
         
         <!-- Global Defaults -->
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
@@ -208,5 +238,12 @@ async function saveAllSettings() {
                 </div>
             </div>
         </div>
+        </div>
+        
+        <!-- Category Manager Tab -->
+        <AdminCategoryManager v-if="activeTab === 'categories'" />
+        
+        <!-- Activity Logs Tab -->
+        <AdminActivityLogs v-if="activeTab === 'logs'" />
     </div>
 </template>

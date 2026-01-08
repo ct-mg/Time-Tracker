@@ -5,6 +5,7 @@ import { useTimeEntriesStore } from './stores/time-entries.store';
 import { useSettingsStore } from './stores/settings.store';
 import TrackerControls from './components/TrackerControls.vue';
 import TimeEntriesList from './components/TimeEntriesList.vue';
+import TimeTrackerFilters from './components/TimeTrackerFilters.vue';
 import TimeEntryModal from './components/TimeEntryModal.vue';
 import AdminSettings from './components/AdminSettings.vue';
 import { watch } from 'vue';
@@ -99,11 +100,10 @@ async function handleSave(entryData: Partial<TimeEntry>) {
             <div v-if="timeEntriesStore.isLoading" class="flex justify-center p-8 text-gray-500">
                 Loading entries...
             </div>
-            <div v-else-if="timeEntriesStore.entries.length === 0" class="text-center p-8 text-gray-500 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
-                No entries found. Start tracking time to see them here.
-            </div>
+            
+            <TimeTrackerFilters />
+
             <TimeEntriesList 
-                v-else 
                 @edit="handleEdit" 
             />
         </div>

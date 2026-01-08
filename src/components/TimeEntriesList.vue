@@ -4,8 +4,9 @@ import { useTimeEntries } from '../composables/useTimeEntries';
 import { useTimeEntriesStore } from '../stores/time-entries.store';
 import { useSettingsStore } from '../stores/settings.store';
 import TimeEntryItem from './TimeEntryItem.vue';
+import { listTransition } from '../utils/animations';
 
-const { groupedEntries, searchTerm } = useTimeEntries();
+const { groupedEntries } = useTimeEntries();
 const store = useTimeEntriesStore();
 const settingsStore = useSettingsStore();
 
@@ -35,41 +36,42 @@ async function handleDelete(entry: any) {
 
 <template>
     <div class="space-y-6">
-        <!-- Search -->
-        <div class="relative">
-            <input 
-                v-model="searchTerm"
-                type="text" 
-                placeholder="Search entries..." 
-                class="w-full px-4 py-2 border rounded-md dark:bg-gray-800 dark:text-white dark:border-gray-700 pl-10 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
-            <svg class="w-5 h-5 text-gray-400 absolute left-3 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-            </svg>
+        <div v-if="groupedEntries.length === 0" class="text-center p-8 text-gray-500 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+            No entries found matching your filters.
         </div>
 
-        <div v-for="week in groupedEntries" :key="week.weekKey" class="bg-gray-50 dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 rounded-lg p-4">
-            <!-- Week Header -->
+        <TransitionGroup 
+            name="list"
+            tag="div"
+            class="space-y-6"
+            v-bind="listTransition"
+        >
+            <div 
+                v-for="group in groupedEntries" 
+                :key="group.key" 
+                class="bg-gray-50 dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 rounded-lg p-4 transition-all duration-200 hover:shadow-md"
+            >
+            <!-- Group Header (Week/Month/Day) -->
             <div class="flex justify-between items-center mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">
                 <h3 class="text-lg font-bold text-gray-800 dark:text-white">
-                    Week {{ week.weekNumber }} <span class="text-gray-500 font-normal">({{ week.year }})</span>
+                    {{ group.title }} <span v-if="group.subTitle" class="text-gray-500 font-normal">{{ group.subTitle }}</span>
                 </h3>
                 <div class="flex gap-4 text-sm">
                     <span class="text-gray-600 dark:text-gray-300">
                         Actual: 
-                        <span :class="week.weekTotalMs >= week.weekTargetMs ? 'text-green-600 dark:text-green-400 font-bold' : 'text-red-600 dark:text-red-400'">
-                            {{ week.weekTotalDisplay }}
+                        <span :class="group.totalMs >= group.targetMs ? 'text-green-600 dark:text-green-400 font-bold' : 'text-red-600 dark:text-red-400'">
+                            {{ group.totalDisplay }}
                         </span>
                     </span>
                     <span class="text-gray-500">
-                        Target: <span class="font-medium">{{ week.weekTargetDisplay }}</span>
+                        Target: <span class="font-medium">{{ group.targetDisplay }}</span>
                     </span>
                 </div>
             </div>
 
             <!-- Days -->
             <div class="space-y-4">
-                <div v-for="day in week.sortedDays" :key="day.date" class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-md overflow-hidden">
+                <div v-for="day in group.sortedDays" :key="day.date" class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-md overflow-hidden">
                     <!-- Day Header -->
                     <div class="bg-gray-50 dark:bg-gray-800 px-4 py-2 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
                         <h4 class="font-semibold text-gray-700 dark:text-gray-200">
@@ -118,6 +120,7 @@ async function handleDelete(entry: any) {
                     </div>
                 </div>
             </div>
-        </div>
+            </div>
+        </TransitionGroup>
     </div>
 </template>

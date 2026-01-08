@@ -3,6 +3,8 @@ import { ref, computed } from 'vue';
 import { useTimeEntriesStore } from '../stores/time-entries.store';
 import { useSettingsStore } from '../stores/settings.store';
 import TimerDisplay from './TimerDisplay.vue';
+import BaseButton from './base/BaseButton.vue';
+import BaseCard from './base/BaseCard.vue';
 
 const timeEntriesStore = useTimeEntriesStore();
 const settingsStore = useSettingsStore();
@@ -49,7 +51,7 @@ async function handleClockOut() {
 </script>
 
 <template>
-    <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md mb-6 border border-gray-200 dark:border-gray-700">
+    <BaseCard padding="md" class="mb-6">
         <div class="flex flex-col md:flex-row items-center justify-between gap-4">
             <!-- Timer Display -->
             <div class="flex-shrink-0">
@@ -83,13 +85,14 @@ async function handleClockOut() {
                 </label>
 
                 <!-- Start Button -->
-                <button 
+                <BaseButton 
                     @click="handleClockIn"
                     :disabled="!selectedCategoryId"
-                    class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-6 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                    variant="success"
+                    size="md"
                 >
-                    <span>Start</span>
-                </button>
+                    Start
+                </BaseButton>
             </div>
 
             <!-- Stop Button (Visible when tracking) -->
@@ -98,13 +101,14 @@ async function handleClockOut() {
                    <div class="text-sm text-gray-500">Current Task:</div>
                    <div class="font-medium dark:text-white">{{ timeEntriesStore.activeEntry?.categoryName }} - {{ timeEntriesStore.activeEntry?.description || 'No description' }}</div>
                 </div>
-                <button 
+                <BaseButton 
                     @click="handleClockOut"
-                    class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-6 rounded-md transition-colors shadow-sm"
+                    variant="danger"
+                    size="md"
                 >
                     Stop
-                </button>
+                </BaseButton>
             </div>
         </div>
-    </div>
+    </BaseCard>
 </template>

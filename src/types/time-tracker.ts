@@ -88,3 +88,6 @@ export interface ActivityLog {
         duration?: number; // Duration in milliseconds for quick display
     };
 }
+
+export type GroupingMode = 'day' | 'week' | 'month';
+export type DateRange = { start: Date | null; end: Date | null };

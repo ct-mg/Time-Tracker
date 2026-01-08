@@ -46,3 +46,15 @@ export function getISOWeekYear(date: Date): number {
     target.setDate(target.getDate() + 3 - ((target.getDay() + 6) % 7));
     return target.getFullYear();
 }
+// Check if two dates are the same day
+export function isSameDay(d1: Date, d2: Date): boolean {
+    return d1.getFullYear() === d2.getFullYear() &&
+        d1.getMonth() === d2.getMonth() &&
+        d1.getDate() === d2.getDate();
+}
+
+// Check if date is within interval
+export function isWithinInterval(date: Date, interval: { start: Date; end: Date }): boolean {
+    return date.getTime() >= interval.start.getTime() &&
+        date.getTime() <= interval.end.getTime();
+}
