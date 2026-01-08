@@ -8,8 +8,8 @@
 
 ## Aktueller Status
 
-**Letztes Update:** 2025-12-15
-**Aktuelle Phase:** Phase 5 - Polish & Testing
+**Letztes Update:** 2026-01-08
+**Aktuelle Phase:** Phase 9 - Internationalization (i18n)
 **Nächste Phase:** Kontinuierliche Verbesserungen
 
 ---
@@ -433,16 +433,14 @@
 
 ### 🟢 Priorität: Niedrig
 
-#### Dark Mode Support
+#### Dark Mode Support ✅ ABGESCHLOSSEN
 **Use Case:** Bessere Lesbarkeit bei Nacht
-**Status:** Offen
-**Aufwand:** Mittel
-
-**Implementierungs-Schritte:**
-1. Dark Mode Toggle in Settings
-2. CSS Variablen für Colors
-3. LocalStorage für Preference
-4. Alle Inline-Styles anpassen
+**Status:** ✅ Implementiert
+**Datum:** 2026-01-08
+**Features:**
+- User Settings Overlay im Header
+- Wahl zwischen Light, Dark, System
+- Persistenz via LocalStorage
 
 ---
 

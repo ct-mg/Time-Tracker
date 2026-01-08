@@ -20,9 +20,10 @@
 6. [Notification System](#notification-system)
 7. [Absence Management](#absence-management) ← NEW
 8. [Break Tracking](#break-tracking) ← NEW
-9. [Group Access Control & Individual SOLL](#group-access-control--individual-soll) ← NEW
-10. [Best Practices](#best-practices)
-11. [Änderungshistorie](#änderungshistorie)
+10. [Group Access Control & Individual SOLL](#group-access-control--individual-soll) ← NEW
+11. [Architecture Refactoring (Vue 3 + Pinia)](#architecture-refactoring-vue-3--pinia) ← **IMPORTANT**
+12. [Best Practices](#best-practices)
+13. [Änderungshistorie](#änderungshistorie)
 
 ---
 
@@ -707,3 +708,29 @@ Die wichtigsten technischen Best Practices und kritischen Patterns sind in der *
 **Letzte Aktualisierung:** 2025-11-23
 **Version:** 1.8.0
 **Status:** ✅ Production Ready (Phase 3 In Progress)
+
+---
+
+## Architecture Refactoring (Vue 3 + Pinia)
+
+> **⚠️ WICHTIG:** Seit Version 2.0 (Januar 2026) wurde die Architektur grundlegend geändert!
+
+### Core Changes
+1.  **Component-Based:**
+    -   Logik wurde aus `main.ts` und `admin.ts` extrahiert.
+    -   UI ist nun in Vue Single File Components (`.vue`) aufgeteilt (z.B. `TrackerControls.vue`, `TimeEntriesList.vue`).
+    -   `App.vue` ist der zentrale Einstiegspunkt, der Layout und Routing steuert.
+
+2.  **State Management (Pinia):**
+    -   Keine globalen State-Variablen mehr in `main.ts`.
+    -   Nutzung von Pinia Stores:
+        -   `time-entries.store.ts`: Verwaltet Einträge, CRUD, Timer.
+        -   `settings.store.ts`: Verwaltet Konfiguration, Theme, User Settings.
+        -   `auth.store.ts`: Verwaltet User, Permissions, Manager-Status.
+        -   `absences.store.ts`: Verwaltet Abwesenheiten.
+
+3.  **UI Framework:**
+    -   Switch zu **Tailwind CSS** für Styling.
+    -   Dark Mode Support via `dark:` Modifier.
+
+Bitte beachten Sie dies bei der Referenzierung alter Code-Teile in dieser Dokumentation.

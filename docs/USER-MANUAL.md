@@ -252,6 +252,13 @@ Zeiteinträge werden nach **ISO-Kalenderwochen** gruppiert:
 - Für jeden Tag sehen Sie IST vs. SOLL
 - Am Ende der Woche: Wochensumme
 
+### Benutzereinstellungen & Dark Mode
+Klicken Sie oben rechts auf Ihren Namen oder Avatar, um das Benutzermenü zu öffnen.
+Hier können Sie das Theme der Anwendung ändern:
+- **Light:** Helles Design (Standard bei Tag)
+- **Dark:** Dunkles Design (Augenschonend bei Nacht)
+- **System:** Passt sich automatisch Ihrem Betriebssystem an
+
 ### Kann ich meine Daten löschen?
 
 **Einzelne Einträge:** Ja, über den "Delete" Button
