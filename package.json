@@ -27,6 +27,7 @@
     },
     "dependencies": {
         "@churchtools/extension-points": "github:churchtools/churchtools-extension-points",
+        "date-fns": "^4.1.0",
         "pinia": "^3.0.4",
         "vue": "^3.5.26",
         "xlsx": "^0.18.5"

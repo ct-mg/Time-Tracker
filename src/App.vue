@@ -8,6 +8,8 @@ import TimeEntriesList from './components/TimeEntriesList.vue';
 import TimeTrackerFilters from './components/TimeTrackerFilters.vue';
 import TimeEntryModal from './components/TimeEntryModal.vue';
 import AdminSettings from './components/AdminSettings.vue';
+import StatisticsCards from './components/StatisticsCards.vue';
+import RecentEntries from './components/RecentEntries.vue';
 import { watch } from 'vue';
 import type { TimeEntry } from './types/time-tracker';
 
@@ -80,7 +82,16 @@ async function handleSave(entryData: Partial<TimeEntry>) {
     </header>
 
     <main v-if="currentView === 'tracker'">
+        <!-- Statistics Cards -->
+        <StatisticsCards />
+
+        <!-- TrackerControls -->
         <TrackerControls />
+        
+        <!-- Recent Entries -->
+        <div class="mb-8">
+            <RecentEntries @viewAll="() => {}" />
+        </div>
         
         <div class="mt-8">
             <div class="flex justify-between items-center mb-4">
