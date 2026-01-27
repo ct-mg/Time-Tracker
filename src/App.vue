@@ -15,9 +15,11 @@ import AbsencesList from './components/AbsencesList.vue';
 import ReportsView from './components/ReportsView.vue';
 import UserSettings from './components/UserSettings.vue';
 import ToastContainer from './components/ToastContainer.vue';
+import ConfirmationModal from './components/base/ConfirmationModal.vue';
 import { useAbsencesStore } from './stores/absences.store';
 import { useToastStore } from './stores/toast.store';
 import { watch } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { setLanguage } from './utils/i18n';
 import type { TimeEntry } from './types/time-tracker';
 
@@ -26,6 +28,7 @@ const settingsStore = useSettingsStore();
 const timeEntriesStore = useTimeEntriesStore();
 const toastStore = useToastStore();
 const absencesStore = useAbsencesStore();
+const { t } = useI18n();
 
 const editingEntry = ref<TimeEntry | null>(null);
 const editingAbsence = ref<any | null>(null);
@@ -33,6 +36,8 @@ const showModal = ref(false);
 const showAbsenceModal = ref(false);
 const currentView = ref<'tracker' | 'admin'>('tracker');
 const activeTab = ref<'dashboard' | 'entries' | 'absences' | 'reports'>('dashboard');
+const showDeleteConfirm = ref(false);
+const absenceToDelete = ref<any | null>(null);
 
 // Initialize Theme
 onMounted(() => {
@@ -96,14 +101,22 @@ function handleEditAbsence(absence: any) {
     showAbsenceModal.value = true;
 }
 
-async function handleDeleteAbsence(absence: any) {
-    if (confirm('Are you sure you want to delete this absence?')) {
-        try {
-            await absencesStore.deleteAbsence(absence.id);
-            toastStore.success('Absence deleted');
-        } catch (e) {
-            toastStore.error('Failed to delete absence');
-        }
+function handleDeleteAbsence(absence: any) {
+    absenceToDelete.value = absence;
+    showDeleteConfirm.value = true;
+}
+
+async function confirmDeleteAbsence() {
+    if (!absenceToDelete.value) return;
+    
+    try {
+        await absencesStore.deleteAbsence(absenceToDelete.value.id);
+        toastStore.success(t('ct.extension.timetracker.notifications.entryDeleted'));
+    } catch (e) {
+        toastStore.error(t('ct.extension.timetracker.notifications.deleteEntryFailed'));
+    } finally {
+        showDeleteConfirm.value = false;
+        absenceToDelete.value = null;
     }
 }
 
@@ -278,6 +291,13 @@ async function handleSaveAbsence(absenceData: any) {
             :absence="editingAbsence"
             :categories="absencesStore.categories"
             @save="handleSaveAbsence"
+        />
+
+        <ConfirmationModal
+            v-model="showDeleteConfirm"
+            :title="t('ct.extension.timetracker.modal.deleteAbsence.title')"
+            :message="t('ct.extension.timetracker.modal.deleteAbsence.message')"
+            @confirm="confirmDeleteAbsence"
         />
     </main>
 

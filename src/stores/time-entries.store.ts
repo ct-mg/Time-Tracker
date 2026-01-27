@@ -192,6 +192,15 @@ export const useTimeEntriesStore = defineStore('timeEntries', () => {
                     const currentCat = workCategories.value.find(c => c.id === entry.categoryId);
                     if (currentCat) entry.categoryName = currentCat.name;
 
+                    // Enrich with User Name from authStore
+                    const u = authStore.userList.find(user => user.id === entry.userId);
+                    if (u) {
+                        entry.userName = u.name;
+                    } else if (entry.userId === authStore.user?.id) {
+                        const currentUser = authStore.user;
+                        entry.userName = `${currentUser.firstName || ''} ${currentUser.lastName || ''}`.trim() || `User ${entry.userId}`;
+                    }
+
                     return entry;
                 });
 
@@ -580,39 +589,71 @@ export const useTimeEntriesStore = defineStore('timeEntries', () => {
     function exportToCSV() {
         if (filteredEntries.value.length === 0) return;
 
-        const headers = ['Date', 'Start', 'End', 'Category', 'Description', 'Duration (h)', 'Is Break', 'Is Manual'];
-        const csvRows = [headers.join(',')];
+        try {
+            const XLSX = (window as any).XLSX;
+            if (!XLSX) {
+                // Fallback to basic CSV if XLSX is not loaded (though it should be a dependency)
+                const headers = ['Date', 'Start', 'End', 'Category', 'Description', 'Duration (h)', 'Is Break', 'User'];
+                const csvRows = [headers.join(',')];
 
-        filteredEntries.value.forEach(e => {
-            const startDate = parseISO(e.startTime);
-            const endDate = e.endTime ? parseISO(e.endTime) : null;
-            const durationMs = endDate ? differenceInMilliseconds(endDate, startDate) : 0;
-            const durationHours = (durationMs / (1000 * 60 * 60)).toFixed(2);
+                filteredEntries.value.forEach(e => {
+                    const startDate = parseISO(e.startTime);
+                    const endDate = e.endTime ? parseISO(e.endTime) : null;
+                    const durationMs = endDate ? differenceInMilliseconds(endDate, startDate) : 0;
+                    const durationHours = (durationMs / 3600000).toFixed(2);
 
-            const row = [
-                format(startDate, 'yyyy-MM-dd'),
-                format(startDate, 'HH:mm:ss'),
-                endDate ? format(endDate, 'HH:mm:ss') : 'RUNNING',
-                `"${e.categoryName}"`,
-                `"${e.description.replace(/"/g, '""')}"`,
-                durationHours,
-                e.isBreak ? 'Yes' : 'No',
-                e.isManual ? 'Yes' : 'No'
-            ];
-            csvRows.push(row.join(','));
-        });
+                    const row = [
+                        format(startDate, 'yyyy-MM-dd'),
+                        format(startDate, 'HH:mm:ss'),
+                        endDate ? format(endDate, 'HH:mm:ss') : 'RUNNING',
+                        `"${e.categoryName}"`,
+                        `"${e.description.replace(/"/g, '""')}"`,
+                        durationHours,
+                        e.isBreak ? 'Yes' : 'No',
+                        `"${e.userName || e.userId}"`
+                    ];
+                    csvRows.push(row.join(','));
+                });
 
-        const csvContent = csvRows.join('\n');
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-        const link = document.createElement('a');
-        const url = URL.createObjectURL(blob);
+                const csvContent = csvRows.join('\n');
+                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                const link = document.createElement('a');
+                const url = URL.createObjectURL(blob);
+                link.setAttribute('href', url);
+                link.setAttribute('download', `time-entries-export-${format(new Date(), 'yyyy-MM-dd-HHmm')}.csv`);
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                return;
+            }
 
-        link.setAttribute('href', url);
-        link.setAttribute('download', `time-entries-export-${format(new Date(), 'yyyy-MM-dd-HHmm')}.csv`);
-        link.style.visibility = 'hidden';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+            // Use XLSX library
+            const data = filteredEntries.value.map(e => {
+                const startDate = parseISO(e.startTime);
+                const endDate = e.endTime ? parseISO(e.endTime) : null;
+                const durationMs = endDate ? differenceInMilliseconds(endDate, startDate) : 0;
+
+                return {
+                    'Date': format(startDate, 'yyyy-MM-dd'),
+                    'Start': format(startDate, 'HH:mm'),
+                    'End': endDate ? format(endDate, 'HH:mm') : '...',
+                    'Category': e.categoryName,
+                    'Description': e.description,
+                    'Duration (h)': Number((durationMs / 3600000).toFixed(2)),
+                    'Is Break': e.isBreak ? 'Yes' : 'No',
+                    'User': e.userName || e.userId
+                };
+            });
+
+            const worksheet = XLSX.utils.json_to_sheet(data);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, 'Time Entries');
+
+            // Generate XLSX file
+            XLSX.writeFile(workbook, `time-entries-export-${format(new Date(), 'yyyy-MM-dd-HHmm')}.xlsx`);
+        } catch (err) {
+            console.error('Export failed:', err);
+        }
     }
 
     return {

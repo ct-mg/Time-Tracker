@@ -13,6 +13,7 @@ export interface TimeEntry {
     isManual: boolean;
     isBreak: boolean; // If true, does not count towards work hours
     createdAt: string;
+    userName?: string; // Cache for display in reports
     settingsSnapshot?: {
         // Settings at time of entry creation (for accurate historical SOLL calculations)
         hoursPerDay: number;

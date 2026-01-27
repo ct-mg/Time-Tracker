@@ -53,8 +53,11 @@ function getProgressColor(progress: number): string {
                     <span :class="todayStats.isOnTrack ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'">
                         {{ todayStats.progress.toFixed(0) }}%
                     </span>
-                    <span class="text-gray-500 dark:text-gray-400">
-                        {{ todayStats.isOnTrack ? t('ct.extension.timetracker.dashboard.stats.status.onTrack') : t('ct.extension.timetracker.dashboard.stats.status.behind') }}
+                    <span v-if="!todayStats.isOnTrack" class="text-gray-500 dark:text-gray-400">
+                        {{ formatHours(todayStats.remaining) }} {{ t('ct.extension.timetracker.dashboard.stats.remaining') }}
+                    </span>
+                    <span v-else class="text-green-600 dark:text-green-400 font-medium">
+                        {{ t('ct.extension.timetracker.dashboard.stats.status.onTrack') }}
                     </span>
                 </div>
             </div>
@@ -93,8 +96,11 @@ function getProgressColor(progress: number): string {
                     <span :class="thisWeekStats.isOnTrack ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'">
                         {{ thisWeekStats.progress.toFixed(0) }}%
                     </span>
-                    <span class="text-gray-500 dark:text-gray-400">
-                        {{ thisWeekStats.isOnTrack ? t('ct.extension.timetracker.dashboard.stats.status.onTrack') : t('ct.extension.timetracker.dashboard.stats.status.behind') }}
+                    <span v-if="!thisWeekStats.isOnTrack" class="text-gray-500 dark:text-gray-400">
+                        {{ formatHours(thisWeekStats.remaining) }} {{ t('ct.extension.timetracker.dashboard.stats.remaining') }}
+                    </span>
+                    <span v-else class="text-green-600 dark:text-green-400 font-medium">
+                        {{ t('ct.extension.timetracker.dashboard.stats.status.onTrack') }}
                     </span>
                 </div>
             </div>
@@ -133,8 +139,11 @@ function getProgressColor(progress: number): string {
                     <span :class="thisMonthStats.isOnTrack ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'">
                         {{ thisMonthStats.progress.toFixed(0) }}%
                     </span>
-                    <span class="text-gray-500 dark:text-gray-400">
-                        {{ thisMonthStats.isOnTrack ? t('ct.extension.timetracker.dashboard.stats.status.onTrack') : t('ct.extension.timetracker.dashboard.stats.status.behind') }}
+                    <span v-if="!thisMonthStats.isOnTrack" class="text-gray-500 dark:text-gray-400">
+                        {{ formatHours(thisMonthStats.remaining) }} {{ t('ct.extension.timetracker.dashboard.stats.remaining') }}
+                    </span>
+                    <span v-else class="text-green-600 dark:text-green-400 font-medium">
+                        {{ t('ct.extension.timetracker.dashboard.stats.status.onTrack') }}
                     </span>
                 </div>
             </div>
@@ -173,8 +182,11 @@ function getProgressColor(progress: number): string {
                     <span :class="lastMonthStats.isOnTrack ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'">
                         {{ lastMonthStats.progress.toFixed(0) }}%
                     </span>
-                    <span class="text-gray-500 dark:text-gray-400">
-                        {{ lastMonthStats.isOnTrack ? t('ct.extension.timetracker.dashboard.stats.status.complete') : t('ct.extension.timetracker.dashboard.stats.status.under') }}
+                    <span v-if="!lastMonthStats.isOnTrack" class="text-gray-500 dark:text-gray-400">
+                        {{ formatHours(lastMonthStats.remaining) }} {{ t('ct.extension.timetracker.dashboard.stats.remaining') }}
+                    </span>
+                    <span v-else class="text-green-600 dark:text-green-400 font-medium">
+                        {{ t('ct.extension.timetracker.dashboard.stats.status.complete') }}
                     </span>
                 </div>
             </div>

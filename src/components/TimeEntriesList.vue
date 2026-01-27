@@ -15,6 +15,44 @@ const settingsStore = useSettingsStore();
 const toastStore = useToastStore();
 const { t } = useI18n();
 
+import ConfirmationModal from './base/ConfirmationModal.vue';
+import { ref, watch, onMounted } from 'vue';
+
+const itemsPerPage = 10;
+const visibleGroupsCount = ref(itemsPerPage);
+const showDeleteConfirm = ref(false);
+const entryToDelete = ref<any | null>(null);
+const isDeleting = ref(false);
+
+const limitedGroups = computed(() => {
+    return groupedEntries.value.slice(0, visibleGroupsCount.value);
+});
+
+const loadMoreTrigger = ref<HTMLElement | null>(null);
+
+function loadMore() {
+    if (visibleGroupsCount.value < groupedEntries.value.length) {
+        visibleGroupsCount.value += itemsPerPage;
+    }
+}
+
+// Reset visible count when grouping or filters change
+watch(() => [store.groupingMode, store.searchTerm, store.selectedCategoryIds, store.selectedUserIds, store.dateRange], () => {
+    visibleGroupsCount.value = itemsPerPage;
+}, { deep: true });
+
+onMounted(() => {
+    if (loadMoreTrigger.value) {
+        const observer = new IntersectionObserver((entries) => {
+            if (entries[0].isIntersecting) {
+                loadMore();
+            }
+        }, { threshold: 1.0 });
+        
+        observer.observe(loadMoreTrigger.value);
+    }
+});
+
 const workCategories = computed(() => store.workCategories);
 
 const emit = defineEmits<{
@@ -57,17 +95,27 @@ function toggleSelectAll() {
     }
 }
 
-async function handleDelete(entry: any) {
-    if (confirm(t('ct.extension.timetracker.timeEntries.deleteConfirm'))) {
-        try {
-            const moduleId = settingsStore.moduleId;
-            if (moduleId) {
-                await store.deleteTimeEntry(moduleId, entry);
-                toastStore.success(t('ct.extension.timetracker.notifications.entryDeleted'));
-            }
-        } catch (e: any) {
-            toastStore.error(t('ct.extension.timetracker.notifications.deleteEntryFailed'));
+function handleDelete(entry: any) {
+    entryToDelete.value = entry;
+    showDeleteConfirm.value = true;
+}
+
+async function confirmDelete() {
+    if (!entryToDelete.value) return;
+    
+    isDeleting.value = true;
+    try {
+        const moduleId = settingsStore.moduleId;
+        if (moduleId) {
+            await store.deleteTimeEntry(moduleId, entryToDelete.value);
+            toastStore.success(t('ct.extension.timetracker.notifications.entryDeleted'));
         }
+    } catch (e: any) {
+        toastStore.error(t('ct.extension.timetracker.notifications.deleteEntryFailed'));
+    } finally {
+        isDeleting.value = false;
+        showDeleteConfirm.value = false;
+        entryToDelete.value = null;
     }
 }
 </script>
@@ -85,7 +133,7 @@ async function handleDelete(entry: any) {
             v-bind="listTransition"
         >
             <div 
-                v-for="group in groupedEntries" 
+                v-for="group in limitedGroups" 
                 :key="group.key" 
                 class="bg-gray-50 dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 rounded-lg p-4 transition-all duration-200 hover:shadow-md"
             >
@@ -117,7 +165,7 @@ async function handleDelete(entry: any) {
                         </h4>
                         <div class="flex gap-4 text-xs">
                              <span class="text-gray-600 dark:text-gray-400">
-                                {{ t('ct.extension.timetracker.dashboard.stats.actual') }}: 
+                                 {{ t('ct.extension.timetracker.dashboard.stats.actual') }}: 
                                 <span :class="{
                                     'text-green-600 dark:text-green-400 font-bold': day.dayTotalMs >= day.dayTargetMs,
                                     'text-red-600 dark:text-red-400': day.dayTotalMs < day.dayTargetMs && day.isWorkDay,
@@ -171,7 +219,24 @@ async function handleDelete(entry: any) {
             </div>
         </TransitionGroup>
 
+        <!-- Load More Trigger -->
+        <div 
+            v-if="visibleGroupsCount < groupedEntries.length" 
+            ref="loadMoreTrigger" 
+            class="h-10 flex items-center justify-center"
+        >
+            <div class="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+        </div>
+
         <!-- Bulk Actions Toolbar -->
         <BulkActionsToolbar />
+
+        <ConfirmationModal
+            v-model="showDeleteConfirm"
+            :title="t('ct.extension.timetracker.modal.deleteEntry.title')"
+            :message="t('ct.extension.timetracker.modal.deleteEntry.message')"
+            :is-loading="isDeleting"
+            @confirm="confirmDelete"
+        />
     </div>
 </template>

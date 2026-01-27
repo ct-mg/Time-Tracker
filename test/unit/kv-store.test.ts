@@ -19,29 +19,12 @@ import {
     // sampleCustomDataValue,
 } from '../fixtures/sample-data';
 
-// Mock the churchtoolsClient module
-vi.mock('@churchtools/churchtools-client', () => ({
-    churchtoolsClient: {
-        get: vi.fn(),
-        post: vi.fn(),
-        put: vi.fn(),
-        deleteApi: vi.fn(),
-    },
-}));
-
-// Mock getContext to return test module ID
-vi.mock('../../src/lib/main', () => ({
-    getContext: vi.fn(() => ({ moduleId: 14, name: 'timetracker' })),
-}));
-
 // Mock getModule function from kv-store
-vi.mock('../../src/utils/kv-store', async () => {
-    const actual = await vi.importActual<typeof import('../../src/services/kv-store')>(
-        '../../src/utils/kv-store'
-    );
+vi.mock('../../src/services/kv-store', async (importOriginal) => {
+    const actual = await importOriginal<typeof import('../../src/services/kv-store')>();
     return {
         ...actual,
-        // Keep actual implementations but we'll mock getModule if needed
+        getModule: vi.fn().mockResolvedValue({ id: 14, shorty: 'timetracker' }),
     };
 });
 

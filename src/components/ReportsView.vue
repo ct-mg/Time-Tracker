@@ -6,6 +6,8 @@ import BaseCard from './base/BaseCard.vue';
 import TimeTrackerFilters from './TimeTrackerFilters.vue';
 import UserFilter from './UserFilter.vue';
 
+import { startOfDay, subDays, format, isSameDay, parseISO, differenceInMilliseconds } from 'date-fns';
+
 const store = useTimeEntriesStore();
 const { t } = useI18n();
 
@@ -18,6 +20,35 @@ const maxHours = computed(() => {
     return Math.max(...stats.value.map((s: any) => s.totalHours), 1);
 });
 
+// Logic for 7-day chart
+const last7Days = computed(() => {
+    const days = [];
+    const now = new Date();
+    
+    for (let i = 6; i >= 0; i--) {
+        const date = subDays(now, i);
+        const dayStart = startOfDay(date);
+        
+        // Sum up hours for this day
+        const dayEntries = store.filteredEntries.filter(e => isSameDay(parseISO(e.startTime), dayStart));
+        const ms = dayEntries.reduce((sum, e) => {
+            const start = parseISO(e.startTime);
+            const end = e.endTime ? parseISO(e.endTime) : new Date();
+            return sum + (e.isBreak ? 0 : differenceInMilliseconds(end, start));
+        }, 0);
+        
+        days.push({
+            date: format(date, 'yyyy-MM-dd'),
+            label: format(date, 'EEE dd.MM.'),
+            hours: ms / 3600000
+        });
+    }
+    return days;
+});
+
+const maxDailyHours = computed(() => {
+    return Math.max(...last7Days.value.map(d => d.hours), 8); // Default 8h for scale
+});
 
 const handleExport = () => {
     store.exportToCSV();
@@ -92,6 +123,30 @@ const handleExport = () => {
 
                 <div v-if="stats.length === 0" class="py-12 text-center text-gray-500 dark:text-gray-400">
                     {{ t('ct.extension.timetracker.reports.noData') }}
+                </div>
+            </div>
+        </BaseCard>
+
+        <!-- Time Series Chart -->
+        <BaseCard :title="t('ct.extension.timetracker.reports.timeLast7Days')">
+            <div class="h-64 flex items-end gap-2 px-4 pb-8 pt-4">
+                <div 
+                    v-for="day in last7Days" 
+                    :key="day.date"
+                    class="flex-grow flex flex-col items-center gap-2 group relative"
+                >
+                    <div 
+                        class="w-full bg-blue-500 rounded-t-sm transition-all duration-500 hover:bg-blue-600 cursor-help"
+                        :style="{ height: `${(day.hours / maxDailyHours * 100) || 0}%` }"
+                    >
+                        <!-- Tooltip -->
+                        <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10">
+                            {{ day.hours.toFixed(1) }}h
+                        </div>
+                    </div>
+                    <span class="text-[10px] text-gray-500 dark:text-gray-400 rotate-45 origin-left whitespace-nowrap">
+                        {{ day.label }}
+                    </span>
                 </div>
             </div>
         </BaseCard>
