@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { onMounted, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { useAbsencesStore } from '../stores/absences.store';
 import BaseCard from './base/BaseCard.vue';
 import BaseButton from './base/BaseButton.vue';
@@ -8,6 +9,7 @@ import UserFilter from './UserFilter.vue';
 import { format, parseISO, subDays, addDays, startOfYear, endOfYear, addYears, subYears } from 'date-fns';
 
 const absencesStore = useAbsencesStore();
+const { t } = useI18n();
 
 defineEmits(['add', 'edit', 'delete']);
 
@@ -71,13 +73,12 @@ const formatDateRange = (absence: any) => {
 <template>
     <div class="space-y-4">
         <div class="flex justify-between items-center mb-6">
-            <h2 class="text-xl font-semibold text-gray-900 dark:text-white">Absences</h2>
+            <h2 class="text-xl font-semibold text-gray-900 dark:text-white">{{ t('ct.extension.timetracker.absences.title') }}</h2>
             <BaseButton variant="primary" size="sm" @click="$emit('add')" class="flex items-center gap-2">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
                 </svg>
-                Add Absence
-                Add Absence
+                {{ t('ct.extension.timetracker.absences.addAbsence') }}
             </BaseButton>
         </div>
 
@@ -90,7 +91,7 @@ const formatDateRange = (absence: any) => {
                     <input 
                         v-model="absencesStore.filters.searchTerm"
                         type="text" 
-                        placeholder="Search absences..." 
+                        :placeholder="t('ct.extension.timetracker.absences.searchPlaceholder')" 
                         class="w-full px-4 py-2 border rounded-md dark:bg-gray-700 dark:text-white dark:border-gray-600 pl-10 focus:ring-2 focus:ring-blue-500"
                     />
                     <svg class="w-5 h-5 text-gray-400 absolute left-3 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -103,7 +104,7 @@ const formatDateRange = (absence: any) => {
 
             <div class="flex flex-wrap gap-4 items-end border-t border-gray-100 dark:border-gray-700 pt-4">
                 <div>
-                    <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">From</label>
+                    <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">{{ t('ct.extension.timetracker.reports.from') }}</label>
                     <input 
                         type="date" 
                         v-model="absencesStore.filters.from"
@@ -111,7 +112,7 @@ const formatDateRange = (absence: any) => {
                     />
                 </div>
                 <div>
-                    <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">To</label>
+                    <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">{{ t('ct.extension.timetracker.reports.to') }}</label>
                     <input 
                         type="date" 
                         v-model="absencesStore.filters.to"
@@ -123,25 +124,25 @@ const formatDateRange = (absence: any) => {
                         @click="setPreset('default')"
                         class="px-3 py-1.5 text-xs font-medium rounded-md bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
                     >
-                        Default
+                        {{ t('ct.extension.timetracker.admin.defaultSettings') }}
                     </button>
                     <button 
                         @click="setPreset('last-year')"
                         class="px-3 py-1.5 text-xs font-medium rounded-md bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors"
                     >
-                        Last Year
+                        {{ t('ct.extension.timetracker.filters.lastYear') }}
                     </button>
                     <button 
                         @click="setPreset('this-year')"
                         class="px-3 py-1.5 text-xs font-medium rounded-md bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors"
                     >
-                        This Year
+                        {{ t('ct.extension.timetracker.filters.thisYear') }}
                     </button>
                     <button 
                         @click="setPreset('next-year')"
                         class="px-3 py-1.5 text-xs font-medium rounded-md bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-300 hover:bg-blue-100 dark:hover:hover:bg-blue-900/50 transition-colors"
                     >
-                        Next Year
+                        {{ t('ct.extension.timetracker.filters.nextYear') }}
                     </button>
                 </div>
             </div>
@@ -155,7 +156,7 @@ const formatDateRange = (absence: any) => {
             <svg class="w-12 h-12 mx-auto mb-4 text-gray-400 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
             </svg>
-            <p class="text-gray-500 dark:text-gray-400">No absences found for this period.</p>
+            <p class="text-gray-500 dark:text-gray-400">{{ t('ct.extension.timetracker.absences.noAbsences') }}</p>
         </div>
 
         <div v-else class="grid gap-4">
@@ -173,7 +174,7 @@ const formatDateRange = (absence: any) => {
                                 <h3 class="font-medium text-gray-900 dark:text-white">
                                     {{ getCategoryName(absence.absenceReasonId) }}
                                 </h3>
-                                <BaseBadge v-if="absence.isFullDay" variant="neutral" size="sm">Full Day</BaseBadge>
+                                <BaseBadge v-if="absence.isFullDay" variant="neutral" size="sm">{{ t('ct.extension.timetracker.absences.fullDay') }}</BaseBadge>
                             </div>
                             <p class="text-sm text-gray-500 dark:text-gray-400">
                                 {{ formatDateRange(absence) }}

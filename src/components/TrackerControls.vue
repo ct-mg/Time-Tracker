@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { useTimeEntriesStore } from '../stores/time-entries.store';
 import { useSettingsStore } from '../stores/settings.store';
 import TimerDisplay from './TimerDisplay.vue';
@@ -8,7 +9,7 @@ import BaseCard from './base/BaseCard.vue';
 
 const timeEntriesStore = useTimeEntriesStore();
 const settingsStore = useSettingsStore();
-
+const { t } = useI18n();
 const description = ref('');
 const selectedCategoryId = ref('');
 const isBreak = ref(false);
@@ -64,7 +65,7 @@ async function handleClockOut() {
                 <input 
                     v-model="description" 
                     type="text" 
-                    placeholder="Task description..."
+                    :placeholder="t('ct.extension.timetracker.dashboard.descriptionPlaceholder')"
                     class="form-input flex-grow px-4 py-2 border rounded-md dark:bg-gray-700 dark:text-white dark:border-gray-600"
                 />
 
@@ -81,7 +82,7 @@ async function handleClockOut() {
                 <!-- Break Toggle (Simplified for now) -->
                 <label class="flex items-center space-x-2 cursor-pointer select-none">
                     <input type="checkbox" v-model="isBreak" class="form-checkbox h-5 w-5 text-blue-600 rounded" />
-                    <span class="text-sm text-gray-600 dark:text-gray-300">Break</span>
+                    <span class="text-sm text-gray-600 dark:text-gray-300">{{ t('ct.extension.timetracker.dashboard.isBreak') }}</span>
                 </label>
 
                 <!-- Start Button -->
@@ -91,7 +92,7 @@ async function handleClockOut() {
                     variant="success"
                     size="md"
                 >
-                    Start
+                    {{ t('ct.extension.timetracker.dashboard.clockIn') }}
                 </BaseButton>
             </div>
 
@@ -105,7 +106,7 @@ async function handleClockOut() {
                     </div>
                     
                     <div class="text-left min-w-0">
-                        <div class="text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider">Current Task</div>
+                        <div class="text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider">{{ t('ct.extension.timetracker.dashboard.currentlyWorking') }}</div>
                         <div class="font-medium text-gray-900 dark:text-white truncate" :title="timeEntriesStore.activeEntry?.description">
                             <span class="font-bold">{{ timeEntriesStore.activeEntry?.categoryName }}</span>
                             <span v-if="timeEntriesStore.activeEntry?.description" class="mx-2 text-gray-400">|</span>
@@ -120,7 +121,7 @@ async function handleClockOut() {
                     size="md"
                     class="mr-4 shadow-sm"
                 >
-                    Stop
+                    {{ t('ct.extension.timetracker.dashboard.clockOut') }}
                 </BaseButton>
             </div>
         </div>

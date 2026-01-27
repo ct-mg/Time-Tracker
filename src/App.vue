@@ -18,6 +18,7 @@ import ToastContainer from './components/ToastContainer.vue';
 import { useAbsencesStore } from './stores/absences.store';
 import { useToastStore } from './stores/toast.store';
 import { watch } from 'vue';
+import { setLanguage } from './utils/i18n';
 import type { TimeEntry } from './types/time-tracker';
 
 const authStore = useAuthStore();
@@ -36,7 +37,18 @@ const activeTab = ref<'dashboard' | 'entries' | 'absences' | 'reports'>('dashboa
 // Initialize Theme
 onMounted(() => {
     settingsStore.initTheme();
+    // Initialize Language
+    setLanguage(settingsStore.settings.language);
 });
+
+// Watch for language changes
+watch(
+    () => settingsStore.settings.language,
+    (newLang) => {
+        setLanguage(newLang);
+    }
+);
+
 
 // Watch for module ID readiness to load initial data
 watch(

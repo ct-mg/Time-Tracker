@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { useTimeEntriesStore } from '../stores/time-entries.store';
 import { useSettingsStore } from '../stores/settings.store';
 import BaseButton from './base/BaseButton.vue';
@@ -10,6 +11,7 @@ import { slideUpTransition } from '../utils/animations';
 const store = useTimeEntriesStore();
 const settingsStore = useSettingsStore();
 const toastStore = useToastStore();
+const { t } = useI18n();
 
 const selectedCount = computed(() => store.selectedEntryIds.length);
 const isVisible = computed(() => selectedCount.value > 0);
@@ -44,9 +46,9 @@ async function handleBulkCategoryUpdate() {
             categoryName: category.name
         });
         showCategoryModal.value = false;
-        toastStore.success('Entries updated');
+        toastStore.success(t('ct.extension.timetracker.notifications.entryUpdated'));
     } catch (e) {
-        toastStore.error('Failed to update entries');
+        toastStore.error(t('ct.extension.timetracker.notifications.bulkUpdateFailed'));
     }
 }
 
@@ -60,9 +62,9 @@ async function handleBulkDelete() {
     try {
         await store.bulkDeleteEntries(settingsStore.moduleId, store.selectedEntryIds);
         showDeleteModal.value = false;
-        toastStore.success('Entries deleted');
+        toastStore.success(t('ct.extension.timetracker.notifications.entryDeleted'));
     } catch (e) {
-        toastStore.error('Failed to delete entries');
+        toastStore.error(t('ct.extension.timetracker.notifications.bulkDeleteFailed'));
     }
 }
 </script>
@@ -84,10 +86,10 @@ async function handleBulkDelete() {
                         </div>
                         <div>
                             <div class="font-bold text-gray-900 dark:text-white">
-                                {{ selectedCount }} {{ selectedCount === 1 ? 'Entry' : 'Entries' }} Selected
+                                {{ t('ct.extension.timetracker.bulkEdit.selected', { count: selectedCount }, selectedCount) }}
                             </div>
                             <div class="text-sm text-gray-500 dark:text-gray-400">
-                                Choose an action below
+                                {{ t('ct.extension.timetracker.bulkEdit.chooseAction') }}
                             </div>
                         </div>
                     </div>
@@ -102,7 +104,7 @@ async function handleBulkDelete() {
                             <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path>
                             </svg>
-                            Change Category
+                            {{ t('ct.extension.timetracker.bulkEdit.changeCategory') }}
                         </BaseButton>
 
                         <BaseButton 
@@ -113,13 +115,13 @@ async function handleBulkDelete() {
                             <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
                             </svg>
-                            Delete Selected
+                            {{ t('ct.extension.timetracker.bulkEdit.deleteSelected') }}
                         </BaseButton>
 
                         <button 
                             @click="handleClearSelection"
                             class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
-                            title="Clear Selection"
+                            :title="t('ct.extension.timetracker.bulkEdit.clearSelection')"
                         >
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
@@ -132,14 +134,14 @@ async function handleBulkDelete() {
     </Transition>
 
     <!-- Category Edit Modal -->
-    <BaseModal v-model="showCategoryModal" title="Change Category" size="sm">
+    <BaseModal v-model="showCategoryModal" :title="t('ct.extension.timetracker.bulkEdit.changeCategory')" size="sm">
         <div class="space-y-4">
             <p class="text-sm text-gray-600 dark:text-gray-400">
-                Change the category for {{ selectedCount }} selected {{ selectedCount === 1 ? 'entry' : 'entries' }}.
+                {{ t('ct.extension.timetracker.bulkEdit.changeCategoryDescription', { count: selectedCount }, selectedCount) }}
             </p>
             <div>
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    New Category
+                    {{ t('ct.extension.timetracker.bulkEdit.newCategory') }}
                 </label>
                 <select 
                     v-model="selectedCategoryId"
@@ -154,17 +156,17 @@ async function handleBulkDelete() {
         <template #footer>
             <div class="flex justify-end gap-3">
                 <BaseButton variant="secondary" @click="showCategoryModal = false">
-                    Cancel
+                    {{ t('ct.extension.timetracker.common.cancel') }}
                 </BaseButton>
                 <BaseButton variant="primary" @click="handleBulkCategoryUpdate">
-                    Update {{ selectedCount }} {{ selectedCount === 1 ? 'Entry' : 'Entries' }}
+                    {{ t('ct.extension.timetracker.bulkEdit.updateEntries', { count: selectedCount }, selectedCount) }}
                 </BaseButton>
             </div>
         </template>
     </BaseModal>
 
     <!-- Delete Confirmation Modal -->
-    <BaseModal v-model="showDeleteModal" title="Confirm Bulk Delete" size="sm">
+    <BaseModal v-model="showDeleteModal" :title="t('ct.extension.timetracker.bulkEdit.confirmBulkDeleteTitle')" size="sm">
         <div class="space-y-4">
             <div class="flex items-start gap-3">
                 <div class="w-12 h-12 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center flex-shrink-0">
@@ -174,10 +176,10 @@ async function handleBulkDelete() {
                 </div>
                 <div>
                     <h4 class="font-bold text-gray-900 dark:text-white mb-2">
-                        Delete {{ selectedCount }} {{ selectedCount === 1 ? 'Entry' : 'Entries' }}?
+                        {{ t('ct.extension.timetracker.bulkEdit.deleteEntriesQuestion', { count: selectedCount }, selectedCount) }}
                     </h4>
                     <p class="text-sm text-gray-600 dark:text-gray-400">
-                        This action cannot be undone. The selected time entries will be permanently deleted.
+                        {{ t('ct.extension.timetracker.bulkEdit.deleteEntriesWarning') }}
                     </p>
                 </div>
             </div>
@@ -185,10 +187,10 @@ async function handleBulkDelete() {
         <template #footer>
             <div class="flex justify-end gap-3">
                 <BaseButton variant="secondary" @click="showDeleteModal = false">
-                    Cancel
+                    {{ t('ct.extension.timetracker.common.cancel') }}
                 </BaseButton>
                 <BaseButton variant="danger" @click="handleBulkDelete">
-                    Delete {{ selectedCount }} {{ selectedCount === 1 ? 'Entry' : 'Entries' }}
+                     {{ t('ct.extension.timetracker.bulkEdit.deleteEntriesButton', { count: selectedCount }, selectedCount) }}
                 </BaseButton>
             </div>
         </template>

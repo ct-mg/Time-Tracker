@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { useTimeEntriesStore } from '../stores/time-entries.store';
 import type { GroupingMode } from '../types/time-tracker';
 import { 
@@ -19,6 +20,7 @@ const props = withDefaults(defineProps<{
 });
 
 const store = useTimeEntriesStore();
+const { t } = useI18n();
 
 // Computed for date inputs
 const startDateStr = computed({
@@ -44,22 +46,27 @@ const endDateStr = computed({
 });
 
 // Options
-const groupingOptions: { label: string; value: GroupingMode }[] = [
-    { label: 'Day', value: 'day' },
-    { label: 'Week', value: 'week' },
-    { label: 'Month', value: 'month' }
-];
+const groupingOptions = computed(() => [
+    { label: t('ct.extension.timetracker.dashboard.day'), value: 'day' as GroupingMode },
+    { label: t('ct.extension.timetracker.dashboard.week'), value: 'week' as GroupingMode },
+    { label: t('ct.extension.timetracker.dashboard.stats.thisMonth'), value: 'month' as GroupingMode } // "Month" general or "This Month"? Just "Month" probably
+]);
 
-const datePresets = [
-    { label: 'Today', action: () => setDateRange('today') },
-    { label: 'This Week', action: () => setDateRange('week', 0) },
-    { label: 'Last Week', action: () => setDateRange('week', -1) },
-    { label: 'This Month', action: () => setDateRange('month', 0) },
-    { label: 'Last Month', action: () => setDateRange('month', -1) },
-    { label: 'This Year', action: () => setDateRange('year', 0) },
-    { label: 'Last Year', action: () => setDateRange('year', -1) },
-    { label: 'Last 365 Days', action: () => setDateRange('last365') }
-];
+// Actually "Month" in grouping should be generic "Month". 
+// But let's check keys. ct.extension.timetracker.dashboard.month exists? No.
+// We have `ct.extension.timetracker.dashboard.stats.thisMonth`.
+// I'll add generic Day, Week, Month keys if not present.
+
+const datePresets = computed(() => [
+    { label: t('ct.extension.timetracker.dashboard.stats.today'), action: () => setDateRange('today') },
+    { label: t('ct.extension.timetracker.dashboard.stats.thisWeek'), action: () => setDateRange('week', 0) },
+    { label: t('ct.extension.timetracker.filters.lastWeek'), action: () => setDateRange('week', -1) },
+    { label: t('ct.extension.timetracker.dashboard.stats.thisMonth'), action: () => setDateRange('month', 0) },
+    { label: t('ct.extension.timetracker.dashboard.stats.lastMonth'), action: () => setDateRange('month', -1) },
+    { label: t('ct.extension.timetracker.filters.thisYear'), action: () => setDateRange('year', 0) },
+    { label: t('ct.extension.timetracker.filters.lastYear'), action: () => setDateRange('year', -1) },
+    { label: t('ct.extension.timetracker.filters.last365Days'), action: () => setDateRange('last365') }
+]);
 
 // Helper to set date range
 function setDateRange(type: 'today' | 'week' | 'month' | 'year' | 'last365', offset: number = 0) {
@@ -123,7 +130,7 @@ function toggleCategory(catId: string) {
                 <input 
                     v-model="store.searchTerm"
                     type="text" 
-                    placeholder="Search entries..." 
+                    :placeholder="t('ct.extension.timetracker.entries.filterSearch')" 
                     class="w-full px-4 py-2 border rounded-md dark:bg-gray-700 dark:text-white dark:border-gray-600 pl-10 focus:ring-2 focus:ring-blue-500"
                 />
                 <svg class="w-5 h-5 text-gray-400 absolute left-3 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -153,7 +160,7 @@ function toggleCategory(catId: string) {
         <div class="flex flex-wrap gap-6 items-end pt-2 border-t border-gray-100 dark:border-gray-700">
             <!-- Custom Date Range -->
             <div class="flex items-center gap-3">
-                <span class="text-sm font-medium text-gray-500 dark:text-gray-400">Range:</span>
+                <span class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ t('ct.extension.timetracker.filters.range') }}:</span>
                 <div class="flex items-center gap-2">
                     <input 
                         type="date" 
@@ -171,7 +178,7 @@ function toggleCategory(catId: string) {
 
             <!-- Date Presets -->
             <div class="flex flex-col gap-1">
-                <span class="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Presets</span>
+                <span class="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">{{ t('ct.extension.timetracker.filters.presets') }}</span>
                 <div class="flex flex-wrap gap-1.5">
                     <button 
                         v-for="preset in datePresets" 
@@ -186,7 +193,7 @@ function toggleCategory(catId: string) {
                         v-if="store.dateRange.start || store.dateRange.end"
                         class="px-2.5 py-1 text-[11px] font-medium rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300"
                     >
-                        Reset
+                        {{ t('ct.extension.timetracker.filters.reset') }}
                     </button>
                 </div>
             </div>

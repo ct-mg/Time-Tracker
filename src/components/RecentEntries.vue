@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { useTimeEntriesStore } from '../stores/time-entries.store';
 import { formatDuration } from '../utils/date';
 import { format } from 'date-fns';
@@ -7,6 +8,7 @@ import BaseCard from './base/BaseCard.vue';
 import BaseBadge from './base/BaseBadge.vue';
 
 const store = useTimeEntriesStore();
+const { t } = useI18n();
 
 // Get latest 5 completed entries
 const recentEntries = computed(() => {
@@ -54,13 +56,13 @@ function getCategoryColor(entry: typeof recentEntries.value[0]): string {
 <template>
     <BaseCard padding="md">
         <div class="flex justify-between items-center mb-4">
-            <h2 class="text-lg font-bold text-gray-900 dark:text-white">Recent Entries</h2>
+            <h2 class="text-lg font-bold text-gray-900 dark:text-white">{{ t('ct.extension.timetracker.dashboard.recentEntries') }}</h2>
             <a 
                 href="#" 
                 @click.prevent="$emit('viewAll')"
                 class="text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-medium"
             >
-                View All →
+                {{ t('ct.extension.timetracker.dashboard.viewAllEntries') }} →
             </a>
         </div>
 
@@ -68,7 +70,7 @@ function getCategoryColor(entry: typeof recentEntries.value[0]): string {
             <svg class="w-12 h-12 mx-auto mb-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
             </svg>
-            <p>No entries yet</p>
+            <p>{{ t('ct.extension.timetracker.dashboard.noRecentEntries') }}</p>
         </div>
 
         <div v-else class="space-y-4">
@@ -99,7 +101,7 @@ function getCategoryColor(entry: typeof recentEntries.value[0]): string {
                                         {{ entry.categoryName }}
                                     </span>
                                     <BaseBadge v-if="entry.isBreak" variant="warning" size="sm">
-                                        Break
+                                        {{ t('ct.extension.timetracker.timeEntries.break') }}
                                     </BaseBadge>
                                 </div>
                                 <p v-if="entry.description" class="text-sm text-gray-600 dark:text-gray-400 truncate">

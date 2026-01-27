@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { useTimeEntries } from '../composables/useTimeEntries';
 import { useTimeEntriesStore } from '../stores/time-entries.store';
 import { useSettingsStore } from '../stores/settings.store';
@@ -12,6 +13,7 @@ const { groupedEntries } = useTimeEntries();
 const store = useTimeEntriesStore();
 const settingsStore = useSettingsStore();
 const toastStore = useToastStore();
+const { t } = useI18n();
 
 const workCategories = computed(() => store.workCategories);
 
@@ -56,15 +58,15 @@ function toggleSelectAll() {
 }
 
 async function handleDelete(entry: any) {
-    if (confirm('Are you sure you want to delete this entry?')) {
+    if (confirm(t('ct.extension.timetracker.timeEntries.deleteConfirm'))) {
         try {
             const moduleId = settingsStore.moduleId;
             if (moduleId) {
                 await store.deleteTimeEntry(moduleId, entry);
-                toastStore.success('Entry deleted');
+                toastStore.success(t('ct.extension.timetracker.notifications.entryDeleted'));
             }
-        } catch (e) {
-            toastStore.error('Failed to delete entry');
+        } catch (e: any) {
+            toastStore.error(t('ct.extension.timetracker.notifications.deleteEntryFailed'));
         }
     }
 }
@@ -73,7 +75,7 @@ async function handleDelete(entry: any) {
 <template>
     <div class="space-y-6">
         <div v-if="groupedEntries.length === 0" class="text-center p-8 text-gray-500 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
-            No entries found matching your filters.
+            {{ t('ct.extension.timetracker.timeEntries.noEntries') }}
         </div>
 
         <TransitionGroup 
@@ -94,13 +96,13 @@ async function handleDelete(entry: any) {
                 </h3>
                 <div class="flex gap-4 text-sm">
                     <span class="text-gray-600 dark:text-gray-300">
-                        Actual: 
+                        {{ t('ct.extension.timetracker.dashboard.stats.actual') }}: 
                         <span :class="group.totalMs >= group.targetMs ? 'text-green-600 dark:text-green-400 font-bold' : 'text-red-600 dark:text-red-400'">
                             {{ group.totalDisplay }}
                         </span>
                     </span>
                     <span class="text-gray-500">
-                        Target: <span class="font-medium">{{ group.targetDisplay }}</span>
+                        {{ t('ct.extension.timetracker.dashboard.stats.target') }}: <span class="font-medium">{{ group.targetDisplay }}</span>
                     </span>
                 </div>
             </div>
@@ -115,7 +117,7 @@ async function handleDelete(entry: any) {
                         </h4>
                         <div class="flex gap-4 text-xs">
                              <span class="text-gray-600 dark:text-gray-400">
-                                Actual: 
+                                {{ t('ct.extension.timetracker.dashboard.stats.actual') }}: 
                                 <span :class="{
                                     'text-green-600 dark:text-green-400 font-bold': day.dayTotalMs >= day.dayTargetMs,
                                     'text-red-600 dark:text-red-400': day.dayTotalMs < day.dayTargetMs && day.isWorkDay,
@@ -124,7 +126,7 @@ async function handleDelete(entry: any) {
                                     {{ day.dayTotalDisplay }}
                                 </span>
                             </span>
-                             <span class="text-gray-500">Target: {{ day.dayTargetDisplay }}</span>
+                             <span class="text-gray-500">{{ t('ct.extension.timetracker.dashboard.stats.target') }}: {{ day.dayTargetDisplay }}</span>
                         </div>
                     </div>
 
@@ -140,16 +142,16 @@ async function handleDelete(entry: any) {
                                             :indeterminate.prop="someSelected"
                                             @change="toggleSelectAll"
                                             class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 cursor-pointer"
-                                            title="Select All"
+                                            :title="t('ct.extension.timetracker.bulkEdit.selectAll')"
                                         />
                                     </th>
-                                    <th class="px-3 py-2">Start</th>
-                                    <th class="px-3 py-2">End</th>
-                                    <th class="px-3 py-2">Duration</th>
-                                    <th class="px-3 py-2">Category</th>
-                                    <th class="px-3 py-2">Description</th>
-                                    <th class="px-3 py-2">Type</th>
-                                    <th class="px-3 py-2 text-center">Actions</th>
+                                    <th class="px-3 py-2">{{ t('ct.extension.timetracker.timeEntries.startTime') }}</th>
+                                    <th class="px-3 py-2">{{ t('ct.extension.timetracker.timeEntries.endTime') }}</th>
+                                    <th class="px-3 py-2">{{ t('ct.extension.timetracker.timeEntries.duration') }}</th>
+                                    <th class="px-3 py-2">{{ t('ct.extension.timetracker.timeEntries.filterCategory') }}</th>
+                                    <th class="px-3 py-2">{{ t('ct.extension.timetracker.dashboard.description') }}</th>
+                                    <th class="px-3 py-2">{{ t('ct.extension.timetracker.timeEntries.type') }}</th>
+                                    <th class="px-3 py-2 text-center">{{ t('ct.extension.timetracker.timeEntries.actions') }}</th>
                                 </tr>
                             </thead>
                             <tbody>

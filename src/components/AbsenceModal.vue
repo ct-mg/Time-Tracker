@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
 import BaseModal from './base/BaseModal.vue';
 import BaseButton from './base/BaseButton.vue';
 import { format } from 'date-fns';
@@ -11,6 +12,7 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits(['update:modelValue', 'save']);
+const { t } = useI18n();
 
 const formData = ref({
     absenceReasonId: 0,
@@ -62,17 +64,17 @@ const validate = () => {
     const newErrors: Record<string, string> = {};
     
     if (!formData.value.absenceReasonId) {
-        newErrors.absenceReasonId = 'Please select a reason';
+        newErrors.absenceReasonId = t('ct.extension.timetracker.absences.validation.reasonRequired');
     }
     
     if (!formData.value.startDate) {
-        newErrors.startDate = 'Start date is required';
+        newErrors.startDate = t('ct.extension.timetracker.absences.validation.startDateRequired');
     }
     
     if (!formData.value.endDate) {
-        newErrors.endDate = 'End date is required';
+        newErrors.endDate = t('ct.extension.timetracker.absences.validation.endDateRequired');
     } else if (formData.value.startDate && formData.value.endDate < formData.value.startDate) {
-        newErrors.endDate = 'End date must be after start date';
+        newErrors.endDate = t('ct.extension.timetracker.absences.validation.endDateAfterStartDate');
     }
     
     errors.value = newErrors;
@@ -93,19 +95,19 @@ const handleSave = () => {
     <BaseModal
         :model-value="modelValue"
         @update:model-value="emit('update:modelValue', $event)"
-        :title="absence ? 'Edit Absence' : 'Add Absence'"
+        :title="absence ? t('ct.extension.timetracker.absences.editAbsence') : t('ct.extension.timetracker.absences.addAbsence')"
         size="md"
     >
         <div class="space-y-4">
             <!-- Reason -->
             <div>
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Reason</label>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ t('ct.extension.timetracker.absences.reason') }}</label>
                 <select 
                     v-model="formData.absenceReasonId"
                     class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
                     :class="{ 'border-red-500': errors.absenceReasonId }"
                 >
-                    <option value="0" disabled>Please select a reason...</option>
+                    <option value="0" disabled>{{ t('ct.extension.timetracker.absences.selectReason') }}</option>
                     <option v-for="cat in categories" :key="cat.id" :value="cat.id">
                         {{ cat.name }}
                     </option>
@@ -116,7 +118,7 @@ const handleSave = () => {
             <!-- Dates -->
             <div class="grid grid-cols-2 gap-4">
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Start Date</label>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ t('ct.extension.timetracker.absences.startDate') }}</label>
                     <input 
                         type="date"
                         v-model="formData.startDate"
@@ -126,7 +128,7 @@ const handleSave = () => {
                     <p v-if="errors.startDate" class="mt-1 text-xs text-red-500">{{ errors.startDate }}</p>
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">End Date</label>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ t('ct.extension.timetracker.absences.endDate') }}</label>
                     <input 
                         type="date"
                         v-model="formData.endDate"
@@ -146,14 +148,14 @@ const handleSave = () => {
                     class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                 />
                 <label for="isFullDay" class="ml-2 block text-sm text-gray-700 dark:text-gray-300">
-                    Full Day Absence
+                    {{ t('ct.extension.timetracker.absences.fullDayLabel') }}
                 </label>
             </div>
 
             <!-- Times (if not full day) -->
             <div v-if="!formData.isFullDay" class="grid grid-cols-2 gap-4 animate-fade-in">
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Start Time</label>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ t('ct.extension.timetracker.absences.startTime') }}</label>
                     <input 
                         type="time"
                         v-model="formData.startTime"
@@ -161,7 +163,7 @@ const handleSave = () => {
                     />
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">End Time</label>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ t('ct.extension.timetracker.absences.endTime') }}</label>
                     <input 
                         type="time"
                         v-model="formData.endTime"
@@ -172,12 +174,12 @@ const handleSave = () => {
 
             <!-- Comment -->
             <div>
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Comment (Optional)</label>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ t('ct.extension.timetracker.absences.comment') }}</label>
                 <textarea 
                     v-model="formData.comment"
                     rows="3"
                     class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                    placeholder="e.g. Doctor's appointment, Vacation..."
+                    :placeholder="t('ct.extension.timetracker.absences.commentPlaceholder')"
                 ></textarea>
             </div>
         </div>
@@ -185,10 +187,10 @@ const handleSave = () => {
         <template #footer>
             <div class="flex justify-end gap-3">
                 <BaseButton variant="secondary" @click="emit('update:modelValue', false)">
-                    Cancel
+                    {{ t('ct.extension.timetracker.common.cancel') }}
                 </BaseButton>
                 <BaseButton variant="primary" @click="handleSave">
-                    {{ absence ? 'Update Absence' : 'Add Absence' }}
+                    {{ absence ? t('ct.extension.timetracker.absences.updateAbsence') : t('ct.extension.timetracker.absences.addAbsence') }}
                 </BaseButton>
             </div>
         </template>

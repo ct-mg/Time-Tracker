@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { useStatistics } from '../composables/useStatistics';
+import { useI18n } from 'vue-i18n';
 import BaseCard from './base/BaseCard.vue';
 
 const { todayStats, thisWeekStats, thisMonthStats, lastMonthStats } = useStatistics();
+const { t } = useI18n();
 
 function formatHours(hours: number): string {
     return `${hours.toFixed(1)}h`;
@@ -21,7 +23,7 @@ function getProgressColor(progress: number): string {
         <BaseCard padding="md" hoverable>
             <div class="space-y-3">
                 <div class="flex justify-between items-start">
-                    <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400">Today</h3>
+                    <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ t('ct.extension.timetracker.dashboard.stats.today') }}</h3>
                     <svg class="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
                     </svg>
@@ -36,7 +38,7 @@ function getProgressColor(progress: number): string {
                             / {{ formatHours(todayStats.target) }}
                         </span>
                     </div>
-                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">IST / SOLL</p>
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">{{ t('ct.extension.timetracker.dashboard.stats.actual') }} / {{ t('ct.extension.timetracker.dashboard.stats.target') }}</p>
                 </div>
 
                 <!-- Progress Bar -->
@@ -52,7 +54,7 @@ function getProgressColor(progress: number): string {
                         {{ todayStats.progress.toFixed(0) }}%
                     </span>
                     <span class="text-gray-500 dark:text-gray-400">
-                        {{ todayStats.isOnTrack ? '✓ On Track' : '⚠ Behind' }}
+                        {{ todayStats.isOnTrack ? t('ct.extension.timetracker.dashboard.stats.status.onTrack') : t('ct.extension.timetracker.dashboard.stats.status.behind') }}
                     </span>
                 </div>
             </div>
@@ -62,7 +64,7 @@ function getProgressColor(progress: number): string {
         <BaseCard padding="md" hoverable>
             <div class="space-y-3">
                 <div class="flex justify-between items-start">
-                    <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400">This Week</h3>
+                    <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ t('ct.extension.timetracker.dashboard.stats.thisWeek') }}</h3>
                     <svg class="w-5 h-5 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
                     </svg>
@@ -77,7 +79,7 @@ function getProgressColor(progress: number): string {
                             / {{ formatHours(thisWeekStats.target) }}
                         </span>
                     </div>
-                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">IST / SOLL</p>
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">{{ t('ct.extension.timetracker.dashboard.stats.actual') }} / {{ t('ct.extension.timetracker.dashboard.stats.target') }}</p>
                 </div>
 
                 <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 overflow-hidden">
@@ -92,7 +94,7 @@ function getProgressColor(progress: number): string {
                         {{ thisWeekStats.progress.toFixed(0) }}%
                     </span>
                     <span class="text-gray-500 dark:text-gray-400">
-                        {{ thisWeekStats.isOnTrack ? '✓ On Track' : '⚠ Behind' }}
+                        {{ thisWeekStats.isOnTrack ? t('ct.extension.timetracker.dashboard.stats.status.onTrack') : t('ct.extension.timetracker.dashboard.stats.status.behind') }}
                     </span>
                 </div>
             </div>
@@ -102,7 +104,7 @@ function getProgressColor(progress: number): string {
         <BaseCard padding="md" hoverable>
             <div class="space-y-3">
                 <div class="flex justify-between items-start">
-                    <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400">This Month</h3>
+                    <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ t('ct.extension.timetracker.dashboard.stats.thisMonth') }}</h3>
                     <svg class="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 8v8m-4-5v5m-4-2v2m-2 4h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
                     </svg>
@@ -117,7 +119,7 @@ function getProgressColor(progress: number): string {
                             / {{ formatHours(thisMonthStats.target) }}
                         </span>
                     </div>
-                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">IST / SOLL</p>
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">{{ t('ct.extension.timetracker.dashboard.stats.actual') }} / {{ t('ct.extension.timetracker.dashboard.stats.target') }}</p>
                 </div>
 
                 <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 overflow-hidden">
@@ -132,7 +134,7 @@ function getProgressColor(progress: number): string {
                         {{ thisMonthStats.progress.toFixed(0) }}%
                     </span>
                     <span class="text-gray-500 dark:text-gray-400">
-                        {{ thisMonthStats.isOnTrack ? '✓ On Track' : '⚠ Behind' }}
+                        {{ thisMonthStats.isOnTrack ? t('ct.extension.timetracker.dashboard.stats.status.onTrack') : t('ct.extension.timetracker.dashboard.stats.status.behind') }}
                     </span>
                 </div>
             </div>
@@ -142,7 +144,7 @@ function getProgressColor(progress: number): string {
         <BaseCard padding="md" hoverable>
             <div class="space-y-3">
                 <div class="flex justify-between items-start">
-                    <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400">Last Month</h3>
+                    <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ t('ct.extension.timetracker.dashboard.stats.lastMonth') }}</h3>
                     <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
                     </svg>
@@ -157,7 +159,7 @@ function getProgressColor(progress: number): string {
                             / {{ formatHours(lastMonthStats.target) }}
                         </span>
                     </div>
-                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">IST / SOLL</p>
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">{{ t('ct.extension.timetracker.dashboard.stats.actual') }} / {{ t('ct.extension.timetracker.dashboard.stats.target') }}</p>
                 </div>
 
                 <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 overflow-hidden">
@@ -172,7 +174,7 @@ function getProgressColor(progress: number): string {
                         {{ lastMonthStats.progress.toFixed(0) }}%
                     </span>
                     <span class="text-gray-500 dark:text-gray-400">
-                        {{ lastMonthStats.isOnTrack ? '✓ Complete' : '⚠ Under' }}
+                        {{ lastMonthStats.isOnTrack ? t('ct.extension.timetracker.dashboard.stats.status.complete') : t('ct.extension.timetracker.dashboard.stats.status.under') }}
                     </span>
                 </div>
             </div>

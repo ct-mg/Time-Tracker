@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { useTimeEntriesStore } from '../stores/time-entries.store';
 import { useSettingsStore } from '../stores/settings.store';
 
 const store = useTimeEntriesStore();
 const settingsStore = useSettingsStore();
+const { t } = useI18n();
 
 const logs = computed(() => store.activityLogs);
 const isLoading = ref(false);
@@ -34,27 +36,27 @@ function getActionColor(action: string) {
 <template>
     <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
         <div class="flex justify-between items-center mb-6">
-            <h2 class="text-xl font-bold text-gray-900 dark:text-white">Activity Logs</h2>
+            <h2 class="text-xl font-bold text-gray-900 dark:text-white">{{ t('ct.extension.timetracker.admin.activityLogs') }}</h2>
             <button 
                 @click="store.loadActivityLogs(settingsStore.moduleId!)"
                 class="px-3 py-1.5 text-sm font-medium text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
             >
-                Refresh
+                {{ t('ct.extension.timetracker.admin.refresh') }}
             </button>
         </div>
 
         <div v-if="isLoading" class="text-center py-8 text-gray-500">
-            Loading logs...
+            {{ t('ct.extension.timetracker.admin.loadingLogs') }}
         </div>
 
         <div v-else class="overflow-x-auto">
             <table class="w-full text-left text-sm">
                 <thead>
                     <tr class="bg-gray-50 dark:bg-gray-900 text-gray-500 border-b dark:border-gray-700">
-                        <th class="p-3">Time</th>
-                        <th class="p-3">User</th>
-                        <th class="p-3">Action</th>
-                        <th class="p-3">Details</th>
+                        <th class="p-3">{{ t('ct.extension.timetracker.admin.time') }}</th>
+                        <th class="p-3">{{ t('ct.extension.timetracker.admin.user') }}</th>
+                        <th class="p-3">{{ t('ct.extension.timetracker.admin.action') }}</th>
+                        <th class="p-3">{{ t('ct.extension.timetracker.admin.details') }}</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
@@ -76,16 +78,16 @@ function getActionColor(action: string) {
                                 <span v-if="log.details.description" class="mx-1 text-gray-400">-</span>
                                 <span>{{ log.details.description }}</span>
                                 <div v-if="log.details.oldValue" class="text-xs text-gray-400 mt-1">
-                                    Modified: {{ log.details.oldValue.description || 'Entry' }}
+                                    {{ t('ct.extension.timetracker.admin.modified') }} {{ log.details.oldValue.description || 'Entry' }}
                                 </div>
                             </div>
                             <div v-else>
-                                ID: {{ log.entityId }}
+                                {{ t('ct.extension.timetracker.admin.id') }} {{ log.entityId }}
                             </div>
                         </td>
                     </tr>
                     <tr v-if="logs.length === 0">
-                        <td colspan="4" class="p-8 text-center text-gray-500">No activity recorded yet.</td>
+                        <td colspan="4" class="p-8 text-center text-gray-500">{{ t('ct.extension.timetracker.admin.noLogs') }}</td>
                     </tr>
                 </tbody>
             </table>

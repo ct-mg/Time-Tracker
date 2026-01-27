@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
+import { useI18n } from 'vue-i18n';
 import type { TimeEntry, WorkCategory } from '../types/time-tracker';
 import { formatDuration } from '../utils/date';
 import { useTimeEntriesStore } from '../stores/time-entries.store';
@@ -15,6 +16,7 @@ const emit = defineEmits<{
     (e: 'delete', entry: TimeEntry): void;
 }>();
 
+const { t } = useI18n();
 const store = useTimeEntriesStore();
 
 const isSelected = computed(() => store.selectedEntryIds.includes(props.entry.startTime));
@@ -26,7 +28,7 @@ function toggleSelection() {
 // const authStore = useAuthStore();
 
 const duration = computed(() => {
-    if (!props.entry.endTime) return 'Active';
+    if (!props.entry.endTime) return t('ct.extension.timetracker.common.active');
     const start = new Date(props.entry.startTime).getTime();
     const end = new Date(props.entry.endTime).getTime();
     return formatDuration(end - start);
@@ -58,7 +60,7 @@ const isActive = computed(() => !props.entry.endTime);
             {{ startTime }}
         </td>
         <td class="p-3 text-sm">
-            <span v-if="isActive" class="text-green-600 font-semibold dark:text-green-400">Active</span>
+            <span v-if="isActive" class="text-green-600 font-semibold dark:text-green-400">{{ t('ct.extension.timetracker.common.active') }}</span>
             <span v-else class="text-gray-700 dark:text-gray-300">{{ endTime }}</span>
         </td>
         <td class="p-3 text-sm font-semibold text-gray-900 dark:text-gray-100">
@@ -78,10 +80,10 @@ const isActive = computed(() => !props.entry.endTime);
         <td class="p-3 text-sm">
              <div class="flex flex-col gap-1 items-start">
                  <span v-if="entry.isManual" class="text-xs text-yellow-600 dark:text-yellow-400 flex items-center gap-1">
-                     Manual
+                     {{ t('ct.extension.timetracker.timeEntries.manual') }}
                  </span>
                  <span v-if="entry.isBreak" class="text-xs text-blue-500 flex items-center gap-1 bg-blue-50 dark:bg-blue-900/30 px-1.5 py-0.5 rounded border border-blue-200 dark:border-blue-800">
-                     Break
+                     {{ t('ct.extension.timetracker.timeEntries.break') }}
                  </span>
              </div>
         </td>
@@ -90,14 +92,14 @@ const isActive = computed(() => !props.entry.endTime);
                  <button 
                     @click="$emit('edit', entry)"
                     class="p-1 bg-yellow-400 text-gray-800 rounded hover:bg-yellow-500 transition-colors"
-                    title="Edit"
+                    :title="t('ct.extension.timetracker.common.edit')"
                  >
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
                  </button>
                  <button 
                     @click="$emit('delete', entry)"
                     class="p-1 bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
-                    title="Delete"
+                    :title="t('ct.extension.timetracker.common.delete')"
                  >
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
                  </button>

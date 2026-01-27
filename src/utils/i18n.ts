@@ -1,95 +1,40 @@
-/**
- * Internationalization (i18n) Utility
- *
- * Provides translation functionality for the Time Tracker extension.
- * Designed to be easily adaptable for ChurchTools native i18n when available.
- */
+import { createI18n } from 'vue-i18n';
+import de from '../locales/de.json';
+import en from '../locales/en.json';
 
+export type MessageSchema = typeof en;
 export type Language = 'de' | 'en';
-
-export type Translations = Record<string, string>;
-
-let currentLanguage: Language = 'en';
-let translations: Translations | null = null;
-
-/**
- * Initialize i18n with a specific language
- * @param language - Language code ('de' or 'en')
- */
-export async function initI18n(language: Language): Promise<void> {
-    currentLanguage = language;
-
-    // Load translations dynamically
-    // Future: This can be replaced with ChurchTools API call
-    try {
-        if (language === 'de') {
-            translations = (await import('../locales/de.json')).default as Translations;
-        } else {
-            translations = (await import('../locales/en.json')).default as Translations;
-        }
-    } catch (error) {
-        console.error('[i18n] Failed to load translations:', error);
-        // Fallback to English
-        translations = (await import('../locales/en.json')).default as Translations;
-    }
-}
 
 /**
  * Detect browser language and return supported language code
- * @returns Language code based on browser language or fallback
  */
-export function detectBrowserLanguage(): Language {
+function detectBrowserLanguage(): Language {
     const browserLang = navigator.language.toLowerCase();
-
-    // Check if German
     if (browserLang.startsWith('de')) {
         return 'de';
     }
-
-    // Default to English
     return 'en';
 }
 
-/**
- * Translate a key to the current language
- * @param key - Translation key in format "ct.extension.timetracker.namespace.key"
- * @param params - Optional parameters to replace in the translation string (e.g., { name: 'John' })
- * @returns Translated string or key if translation not found
- */
-export function t(key: string, params?: Record<string, string | number>): string {
-    if (!translations) {
-        console.warn('[i18n] Translations not loaded, returning key:', key);
-        return key;
-    }
+const i18n = createI18n<[MessageSchema], Language>({
+    legacy: false, // Use Composition API
+    locale: detectBrowserLanguage(), // Set initial locale
+    fallbackLocale: 'en', // Set fallback
+    messages: {
+        de,
+        en,
+    },
+});
 
-    let translation = translations[key];
+export default i18n;
 
-    if (translation === undefined) {
-        // console.warn('[i18n] Translation key not found:', key);
-        return key;
-    }
+export function setLanguage(lang: Language | 'auto') {
+    const targetLang = lang === 'auto' ? detectBrowserLanguage() : lang;
 
-    if (params) {
-        Object.entries(params).forEach(([paramKey, value]) => {
-            translation = translation.replace(new RegExp(`{${paramKey}}`, 'g'), String(value));
-        });
-    }
+    // Type assertion needed because i18n.global.locale is a Ref in legacy: false mode
+    // but TypeScript might not infer it correctly depending on strict settings
+    // @ts-ignore
+    i18n.global.locale.value = targetLang;
 
-    return translation;
-}
-
-/**
- * Get current language
- * @returns Current language code
- */
-export function getCurrentLanguage(): Language {
-    return currentLanguage;
-}
-
-/**
- * Change language and reload translations
- * @param language - New language code
- */
-export async function changeLanguage(language: Language): Promise<void> {
-    await initI18n(language);
+    document.querySelector('html')?.setAttribute('lang', targetLang);
 }
