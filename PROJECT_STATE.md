@@ -1,12 +1,36 @@
 # Project State
 
-**Last Updated:** 2026-01-08 20:00
-**Current Phase:** Phase 9 (Starting) - Internationalization
-**Current Focus:** Documentation Review & Logic Sync
+**Last Updated:** 2026-01-27 19:30
+**Current Phase:** Phase 10 - Polish & Advanced Features
+**Current Focus:** Performance, Statistics & Data Integrity
 
 ## Active Content
 - **Branch:** `rewrite/vue`
-- **Active Feature:** User Settings & Dark Mode (Done), i18n (Next)
+- **Active Feature:** Absences Integration, Statistics Enhancements, Confirmation Modals, Improved Exports
+
+## Session Handoff - 2026-01-27 19:30
+**Feature:** Statistics, Absences & Test Stabilization
+**Branch:** `rewrite/vue`
+**Status:** 95% done (Vue migration stabilization)
+
+### Was wurde gemacht:
+- **Test Stabilization:** KV-Store tests fixed (all 13 passing), added unit tests for Absences store.
+- **Statistics Enhancements:** 
+  - `useStatistics` now includes **Absences** (that count as work time).
+  - **Active Timer** inclusion in real-time stats.
+  - Added "Remaining Hours" calculation to all cards.
+- **UI/UX Polish:**
+  - Implemented `ConfirmationModal` for safe deletions.
+  - Added 7-day work time chart to Reports view.
+- **Data Export:**
+  - Upgraded CSV/Excel export to use `xlsx` library.
+  - Added User Name attribution to exported files.
+
+### Nächste Schritte:
+1. Finish PDF Export (Basic implementation).
+2. Advanced Admin Features (Backup verification, Manager assignments).
+3. Visual polish for the active timer (heartbeat animation).
+4. E2E tests with Playwright.
 
 
 ## Session Handoff - 2025-12-19 14:00
