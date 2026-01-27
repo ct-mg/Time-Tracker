@@ -96,17 +96,16 @@ async function handleClockOut() {
                 </BaseButton>
             </div>
 
-            <!-- Stop Button (Visible when tracking) -->
             <!-- Active State (Visible when tracking) -->
-            <div v-else class="flex-grow flex items-center justify-between gap-4 w-full md:w-auto bg-gradient-to-r from-blue-50 to-blue-50/0 dark:from-blue-900/20 -my-4 py-4 pl-4 rounded-l-lg border-l-4 border-blue-500 transition-all duration-300">
+            <div v-else class="flex-grow flex items-center justify-between gap-4 w-full md:w-auto bg-gradient-to-r from-green-50 to-green-50/0 dark:from-green-900/20 -my-4 py-4 pl-4 rounded-l-lg border-l-4 border-green-500 transition-all duration-300">
                 <div class="flex items-center gap-3 overflow-hidden">
                     <div class="relative flex h-3 w-3">
-                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
-                        <span class="relative inline-flex rounded-full h-3 w-3 bg-blue-500"></span>
+                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                        <span class="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
                     </div>
                     
                     <div class="text-left min-w-0">
-                        <div class="text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider">{{ t('ct.extension.timetracker.dashboard.currentlyWorking') }}</div>
+                        <div class="text-xs font-semibold text-green-600 dark:text-green-400 uppercase tracking-wider">{{ t('ct.extension.timetracker.dashboard.currentlyWorking') }}</div>
                         <div class="font-medium text-gray-900 dark:text-white truncate" :title="timeEntriesStore.activeEntry?.description">
                             <span class="font-bold">{{ timeEntriesStore.activeEntry?.categoryName }}</span>
                             <span v-if="timeEntriesStore.activeEntry?.description" class="mx-2 text-gray-400">|</span>

@@ -28,6 +28,8 @@
     "dependencies": {
         "@churchtools/extension-points": "github:churchtools/churchtools-extension-points",
         "date-fns": "^4.1.0",
+        "jspdf": "^4.0.0",
+        "jspdf-autotable": "^5.0.7",
         "pinia": "^3.0.4",
         "vue": "^3.5.26",
         "vue-i18n": "^9.14.5",
@@ -36,6 +38,7 @@
     "devDependencies": {
         "@churchtools/churchtools-client": "^1.4.0",
         "@eslint/js": "^9.39.1",
+        "@playwright/test": "^1.58.0",
         "@testing-library/dom": "^10.4.1",
         "@types/node": "^24.3.0",
         "@typescript-eslint/eslint-plugin": "^8.48.0",

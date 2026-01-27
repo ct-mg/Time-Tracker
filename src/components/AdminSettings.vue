@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useSettingsStore } from '../stores/settings.store';
 import { useAuthStore } from '../stores/auth.store';
@@ -7,13 +7,14 @@ import type { UserHoursConfig } from '../types/time-tracker';
 import { useToastStore } from '../stores/toast.store';
 import AdminCategoryManager from './AdminCategoryManager.vue';
 import AdminActivityLogs from './AdminActivityLogs.vue';
+import AdminManagerAssignments from './AdminManagerAssignments.vue';
 
 const settingsStore = useSettingsStore();
 const authStore = useAuthStore();
 const toastStore = useToastStore();
 const { t } = useI18n();
 
-const activeTab = ref<'general' | 'categories' | 'logs'>('general');
+const activeTab = ref<'general' | 'categories' | 'managers' | 'logs'>('general');
 
 // Local state for editing
 const settings = ref({ ...settingsStore.settings });
@@ -114,6 +115,23 @@ async function saveAllSettings() {
         toastStore.error(t('ct.extension.timetracker.admin.saveFailed'));
     }
 }
+
+async function restoreFromBackup(backup: any) {
+    if (confirm(t('ct.extension.timetracker.admin.restoreBackupConfirm'))) {
+        try {
+            await settingsStore.restoreBackup(backup);
+            settings.value = JSON.parse(JSON.stringify(settingsStore.settings));
+            userConfigs.value = settings.value.userHoursConfig || [];
+            toastStore.success(t('ct.extension.timetracker.admin.backupRestored'));
+        } catch (e) {
+            toastStore.error(t('ct.extension.timetracker.admin.backupRestoreFailed'));
+        }
+    }
+}
+
+onMounted(() => {
+    settingsStore.loadBackups();
+});
 </script>
 
 <template>
@@ -133,6 +151,13 @@ async function saveAllSettings() {
                          activeTab === 'categories' ? 'border-blue-600 text-blue-600 dark:text-blue-400' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400']"
             >
                 {{ t('ct.extension.timetracker.admin.workCategories') }}
+            </button>
+            <button 
+                @click="activeTab = 'managers'"
+                :class="['px-6 py-3 font-medium text-sm border-b-2 transition-colors', 
+                         activeTab === 'managers' ? 'border-blue-600 text-blue-600 dark:text-blue-400' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400']"
+            >
+                {{ t('ct.extension.timetracker.admin.userManagement') }}
             </button>
             <button 
                 @click="activeTab = 'logs'"
@@ -223,6 +248,36 @@ async function saveAllSettings() {
             </button>
         </div>
 
+        <hr class="my-10 border-gray-200 dark:border-gray-700" />
+
+        <!-- Backups -->
+        <h2 class="text-xl font-bold mb-4 text-gray-900 dark:text-white">{{ t('ct.extension.timetracker.admin.settingsBackup') }}</h2>
+        <p class="text-sm text-gray-500 dark:text-gray-400 mb-6">{{ t('ct.extension.timetracker.admin.noBackups') }}</p>
+
+        <div class="space-y-4">
+            <div 
+                v-for="backup in settingsStore.backups" 
+                :key="backup.timestamp"
+                class="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-900 rounded-lg border dark:border-gray-700"
+            >
+                <div>
+                    <div class="font-bold text-gray-900 dark:text-white">
+                        {{ new Date(backup.timestamp).toLocaleString() }}
+                    </div>
+                    <div class="text-xs text-gray-500">{{ backup.summary }}</div>
+                </div>
+                <button 
+                    @click="restoreFromBackup(backup)"
+                    class="px-3 py-1.5 text-sm bg-white dark:bg-gray-800 border dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                >
+                    {{ t('ct.extension.timetracker.admin.restoreBackup') }}
+                </button>
+            </div>
+            <div v-if="settingsStore.backups.length === 0" class="text-center py-8 text-gray-400 italic">
+                {{ t('ct.extension.timetracker.admin.noBackups') }}
+            </div>
+        </div>
+
         <!-- Add/Edit Modal (Simple Inline Overlay) -->
         <div v-if="isEditingConfig" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
             <div class="bg-white dark:bg-gray-800 p-6 rounded-lg w-full max-w-md shadow-xl">
@@ -258,5 +313,8 @@ async function saveAllSettings() {
         
         <!-- Activity Logs Tab -->
         <AdminActivityLogs v-if="activeTab === 'logs'" />
+
+        <!-- Manager Assignments Tab -->
+        <AdminManagerAssignments v-if="activeTab === 'managers'" />
     </div>
 </template>

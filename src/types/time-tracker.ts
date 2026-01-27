@@ -68,6 +68,13 @@ export interface Settings {
     };
 }
 
+export interface SettingsBackup {
+    id?: number;
+    timestamp: number;
+    settings: Settings;
+    summary: string;
+}
+
 export interface UserPermissions {
     canSeeAllEntries: boolean; // HR role
     canSeeOwnEntries: boolean; // Everyone

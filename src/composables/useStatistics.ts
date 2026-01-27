@@ -186,7 +186,10 @@ export function useStatistics() {
         };
     });
 
+    const isLoading = computed(() => timeEntriesStore.isLoading || absencesStore.isLoading);
+
     return {
+        isLoading,
         todayStats,
         thisWeekStats,
         thisMonthStats,

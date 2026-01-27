@@ -163,11 +163,11 @@ async function handleSaveAbsence(absenceData: any) {
     <main v-if="currentView === 'tracker'">
         <!-- Tab Navigation -->
         <div class="mb-6 border-b border-gray-200 dark:border-gray-700">
-            <nav class="flex gap-8" aria-label="Tabs">
+            <nav class="flex gap-4 md:gap-8 overflow-x-auto no-scrollbar scroll-smooth" aria-label="Tabs">
                 <button
                     @click="activeTab = 'dashboard'"
                     :class="[
-                        'py-4 px-1 border-b-2 font-medium text-sm transition-colors flex items-center gap-2',
+                        'py-4 px-1 border-b-2 font-medium text-sm transition-colors flex items-center gap-2 whitespace-nowrap',
                         activeTab === 'dashboard'
                             ? 'border-blue-500 text-blue-600 dark:text-blue-400'
                             : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
@@ -176,12 +176,12 @@ async function handleSaveAbsence(absenceData: any) {
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
                     </svg>
-                    Dashboard
+                    {{ t('ct.extension.timetracker.dashboard.title') }}
                 </button>
                 <button
                     @click="activeTab = 'entries'"
                     :class="[
-                        'py-4 px-1 border-b-2 font-medium text-sm transition-colors flex items-center gap-2',
+                        'py-4 px-1 border-b-2 font-medium text-sm transition-colors flex items-center gap-2 whitespace-nowrap',
                         activeTab === 'entries'
                             ? 'border-blue-500 text-blue-600 dark:text-blue-400'
                             : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
@@ -190,12 +190,12 @@ async function handleSaveAbsence(absenceData: any) {
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                     </svg>
-                    Time Entries
+                    {{ t('ct.extension.timetracker.timeEntries.title') }}
                 </button>
                 <button
                     @click="activeTab = 'absences'"
                     :class="[
-                        'py-4 px-1 border-b-2 font-medium text-sm transition-colors flex items-center gap-2',
+                        'py-4 px-1 border-b-2 font-medium text-sm transition-colors flex items-center gap-2 whitespace-nowrap',
                         activeTab === 'absences'
                             ? 'border-blue-500 text-blue-600 dark:text-blue-400'
                             : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
@@ -204,12 +204,12 @@ async function handleSaveAbsence(absenceData: any) {
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
                     </svg>
-                    Absences
+                    {{ t('ct.extension.timetracker.absences.title') }}
                 </button>
                 <button
                     @click="activeTab = 'reports'"
                     :class="[
-                        'py-4 px-1 border-b-2 font-medium text-sm transition-colors flex items-center gap-2',
+                        'py-4 px-1 border-b-2 font-medium text-sm transition-colors flex items-center gap-2 whitespace-nowrap',
                         activeTab === 'reports'
                             ? 'border-blue-500 text-blue-600 dark:text-blue-400'
                             : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
@@ -218,7 +218,7 @@ async function handleSaveAbsence(absenceData: any) {
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 8v8m-4-5v5m-4-2v2m-2 4h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
                     </svg>
-                    Reports
+                    {{ t('ct.extension.timetracker.reports.title') }}
                 </button>
             </nav>
         </div>
@@ -240,7 +240,7 @@ async function handleSaveAbsence(absenceData: any) {
         <!-- Time Entries Tab -->
         <div v-if="activeTab === 'entries'">
             <div class="flex justify-between items-center mb-4">
-                <h2 class="text-xl font-semibold dark:text-white">Time Entries</h2>
+                <h2 class="text-xl font-semibold dark:text-white">{{ t('ct.extension.timetracker.timeEntries.title') }}</h2>
                 <button 
                     @click="handleAdd"
                     class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors text-sm font-medium flex items-center gap-2"
@@ -249,7 +249,7 @@ async function handleSaveAbsence(absenceData: any) {
                         <line x1="12" y1="5" x2="12" y2="19"></line>
                         <line x1="5" y1="12" x2="19" y2="12"></line>
                     </svg>
-                    Add Entry
+                    {{ t('ct.extension.timetracker.timeEntries.addManual') }}
                 </button>
             </div>
             

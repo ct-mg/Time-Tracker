@@ -13,6 +13,9 @@ import {
     createCustomDataCategory,
     deleteCustomDataValue
 } from '../services/kv-store';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import * as XLSX from 'xlsx';
 
 export const useTimeEntriesStore = defineStore('timeEntries', () => {
     const entries = ref<TimeEntry[]>([]);
@@ -131,7 +134,7 @@ export const useTimeEntriesStore = defineStore('timeEntries', () => {
         const settings = settingsStore.settings;
 
         // Priority 1: User-specific settings from store
-        const userConfig = settings.userHoursConfig?.find((u) => u.userId === userId);
+        const userConfig = settings.userHoursConfig?.find((u: any) => u.userId === userId);
 
         return {
             hoursPerDay: userConfig?.hoursPerDay ?? settings.defaultHoursPerDay,
@@ -590,44 +593,7 @@ export const useTimeEntriesStore = defineStore('timeEntries', () => {
         if (filteredEntries.value.length === 0) return;
 
         try {
-            const XLSX = (window as any).XLSX;
-            if (!XLSX) {
-                // Fallback to basic CSV if XLSX is not loaded (though it should be a dependency)
-                const headers = ['Date', 'Start', 'End', 'Category', 'Description', 'Duration (h)', 'Is Break', 'User'];
-                const csvRows = [headers.join(',')];
-
-                filteredEntries.value.forEach(e => {
-                    const startDate = parseISO(e.startTime);
-                    const endDate = e.endTime ? parseISO(e.endTime) : null;
-                    const durationMs = endDate ? differenceInMilliseconds(endDate, startDate) : 0;
-                    const durationHours = (durationMs / 3600000).toFixed(2);
-
-                    const row = [
-                        format(startDate, 'yyyy-MM-dd'),
-                        format(startDate, 'HH:mm:ss'),
-                        endDate ? format(endDate, 'HH:mm:ss') : 'RUNNING',
-                        `"${e.categoryName}"`,
-                        `"${e.description.replace(/"/g, '""')}"`,
-                        durationHours,
-                        e.isBreak ? 'Yes' : 'No',
-                        `"${e.userName || e.userId}"`
-                    ];
-                    csvRows.push(row.join(','));
-                });
-
-                const csvContent = csvRows.join('\n');
-                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-                const link = document.createElement('a');
-                const url = URL.createObjectURL(blob);
-                link.setAttribute('href', url);
-                link.setAttribute('download', `time-entries-export-${format(new Date(), 'yyyy-MM-dd-HHmm')}.csv`);
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-                return;
-            }
-
-            // Use XLSX library
+            // Use local XLSX import
             const data = filteredEntries.value.map(e => {
                 const startDate = parseISO(e.startTime);
                 const endDate = e.endTime ? parseISO(e.endTime) : null;
@@ -653,6 +619,79 @@ export const useTimeEntriesStore = defineStore('timeEntries', () => {
             XLSX.writeFile(workbook, `time-entries-export-${format(new Date(), 'yyyy-MM-dd-HHmm')}.xlsx`);
         } catch (err) {
             console.error('Export failed:', err);
+        }
+    }
+
+    function exportToPDF() {
+        if (filteredEntries.value.length === 0) return;
+
+        try {
+            const doc = new jsPDF();
+            const user = authStore.user;
+            const userName = user ? `${user.firstName || ''} ${user.lastName || ''}`.trim() : 'User';
+
+            // Title
+            doc.setFontSize(18);
+            doc.text('Time Tracker Report', 14, 22);
+
+            doc.setFontSize(11);
+            doc.setTextColor(100);
+
+            // Header Info
+            doc.text(`User: ${userName}`, 14, 32);
+            doc.text(`Generated: ${format(new Date(), 'dd.MM.yyyy HH:mm')}`, 14, 38);
+
+            // Period
+            if (dateRange.value.start && dateRange.value.end) {
+                const period = `${format(dateRange.value.start, 'dd.MM.yyyy')} - ${format(dateRange.value.end, 'dd.MM.yyyy')}`;
+                doc.text(`Period: ${period}`, 14, 44);
+            }
+
+            // Summary Stats
+            const stats = categoryStats.value;
+            const totalHours = stats.reduce((acc, curr) => acc + curr.totalHours, 0);
+
+            doc.setFontSize(14);
+            doc.setTextColor(0);
+            doc.text('Summary', 14, 55);
+
+            doc.setFontSize(11);
+            doc.text(`Total working hours: ${totalHours.toFixed(1)}h`, 14, 62);
+
+            let yPos = 70;
+            stats.forEach(stat => {
+                doc.text(`${stat.name}: ${stat.totalHours.toFixed(1)}h`, 20, yPos);
+                yPos += 6;
+            });
+
+            // Table
+            const tableData = filteredEntries.value.map(e => {
+                const startDate = parseISO(e.startTime);
+                const endDate = e.endTime ? parseISO(e.endTime) : null;
+                const durationMs = endDate ? differenceInMilliseconds(endDate, startDate) : 0;
+
+                return [
+                    format(startDate, 'dd.MM.yyyy'),
+                    format(startDate, 'HH:mm'),
+                    endDate ? format(endDate, 'HH:mm') : '...',
+                    e.categoryName,
+                    e.description || '-',
+                    (durationMs / 3600000).toFixed(2) + 'h',
+                    e.userName || '-'
+                ];
+            });
+
+            autoTable(doc, {
+                startY: yPos + 5,
+                head: [['Date', 'Start', 'End', 'Category', 'Description', 'Duration', 'User']],
+                body: tableData,
+                theme: 'striped',
+                headStyles: { fillColor: [0, 123, 255] }
+            });
+
+            doc.save(`time-tracker-report-${format(new Date(), 'yyyy-MM-dd-HHmm')}.pdf`);
+        } catch (err) {
+            console.error('PDF Export failed:', err);
         }
     }
 
@@ -691,6 +730,7 @@ export const useTimeEntriesStore = defineStore('timeEntries', () => {
         clearSelection,
         bulkDeleteEntries,
         bulkUpdateEntries,
-        exportToCSV
+        exportToCSV,
+        exportToPDF
     };
 });

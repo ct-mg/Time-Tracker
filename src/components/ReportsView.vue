@@ -53,22 +53,38 @@ const maxDailyHours = computed(() => {
 const handleExport = () => {
     store.exportToCSV();
 };
+
+const handleExportPDF = () => {
+    store.exportToPDF();
+};
 </script>
 
 <template>
     <div class="space-y-6">
         <div class="flex justify-between items-center mb-6">
             <h2 class="text-xl font-semibold text-gray-900 dark:text-white">{{ t('ct.extension.timetracker.reports.titleFull') }}</h2>
-            <button 
-                @click="handleExport"
-                class="px-4 py-2 bg-emerald-600 text-white rounded hover:bg-emerald-700 transition-colors text-sm font-medium flex items-center gap-2 shadow-sm"
-                :disabled="store.filteredEntries.length === 0"
-            >
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
-                </svg>
-                {{ t('ct.extension.timetracker.reports.exportCSV') }}
-            </button>
+            <div class="flex gap-2">
+                <button 
+                    @click="handleExport"
+                    class="px-4 py-2 bg-emerald-600 text-white rounded hover:bg-emerald-700 transition-colors text-sm font-medium flex items-center gap-2 shadow-sm"
+                    :disabled="store.filteredEntries.length === 0"
+                >
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                    </svg>
+                    {{ t('ct.extension.timetracker.reports.exportCSV') }}
+                </button>
+                <button 
+                    @click="handleExportPDF"
+                    class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors text-sm font-medium flex items-center gap-2 shadow-sm"
+                    :disabled="store.filteredEntries.length === 0"
+                >
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+                    </svg>
+                    PDF
+                </button>
+            </div>
         </div>
         
         <div class="flex justify-end mb-4">

@@ -6,6 +6,7 @@ import { formatDuration } from '../utils/date';
 import { format } from 'date-fns';
 import BaseCard from './base/BaseCard.vue';
 import BaseBadge from './base/BaseBadge.vue';
+import SkeletonLoader from './base/SkeletonLoader.vue';
 
 const store = useTimeEntriesStore();
 const { t } = useI18n();
@@ -58,15 +59,36 @@ function getCategoryColor(entry: typeof recentEntries.value[0]): string {
         <div class="flex justify-between items-center mb-4">
             <h2 class="text-lg font-bold text-gray-900 dark:text-white">{{ t('ct.extension.timetracker.dashboard.recentEntries') }}</h2>
             <a 
+                v-if="!store.isLoading"
                 href="#" 
                 @click.prevent="$emit('viewAll')"
                 class="text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-medium"
             >
                 {{ t('ct.extension.timetracker.dashboard.viewAllEntries') }} →
             </a>
+            <SkeletonLoader v-else width="80px" height="1.25rem" />
         </div>
 
-        <div v-if="recentEntries.length === 0" class="text-center py-8 text-gray-500 dark:text-gray-400">
+        <div v-if="store.isLoading && recentEntries.length === 0" class="space-y-4">
+            <div v-for="i in 2" :key="i">
+                <SkeletonLoader width="150px" height="1rem" class-name="mb-3" />
+                <div v-for="j in 2" :key="j" class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900 rounded-lg mb-2">
+                    <div class="flex items-center gap-3">
+                        <SkeletonLoader width="4px" height="2rem" />
+                        <div>
+                            <SkeletonLoader width="100px" height="1rem" class-name="mb-1" />
+                            <SkeletonLoader width="150px" height="0.75rem" />
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <SkeletonLoader width="80px" height="1rem" class-name="mb-1" />
+                        <SkeletonLoader width="40px" height="0.75rem" />
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div v-else-if="recentEntries.length === 0" class="text-center py-8 text-gray-500 dark:text-gray-400">
             <svg class="w-12 h-12 mx-auto mb-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
             </svg>

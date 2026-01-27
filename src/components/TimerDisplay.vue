@@ -18,7 +18,14 @@ const formattedTime = computed(() => {
 </script>
 
 <template>
-    <div class="text-4xl font-mono font-bold text-gray-800 dark:text-white tracking-wider">
+    <div 
+        class="text-4xl font-mono font-bold text-gray-800 dark:text-white tracking-wider px-4 py-2 rounded-lg"
+        :class="{ 'animate-shine text-green-600 dark:text-green-400': isTracking }"
+    >
         {{ formattedTime }}
     </div>
 </template>
+
+<style scoped>
+/* Scoped styles removed as animation moved to global style.css */
+</style>

@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia';
 import { ref } from 'vue';
-import type { Settings } from '../types/time-tracker';
-import { getCustomDataCategory, getCustomDataValues, createCustomDataValue, updateCustomDataValue, getModule } from '../services/kv-store';
+import type { Settings, SettingsBackup } from '../types/time-tracker';
+import { getCustomDataCategory, getCustomDataValues, createCustomDataValue, updateCustomDataValue, getModule, deleteCustomDataValue, createCustomDataCategory } from '../services/kv-store';
 
 interface UserSettings extends Settings {
     theme: 'light' | 'dark' | 'system';
@@ -23,6 +23,8 @@ export const useSettingsStore = defineStore('settings', () => {
     const error = ref<string | null>(null);
     const moduleId = ref<number | null>(null);
     const isInitialized = ref(false);
+    const backups = ref<SettingsBackup[]>([]);
+    const MAX_BACKUPS = 5;
 
     function applyTheme(currentTheme: 'light' | 'dark' | 'system') {
         const isDark = currentTheme === 'dark' || (currentTheme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
@@ -100,7 +102,66 @@ export const useSettingsStore = defineStore('settings', () => {
         }
     }
 
-    async function saveSettings() {
+    async function loadBackups() {
+        if (!moduleId.value) return;
+        try {
+            const category = await getCustomDataCategory<object>('settings_backups');
+            if (category) {
+                const values = await getCustomDataValues<SettingsBackup>(category.id, moduleId.value);
+                backups.value = values.sort((a, b) => b.timestamp - a.timestamp);
+            }
+        } catch (e) {
+            console.error('Failed to load backups', e);
+        }
+    }
+
+    async function createBackup(summary: string) {
+        if (!moduleId.value) return;
+        try {
+            let category = await getCustomDataCategory<object>('settings_backups');
+            if (!category) {
+                category = await createCustomDataCategory({
+                    customModuleId: moduleId.value,
+                    name: 'Settings Backups',
+                    shorty: 'settings_backups',
+                    description: 'Automatic backups of extension settings'
+                }, moduleId.value);
+            }
+
+            if (category) {
+                const newBackup: SettingsBackup = {
+                    timestamp: Date.now(),
+                    settings: JSON.parse(JSON.stringify(settings.value)),
+                    summary
+                };
+
+                await createCustomDataValue({
+                    dataCategoryId: category.id,
+                    value: JSON.stringify(newBackup)
+                }, moduleId.value);
+
+                // Load existing and prune
+                const existing = await getCustomDataValues<SettingsBackup>(category.id, moduleId.value);
+                const sorted = existing.sort((a, b) => b.timestamp - a.timestamp);
+
+                if (sorted.length > MAX_BACKUPS) {
+                    const toDelete = sorted.slice(MAX_BACKUPS);
+                    for (const b of toDelete) {
+                        if ((b as any).id) {
+                            await deleteCustomDataValue(category.id, (b as any).id, moduleId.value);
+                        }
+                    }
+                }
+
+                // Refresh local list
+                await loadBackups();
+            }
+        } catch (e) {
+            console.error('Backup creation failed', e);
+        }
+    }
+
+    async function saveSettings(summary: string = 'Settings updated') {
         if (!moduleId.value) return;
 
         // Save to localStorage first
@@ -108,6 +169,9 @@ export const useSettingsStore = defineStore('settings', () => {
         applyTheme(settings.value.theme); // Re-apply theme in case it changed
 
         try {
+            // Create backup first (safety)
+            await createBackup(summary);
+
             const category = await getCustomDataCategory<object>('settings');
             if (category) {
                 const values = await getCustomDataValues<Settings>(category.id, moduleId.value);
@@ -132,6 +196,18 @@ export const useSettingsStore = defineStore('settings', () => {
         }
     }
 
+    async function restoreBackup(backup: SettingsBackup) {
+        if (!moduleId.value) return;
+        try {
+            // Confirmation should be handled in UI
+            settings.value = { ...settings.value, ...backup.settings };
+            await saveSettings(`Restored from backup: ${new Date(backup.timestamp).toLocaleString()}`);
+        } catch (e) {
+            console.error('Restore failed', e);
+            throw e;
+        }
+    }
+
     function setTheme(newTheme: 'light' | 'dark' | 'system') {
         settings.value.theme = newTheme;
         saveSettings();
@@ -151,11 +227,14 @@ export const useSettingsStore = defineStore('settings', () => {
         error,
         moduleId,
         isInitialized,
+        backups,
         // Actions
         init,
         initTheme,
         saveSettings,
         setTheme,
-        setLanguage
+        setLanguage,
+        loadBackups,
+        restoreBackup
     };
 });
