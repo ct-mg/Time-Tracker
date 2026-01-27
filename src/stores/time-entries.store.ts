@@ -4,7 +4,7 @@ import { churchtoolsClient } from '@churchtools/churchtools-client';
 import type { TimeEntry, WorkCategory, GroupingMode, DateRange, ActivityLog } from '../types/time-tracker';
 import { useSettingsStore } from './settings.store';
 import { useAuthStore } from './auth.store';
-import { parseISO, differenceInMilliseconds, isWithinInterval, startOfDay, endOfDay, format, subDays } from 'date-fns';
+import { parseISO, differenceInMilliseconds, isWithinInterval, startOfDay, endOfDay, format, subDays, isSameDay } from 'date-fns';
 import {
     getCustomDataCategory,
     getCustomDataValues,
@@ -622,6 +622,42 @@ export const useTimeEntriesStore = defineStore('timeEntries', () => {
         }
     }
 
+    function drawTrendChart(doc: jsPDF, data: any[], x: number, y: number, width: number, height: number) {
+        const padding = 10;
+        const chartWidth = width - (padding * 2);
+        const chartHeight = height - (padding * 2);
+        const barWidth = chartWidth / data.length;
+        const maxHours = Math.max(...data.map(d => d.hours), 8);
+
+        // Draw background
+        doc.setFillColor(249, 250, 251); // Gray 50
+        doc.rect(x, y, width, height, 'F');
+        doc.setDrawColor(229, 231, 235); // Gray 200
+        doc.rect(x, y, width, height, 'S');
+
+        // Draw bars
+        data.forEach((day, i) => {
+            const barHeight = (day.hours / maxHours) * (chartHeight - 10);
+            const barX = x + padding + (i * barWidth) + (barWidth * 0.1);
+            const barY = y + height - padding - barHeight - 5;
+            const currentBarWidth = barWidth * 0.8;
+
+            doc.setFillColor(59, 130, 246); // Blue 500
+            doc.rect(barX, barY, currentBarWidth, barHeight, 'F');
+
+            // Label (Date)
+            doc.setFontSize(7);
+            doc.setTextColor(107, 114, 128); // Gray 500
+            doc.text(day.labelShort, barX + (currentBarWidth / 2), y + height - padding + 2, { align: 'center' });
+
+            // Value (Hours)
+            if (day.hours > 0) {
+                doc.setTextColor(55, 65, 81); // Gray 700
+                doc.text(`${day.hours.toFixed(1)}h`, barX + (currentBarWidth / 2), barY - 2, { align: 'center' });
+            }
+        });
+    }
+
     function exportToPDF() {
         if (filteredEntries.value.length === 0) return;
 
@@ -664,6 +700,29 @@ export const useTimeEntriesStore = defineStore('timeEntries', () => {
                 yPos += 6;
             });
 
+            // Trend Chart (Last 7 Days)
+            const trendData = [];
+            const now = new Date();
+            for (let i = 6; i >= 0; i--) {
+                const date = subDays(now, i);
+                const dayStart = startOfDay(date);
+                const dayEntries = filteredEntries.value.filter(e => isSameDay(parseISO(e.startTime), dayStart));
+                const ms = dayEntries.reduce((sum, e) => {
+                    const start = parseISO(e.startTime);
+                    const end = e.endTime ? parseISO(e.endTime) : new Date();
+                    return sum + (e.isBreak ? 0 : differenceInMilliseconds(end, start));
+                }, 0);
+                trendData.push({
+                    labelShort: format(date, 'dd.MM.'),
+                    hours: ms / 3600000
+                });
+            }
+
+            doc.setFontSize(12);
+            doc.text('Last 7 Days Trend', 14, yPos + 10);
+            drawTrendChart(doc, trendData, 14, yPos + 15, 180, 40);
+            yPos += 65;
+
             // Table
             const tableData = filteredEntries.value.map(e => {
                 const startDate = parseISO(e.startTime);
@@ -682,7 +741,7 @@ export const useTimeEntriesStore = defineStore('timeEntries', () => {
             });
 
             autoTable(doc, {
-                startY: yPos + 5,
+                startY: yPos,
                 head: [['Date', 'Start', 'End', 'Category', 'Description', 'Duration', 'User']],
                 body: tableData,
                 theme: 'striped',

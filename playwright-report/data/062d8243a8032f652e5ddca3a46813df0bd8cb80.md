@@ -1,0 +1,113 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e3]:
+      - heading "Extension Test Environment" [level=2] [ref=e4]
+      - generic [ref=e5]: Select an entry point
+    - generic [ref=e6]:
+      - generic [ref=e7] [cursor=pointer]:
+        - generic [ref=e8]: "main: main"
+        - generic [ref=e9]: Time Tracker • Track working hours, view reports, and manage time entries
+      - generic [ref=e10] [cursor=pointer]:
+        - generic [ref=e11]: "admin: admin"
+        - generic [ref=e12]: Time Tracker Settings • Configure work categories, default hours, and overtime rules
+  - generic [ref=e16]:
+    - banner [ref=e17]:
+      - heading "ChurchTools Time Tracker" [level=1] [ref=e18]
+      - generic [ref=e19]:
+        - generic [ref=e20]:
+          - button "Tracker" [ref=e21] [cursor=pointer]
+          - button "Admin" [ref=e22] [cursor=pointer]
+        - button "Test User Admin TU" [ref=e25] [cursor=pointer]:
+          - generic [ref=e26]:
+            - generic [ref=e27]: Test User
+            - generic [ref=e28]: Admin
+          - generic [ref=e29]: TU
+    - main [ref=e30]:
+      - navigation "Tabs" [ref=e32]:
+        - button "Dashboard" [ref=e33] [cursor=pointer]:
+          - img [ref=e34]
+          - text: Dashboard
+        - button "Time Entries" [ref=e36] [cursor=pointer]:
+          - img [ref=e37]
+          - text: Time Entries
+        - button "Absences" [ref=e39] [cursor=pointer]:
+          - img [ref=e40]
+          - text: Absences
+        - button "Reports" [ref=e42] [cursor=pointer]:
+          - img [ref=e43]
+          - text: Reports
+      - generic [ref=e45]:
+        - generic [ref=e46]:
+          - heading "Time Entries" [level=2] [ref=e47]
+          - button "Manual Entry" [ref=e48] [cursor=pointer]:
+            - img [ref=e49]
+            - text: Manual Entry
+        - generic [ref=e50]:
+          - generic [ref=e51]:
+            - generic [ref=e52]:
+              - textbox "Search in description" [ref=e53]
+              - img [ref=e54]
+            - generic [ref=e56]:
+              - generic [ref=e57]: "User:"
+              - generic [ref=e58]:
+                - combobox [ref=e59]:
+                  - option "Me (Test)" [selected]
+                  - option "Test User"
+                  - option "Employee A"
+                  - option "Employee B"
+                - generic:
+                  - img
+            - generic [ref=e60]:
+              - button "Day" [ref=e61] [cursor=pointer]
+              - button "Week" [ref=e62] [cursor=pointer]
+              - button "This Month" [ref=e63] [cursor=pointer]
+          - generic [ref=e64]:
+            - generic [ref=e65]:
+              - generic [ref=e66]: "Range:"
+              - generic [ref=e67]:
+                - textbox [ref=e68]: 2025-01-27
+                - generic [ref=e69]: "-"
+                - textbox [ref=e70]: 2026-01-27
+            - generic [ref=e71]:
+              - generic [ref=e72]: Presets
+              - generic [ref=e73]:
+                - button "Today" [ref=e74] [cursor=pointer]
+                - button "This Week" [ref=e75] [cursor=pointer]
+                - button "Last Week" [ref=e76] [cursor=pointer]
+                - button "This Month" [ref=e77] [cursor=pointer]
+                - button "Last Month" [ref=e78] [cursor=pointer]
+                - button "This Year" [ref=e79] [cursor=pointer]
+                - button "Last Year" [ref=e80] [cursor=pointer]
+                - button "Last 365 Days" [ref=e81] [cursor=pointer]
+                - button "Reset" [ref=e82] [cursor=pointer]
+            - button "Office" [ref=e84] [cursor=pointer]: Office
+        - generic [ref=e87]: No entries found
+      - dialog "Add Manual Entry" [ref=e88]:
+        - generic [ref=e91]:
+          - generic [ref=e92]:
+            - heading "Add Manual Entry" [level=3] [ref=e93]
+            - generic [ref=e94]:
+              - generic [ref=e95]:
+                - generic [ref=e96]:
+                  - generic [ref=e97]: Start
+                  - textbox [ref=e98]: 2026-01-27T21:47
+                - generic [ref=e99]:
+                  - generic [ref=e100]: End
+                  - textbox [ref=e101]
+              - generic [ref=e103]:
+                - generic [ref=e104]: Category
+                - combobox [ref=e105]:
+                  - option "Office"
+              - generic [ref=e106]:
+                - generic [ref=e107]: Description
+                - textbox [ref=e108]
+              - generic [ref=e109]:
+                - checkbox "Mark as break (won't count towards work hours)" [ref=e110]
+                - generic [ref=e111]: Mark as break (won't count towards work hours)
+          - generic [ref=e112]:
+            - button "Save" [active] [ref=e113] [cursor=pointer]
+            - button "Cancel" [ref=e114] [cursor=pointer]
+```
