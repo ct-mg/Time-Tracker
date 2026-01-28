@@ -82,6 +82,8 @@
     "ct.extension.timetracker.dashboard.stats.status.behind": "⚠ Behind",
     "ct.extension.timetracker.dashboard.stats.status.complete": "✓ Complete",
     "ct.extension.timetracker.dashboard.stats.status.under": "⚠ Under",
+    "ct.extension.timetracker.dashboard.stats.status.hoursLeft": "{hours}h left",
+    "ct.extension.timetracker.dashboard.stats.progress": "Progress",
     "ct.extension.timetracker.timeEntries.title": "Time Entries",
     "ct.extension.timetracker.timeEntries.addManual": "Manual Entry",
     "ct.extension.timetracker.entries.filterDate": "Date",

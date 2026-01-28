@@ -2,13 +2,11 @@
 import { ref, computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useTimeEntriesStore } from '../stores/time-entries.store';
-import { useSettingsStore } from '../stores/settings.store';
 import TimerDisplay from './TimerDisplay.vue';
 import BaseButton from './base/BaseButton.vue';
 import BaseCard from './base/BaseCard.vue';
 
 const timeEntriesStore = useTimeEntriesStore();
-const settingsStore = useSettingsStore();
 const { t } = useI18n();
 const description = ref('');
 const selectedCategoryId = ref('');
@@ -25,15 +23,8 @@ if (!selectedCategoryId.value && categories.value.length > 0) {
 async function handleClockIn() {
     if (!selectedCategoryId.value) return;
     try {
-        // TODO: Get Module ID from settings store or elsewhere - currently hardcoded/needs fix
-        // We need a reliable way to get the module ID. SettingsStore has it.
-        const moduleId = settingsStore.moduleId; 
-        if (moduleId) {
-            await timeEntriesStore.clockIn(moduleId, selectedCategoryId.value, description.value, isBreak.value);
-            description.value = ''; // Reset description
-        } else {
-            console.error("Module ID not found");
-        }
+        await timeEntriesStore.clockIn(selectedCategoryId.value, description.value, isBreak.value);
+        description.value = ''; // Reset description
     } catch (e) {
         console.error("Clock in error", e);
     }
@@ -41,10 +32,7 @@ async function handleClockIn() {
 
 async function handleClockOut() {
     try {
-        const moduleId = settingsStore.moduleId;
-        if (moduleId) {
-            await timeEntriesStore.clockOut(moduleId);
-        }
+        await timeEntriesStore.clockOut();
     } catch (e) {
         console.error("Clock out error", e);
     }

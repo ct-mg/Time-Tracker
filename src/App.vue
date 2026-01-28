@@ -1,8 +1,13 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, watch } from 'vue';
 import { useAuthStore } from './stores/auth.store';
 import { useTimeEntriesStore } from './stores/time-entries.store';
 import { useSettingsStore } from './stores/settings.store';
+import { useAbsencesStore } from './stores/absences.store';
+import { useToastStore } from './stores/toast.store';
+import { useI18n } from 'vue-i18n';
+
+// Components
 import TrackerControls from './components/TrackerControls.vue';
 import TimeEntriesList from './components/TimeEntriesList.vue';
 import TimeTrackerFilters from './components/TimeTrackerFilters.vue';
@@ -13,13 +18,11 @@ import RecentEntries from './components/RecentEntries.vue';
 import AbsenceModal from './components/AbsenceModal.vue';
 import AbsencesList from './components/AbsencesList.vue';
 import ReportsView from './components/ReportsView.vue';
-import UserSettings from './components/UserSettings.vue';
 import ToastContainer from './components/ToastContainer.vue';
 import ConfirmationModal from './components/base/ConfirmationModal.vue';
-import { useAbsencesStore } from './stores/absences.store';
-import { useToastStore } from './stores/toast.store';
-import { watch } from 'vue';
-import { useI18n } from 'vue-i18n';
+import MainHeader from './components/MainHeader.vue';
+import TabNavigation from './components/TabNavigation.vue';
+
 import { setLanguage } from './utils/i18n';
 import type { TimeEntry } from './types/time-tracker';
 
@@ -34,16 +37,33 @@ const editingEntry = ref<TimeEntry | null>(null);
 const editingAbsence = ref<any | null>(null);
 const showModal = ref(false);
 const showAbsenceModal = ref(false);
-const currentView = ref<'tracker' | 'admin'>('tracker');
-const activeTab = ref<'dashboard' | 'entries' | 'absences' | 'reports'>('dashboard');
 const showDeleteConfirm = ref(false);
 const absenceToDelete = ref<any | null>(null);
 
-// Initialize Theme
+// Initialize App
 onMounted(() => {
+    // 1. Initial Local Theme/Lang/UI
     settingsStore.initTheme();
-    // Initialize Language
     setLanguage(settingsStore.settings.language);
+
+    // 2. Load History State (takes precedence over localStorage for back/forward)
+    if (window.history.state && (window.history.state.currentView || window.history.state.activeTab)) {
+        if (window.history.state.currentView) settingsStore.currentView = window.history.state.currentView;
+        if (window.history.state.activeTab) settingsStore.activeTab = window.history.state.activeTab;
+    } else {
+        window.history.replaceState({ 
+            currentView: settingsStore.currentView, 
+            activeTab: settingsStore.activeTab 
+        }, '', '');
+    }
+
+    // 3. Handle back/forward
+    window.addEventListener('popstate', (event) => {
+        if (event.state) {
+            if (event.state.currentView) settingsStore.currentView = event.state.currentView;
+            if (event.state.activeTab) settingsStore.activeTab = event.state.activeTab;
+        }
+    });
 });
 
 // Watch for language changes
@@ -54,20 +74,34 @@ watch(
     }
 );
 
-
 // Watch for module ID readiness to load initial data
 watch(
     () => settingsStore.moduleId,
     async (newId) => {
         if (newId) {
-            await timeEntriesStore.loadWorkCategories(newId);
-            await timeEntriesStore.loadTimeEntries(newId);
-            await absencesStore.loadAbsenceCategories();
-            await absencesStore.loadAbsences();
-            await authStore.checkPermissions(); // Ensure permissions are checked
+            await Promise.all([
+                timeEntriesStore.loadWorkCategories(),
+                timeEntriesStore.loadTimeEntries(),
+                absencesStore.loadAbsenceCategories(),
+                absencesStore.loadAbsences(),
+                authStore.checkPermissions()
+            ]);
         }
-    }
+    },
+    { immediate: true }
 );
+
+// Sync state to history
+watch([() => settingsStore.currentView, () => settingsStore.activeTab], ([newView, newTab]) => {
+    const currentState = window.history.state;
+    if (!currentState || currentState.currentView !== newView || currentState.activeTab !== newTab) {
+        window.history.pushState(
+            { currentView: newView, activeTab: newTab },
+            '',
+            ''
+        );
+    }
+});
 
 function handleAdd() {
     editingEntry.value = null;
@@ -80,13 +114,11 @@ function handleEdit(entry: TimeEntry) {
 }
 
 async function handleSave(entryData: Partial<TimeEntry>) {
-    if (settingsStore.moduleId) {
-        try {
-            await timeEntriesStore.saveManualEntry(settingsStore.moduleId, entryData, editingEntry.value || undefined);
-            toastStore.success('Entry saved successfully');
-        } catch (e) {
-            toastStore.error('Failed to save entry');
-        }
+    try {
+        await timeEntriesStore.saveManualEntry(entryData, editingEntry.value || undefined);
+        toastStore.success('Entry saved successfully');
+    } catch (e) {
+        toastStore.error('Failed to save entry');
     }
 }
 
@@ -134,111 +166,23 @@ async function handleSaveAbsence(absenceData: any) {
 <template>
   <div class="time-tracker-app min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
     <div class="p-4 pb-24 max-w-7xl mx-auto">
-    <header class="mb-8 flex justify-between items-center">
-      <h1 class="text-2xl font-bold text-gray-900 dark:text-white">ChurchTools Time Tracker</h1>
-      
-      <div class="flex items-center gap-4">
-          <div v-if="authStore.isAdmin" class="flex bg-gray-100 dark:bg-gray-800 rounded p-1">
-              <button 
-                @click="currentView = 'tracker'"
-                :class="['px-3 py-1 rounded text-sm font-medium transition-colors', currentView === 'tracker' ? 'bg-white dark:bg-gray-600 shadow text-blue-600 dark:text-white' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400']"
-              >
-                  Tracker
-              </button>
-              <button 
-                @click="currentView = 'admin'"
-                :class="['px-3 py-1 rounded text-sm font-medium transition-colors', currentView === 'admin' ? 'bg-white dark:bg-gray-600 shadow text-blue-600 dark:text-white' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400']"
-              >
-                  Admin
-              </button>
-          </div>
+    
+    <MainHeader />
 
-          <!-- User Settings Dropdown -->
-          <div v-if="authStore.user">
-            <UserSettings />
-          </div>
-      </div>
-    </header>
-
-    <main v-if="currentView === 'tracker'">
-        <!-- Tab Navigation -->
-        <div class="mb-6 border-b border-gray-200 dark:border-gray-700">
-            <nav class="flex gap-4 md:gap-8 overflow-x-auto no-scrollbar scroll-smooth" aria-label="Tabs">
-                <button
-                    @click="activeTab = 'dashboard'"
-                    :class="[
-                        'py-4 px-1 border-b-2 font-medium text-sm transition-colors flex items-center gap-2 whitespace-nowrap',
-                        activeTab === 'dashboard'
-                            ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                            : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
-                    ]"
-                >
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
-                    </svg>
-                    {{ t('ct.extension.timetracker.dashboard.title') }}
-                </button>
-                <button
-                    @click="activeTab = 'entries'"
-                    :class="[
-                        'py-4 px-1 border-b-2 font-medium text-sm transition-colors flex items-center gap-2 whitespace-nowrap',
-                        activeTab === 'entries'
-                            ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                            : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
-                    ]"
-                >
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                    </svg>
-                    {{ t('ct.extension.timetracker.timeEntries.title') }}
-                </button>
-                <button
-                    @click="activeTab = 'absences'"
-                    :class="[
-                        'py-4 px-1 border-b-2 font-medium text-sm transition-colors flex items-center gap-2 whitespace-nowrap',
-                        activeTab === 'absences'
-                            ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                            : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
-                    ]"
-                >
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-                    </svg>
-                    {{ t('ct.extension.timetracker.absences.title') }}
-                </button>
-                <button
-                    @click="activeTab = 'reports'"
-                    :class="[
-                        'py-4 px-1 border-b-2 font-medium text-sm transition-colors flex items-center gap-2 whitespace-nowrap',
-                        activeTab === 'reports'
-                            ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                            : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
-                    ]"
-                >
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 8v8m-4-5v5m-4-2v2m-2 4h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-                    </svg>
-                    {{ t('ct.extension.timetracker.reports.title') }}
-                </button>
-            </nav>
-        </div>
+    <main v-if="settingsStore.currentView === 'tracker'">
+        <TabNavigation />
 
         <!-- Dashboard Tab -->
-        <div v-if="activeTab === 'dashboard'">
-        <!-- Statistics Cards -->
-        <StatisticsCards />
-
-        <!-- TrackerControls -->
-        <TrackerControls />
-        
-        <!-- Recent Entries -->
-        <div class="mb-8">
-            <RecentEntries @viewAll="activeTab = 'entries'" />
-        </div>
+        <div v-if="settingsStore.activeTab === 'dashboard'">
+            <StatisticsCards />
+            <TrackerControls />
+            <div class="mb-8">
+                <RecentEntries @viewAll="settingsStore.activeTab = 'entries'" />
+            </div>
         </div>
 
         <!-- Time Entries Tab -->
-        <div v-if="activeTab === 'entries'">
+        <div v-if="settingsStore.activeTab === 'entries'">
             <div class="flex justify-between items-center mb-4">
                 <h2 class="text-xl font-semibold dark:text-white">{{ t('ct.extension.timetracker.timeEntries.title') }}</h2>
                 <button 
@@ -265,7 +209,7 @@ async function handleSaveAbsence(absenceData: any) {
         </div>
 
         <!-- Absences Tab -->
-        <div v-if="activeTab === 'absences'">
+        <div v-if="settingsStore.activeTab === 'absences'">
             <AbsencesList 
                 @add="handleAddAbsence"
                 @edit="handleEditAbsence"
@@ -274,7 +218,7 @@ async function handleSaveAbsence(absenceData: any) {
         </div>
 
         <!-- Reports Tab -->
-        <div v-if="activeTab === 'reports'">
+        <div v-if="settingsStore.activeTab === 'reports'">
             <ReportsView />
         </div>
 
@@ -301,7 +245,7 @@ async function handleSaveAbsence(absenceData: any) {
         />
     </main>
 
-    <main v-else-if="currentView === 'admin'">
+    <main v-else-if="settingsStore.currentView === 'admin'">
         <AdminSettings />
     </main>
 

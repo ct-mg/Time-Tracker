@@ -2,14 +2,12 @@
 import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useTimeEntriesStore } from '../stores/time-entries.store';
-import { useSettingsStore } from '../stores/settings.store';
 import BaseButton from './base/BaseButton.vue';
 import BaseModal from './base/BaseModal.vue';
 import { useToastStore } from '../stores/toast.store';
 import { slideUpTransition } from '../utils/animations';
 
 const store = useTimeEntriesStore();
-const settingsStore = useSettingsStore();
 const toastStore = useToastStore();
 const { t } = useI18n();
 
@@ -35,13 +33,13 @@ function openCategoryEdit() {
 }
 
 async function handleBulkCategoryUpdate() {
-    if (!selectedCategoryId.value || !settingsStore.moduleId) return;
+    if (!selectedCategoryId.value) return;
     
     const category = categories.value.find(c => c.id === selectedCategoryId.value);
     if (!category) return;
-
+    
     try {
-        await store.bulkUpdateEntries(settingsStore.moduleId, store.selectedEntryIds, {
+        await store.bulkUpdateEntries(store.selectedEntryIds, {
             categoryId: selectedCategoryId.value,
             categoryName: category.name
         });
@@ -57,10 +55,8 @@ function openDeleteConfirmation() {
 }
 
 async function handleBulkDelete() {
-    if (!settingsStore.moduleId) return;
-
     try {
-        await store.bulkDeleteEntries(settingsStore.moduleId, store.selectedEntryIds);
+        await store.bulkDeleteEntries(store.selectedEntryIds);
         showDeleteModal.value = false;
         toastStore.success(t('ct.extension.timetracker.notifications.entryDeleted'));
     } catch (e) {

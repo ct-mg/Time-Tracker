@@ -8,7 +8,7 @@ import { format, subDays, addDays } from 'date-fns';
 export const useAbsencesStore = defineStore('absences', () => {
     const absences = ref<Absence[]>([]);
     const categories = ref<AbsenceCategory[]>([]);
-    const isLoading = ref(false);
+    const isLoading = ref(true);
     const error = ref<string | null>(null);
 
     const now = new Date();

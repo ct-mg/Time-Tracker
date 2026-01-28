@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia';
 import { ref } from 'vue';
 import type { Settings, SettingsBackup } from '../types/time-tracker';
-import { getCustomDataCategory, getCustomDataValues, createCustomDataValue, updateCustomDataValue, getModule, deleteCustomDataValue, createCustomDataCategory } from '../services/kv-store';
+import { getCustomDataCategory, getCustomDataValues, createCustomDataValue, updateCustomDataValue, getModule, deleteCustomDataValue, createCustomDataCategory, setModuleId } from '../services/kv-store';
 
 interface UserSettings extends Settings {
     theme: 'light' | 'dark' | 'system';
@@ -9,6 +9,7 @@ interface UserSettings extends Settings {
 }
 
 const STORAGE_KEY = 'ct-extension-timetracker-settings-v2';
+const UI_STORAGE_KEY = 'ct-extension-timetracker-ui-state';
 
 export const useSettingsStore = defineStore('settings', () => {
     const settings = ref<UserSettings>({
@@ -19,12 +20,16 @@ export const useSettingsStore = defineStore('settings', () => {
         theme: 'system',
         language: 'auto',
     });
-    const isLoading = ref(false);
+    const isLoading = ref(true);
     const error = ref<string | null>(null);
     const moduleId = ref<number | null>(null);
     const isInitialized = ref(false);
     const backups = ref<SettingsBackup[]>([]);
     const MAX_BACKUPS = 5;
+
+    // UI state that should be persisted locally
+    const currentView = ref<'tracker' | 'admin'>('tracker');
+    const activeTab = ref<'dashboard' | 'entries' | 'absences' | 'reports'>('dashboard');
 
     function applyTheme(currentTheme: 'light' | 'dark' | 'system') {
         const isDark = currentTheme === 'dark' || (currentTheme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
@@ -47,6 +52,18 @@ export const useSettingsStore = defineStore('settings', () => {
                 console.error('Failed to parse settings', e);
             }
         }
+
+        const savedUI = localStorage.getItem(UI_STORAGE_KEY);
+        if (savedUI) {
+            try {
+                const parsed = JSON.parse(savedUI);
+                if (parsed.currentView) currentView.value = parsed.currentView;
+                if (parsed.activeTab) activeTab.value = parsed.activeTab;
+            } catch (e) {
+                console.error('Failed to parse UI state', e);
+            }
+        }
+
         applyTheme(settings.value.theme);
         // Language is applied in App.vue via watcher or initial load
 
@@ -56,6 +73,13 @@ export const useSettingsStore = defineStore('settings', () => {
                 applyTheme(settings.value.theme);
             }
         });
+    }
+
+    function saveUIState() {
+        localStorage.setItem(UI_STORAGE_KEY, JSON.stringify({
+            currentView: currentView.value,
+            activeTab: activeTab.value
+        }));
     }
 
     // Initial load
@@ -68,7 +92,8 @@ export const useSettingsStore = defineStore('settings', () => {
         try {
             const module = await getModule(key);
             moduleId.value = module.id;
-            await loadRemoteSettings(module.id);
+            setModuleId(module.id);
+            await loadRemoteSettings();
             isInitialized.value = true;
         } catch (e) {
             console.error('Failed to init settings', e);
@@ -78,11 +103,13 @@ export const useSettingsStore = defineStore('settings', () => {
         }
     }
 
-    async function loadRemoteSettings(module_id: number) {
+    async function loadRemoteSettings() {
         isLoading.value = true;
-        moduleId.value = module_id;
+        const module_id = moduleId.value;
+        if (!module_id) return;
+
         try {
-            const category = await getCustomDataCategory<object>('settings');
+            const category = await getCustomDataCategory<object>('settings', module_id);
             if (category) {
                 const values = await getCustomDataValues<Settings>(category.id, module_id);
                 if (values.length > 0) {
@@ -105,7 +132,7 @@ export const useSettingsStore = defineStore('settings', () => {
     async function loadBackups() {
         if (!moduleId.value) return;
         try {
-            const category = await getCustomDataCategory<object>('settings_backups');
+            const category = await getCustomDataCategory<object>('settings_backups', moduleId.value);
             if (category) {
                 const values = await getCustomDataValues<SettingsBackup>(category.id, moduleId.value);
                 backups.value = values.sort((a, b) => b.timestamp - a.timestamp);
@@ -118,7 +145,7 @@ export const useSettingsStore = defineStore('settings', () => {
     async function createBackup(summary: string) {
         if (!moduleId.value) return;
         try {
-            let category = await getCustomDataCategory<object>('settings_backups');
+            let category = await getCustomDataCategory<object>('settings_backups', moduleId.value);
             if (!category) {
                 category = await createCustomDataCategory({
                     customModuleId: moduleId.value,
@@ -172,7 +199,7 @@ export const useSettingsStore = defineStore('settings', () => {
             // Create backup first (safety)
             await createBackup(summary);
 
-            const category = await getCustomDataCategory<object>('settings');
+            const category = await getCustomDataCategory<object>('settings', moduleId.value);
             if (category) {
                 const values = await getCustomDataValues<Settings>(category.id, moduleId.value);
                 if (values.length > 0) {
@@ -228,10 +255,13 @@ export const useSettingsStore = defineStore('settings', () => {
         moduleId,
         isInitialized,
         backups,
+        currentView,
+        activeTab,
         // Actions
         init,
         initTheme,
         saveSettings,
+        saveUIState,
         setTheme,
         setLanguage,
         loadBackups,

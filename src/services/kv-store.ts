@@ -16,6 +16,17 @@ import type {
  *  CUSTOM MODULE itself
  * ────────────────────────────────────────────────
  */
+let CACHED_MODULE_ID: number | null = null;
+const CACHED_CATEGORY_IDS: Record<string, number> = {};
+
+/**
+ * Sets the module ID globally for the KV store service.
+ * This allows other functions to be called without passing the ID every time.
+ */
+export function setModuleId(id: number): void {
+    CACHED_MODULE_ID = id;
+}
+
 /**
  * retrieves the module configuration
  * @param extensionkey optional - defaults to module with shorty=extensionkey
@@ -76,7 +87,10 @@ async function createModule(
  */
 async function resolveModuleId(moduleId?: number): Promise<number> {
     if (moduleId) return moduleId;
+    if (CACHED_MODULE_ID) return CACHED_MODULE_ID;
+
     const module = await getModule();
+    CACHED_MODULE_ID = module.id;
     return module.id;
 }
 
@@ -122,10 +136,17 @@ export async function getCustomDataCategories<T extends object>(
  * @returns the one category with matching name - if it exists
  */
 export async function getCustomDataCategory<T extends object>(
-    shorty: string
+    shorty: string,
+    moduleId?: number
 ): Promise<(T & Omit<CustomModuleDataCategory, 'data'>) | undefined> {
-    const categories = await getCustomDataCategories<T>();
-    return categories.find((category) => category.shorty === shorty);
+    const categories = await getCustomDataCategories<T>(moduleId);
+    const category = categories.find((c) => c.shorty === shorty);
+
+    if (category) {
+        CACHED_CATEGORY_IDS[shorty] = category.id;
+    }
+
+    return category;
 }
 
 /**

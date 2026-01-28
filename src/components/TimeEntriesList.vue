@@ -1,32 +1,29 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref, watch, onMounted } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useTimeEntries } from '../composables/useTimeEntries';
 import { useTimeEntriesStore } from '../stores/time-entries.store';
-import { useSettingsStore } from '../stores/settings.store';
-import TimeEntryItem from './TimeEntryItem.vue';
-import BulkActionsToolbar from './BulkActionsToolbar.vue';
 import { useToastStore } from '../stores/toast.store';
 import { listTransition } from '../utils/animations';
+import type { TimeEntry, TimeEntryGroup, DayGroup } from '../types/time-tracker';
 
+import TimeEntryItem from './TimeEntryItem.vue';
+import BulkActionsToolbar from './BulkActionsToolbar.vue';
 import TimeEntriesListSkeleton from './skeletons/TimeEntriesListSkeleton.vue';
+import ConfirmationModal from './base/ConfirmationModal.vue';
 
 const { groupedEntries } = useTimeEntries();
 const store = useTimeEntriesStore();
-const settingsStore = useSettingsStore();
 const toastStore = useToastStore();
 const { t } = useI18n();
-
-import ConfirmationModal from './base/ConfirmationModal.vue';
-import { ref, watch, onMounted } from 'vue';
 
 const itemsPerPage = 10;
 const visibleGroupsCount = ref(itemsPerPage);
 const showDeleteConfirm = ref(false);
-const entryToDelete = ref<any | null>(null);
+const entryToDelete = ref<TimeEntry | null>(null);
 const isDeleting = ref(false);
 
-const limitedGroups = computed(() => {
+const limitedGroups = computed<TimeEntryGroup[]>(() => {
     return groupedEntries.value.slice(0, visibleGroupsCount.value);
 });
 
@@ -58,19 +55,19 @@ onMounted(() => {
 const workCategories = computed(() => store.workCategories);
 
 const emit = defineEmits<{
-    (e: 'edit', entry: any): void;
+    (e: 'edit', entry: TimeEntry): void;
 }>();
 
-function handleEdit(entry: any) {
+function handleEdit(entry: TimeEntry) {
     emit('edit', entry);
 }
 
 // Select All functionality
 const allVisibleEntryIds = computed(() => {
     const ids: string[] = [];
-    groupedEntries.value.forEach(group => {
-        group.sortedDays.forEach(day => {
-            day.entries.forEach(entry => {
+    groupedEntries.value.forEach((group: TimeEntryGroup) => {
+        group.sortedDays.forEach((day: DayGroup) => {
+            day.entries.forEach((entry: TimeEntry) => {
                 if (entry.endTime) { // Only selectable if not active
                     ids.push(entry.startTime);
                 }
@@ -97,7 +94,7 @@ function toggleSelectAll() {
     }
 }
 
-function handleDelete(entry: any) {
+function handleDelete(entry: TimeEntry) {
     entryToDelete.value = entry;
     showDeleteConfirm.value = true;
 }
@@ -107,11 +104,8 @@ async function confirmDelete() {
     
     isDeleting.value = true;
     try {
-        const moduleId = settingsStore.moduleId;
-        if (moduleId) {
-            await store.deleteTimeEntry(moduleId, entryToDelete.value);
-            toastStore.success(t('ct.extension.timetracker.notifications.entryDeleted'));
-        }
+        await store.deleteTimeEntry(entryToDelete.value);
+        toastStore.success(t('ct.extension.timetracker.notifications.entryDeleted'));
     } catch (e: any) {
         toastStore.error(t('ct.extension.timetracker.notifications.deleteEntryFailed'));
     } finally {

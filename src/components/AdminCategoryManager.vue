@@ -2,12 +2,10 @@
 import { ref, computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useTimeEntriesStore } from '../stores/time-entries.store';
-import { useSettingsStore } from '../stores/settings.store';
 import type { WorkCategory } from '../types/time-tracker';
 import { useToastStore } from '../stores/toast.store';
 
 const store = useTimeEntriesStore();
-const settingsStore = useSettingsStore();
 const toastStore = useToastStore();
 const { t } = useI18n();
 
@@ -31,9 +29,8 @@ function openEdit(cat: WorkCategory) {
 
 async function handleDelete(cat: WorkCategory) {
     if (confirm(t('ct.extension.timetracker.admin.deleteCategoryConfirm', { name: cat.name }))) {
-        if (!settingsStore.moduleId) return;
         try {
-            await store.deleteWorkCategory(settingsStore.moduleId, cat.id);
+            await store.deleteWorkCategory(cat.id);
             toastStore.success(t('ct.extension.timetracker.admin.categoryDeleted'));
         } catch (e) {
             toastStore.error(t('ct.extension.timetracker.admin.deleteCategoryFailed'));
@@ -42,10 +39,10 @@ async function handleDelete(cat: WorkCategory) {
 }
 
 async function save() {
-    if (!editingCategory.value.name || !settingsStore.moduleId) return;
+    if (!editingCategory.value.name) return;
 
     try {
-        await store.saveWorkCategory(settingsStore.moduleId, editingCategory.value);
+        await store.saveWorkCategory(editingCategory.value);
         isEditing.value = false;
         editingCategory.value = {};
         toastStore.success(t('ct.extension.timetracker.admin.categorySaved'));

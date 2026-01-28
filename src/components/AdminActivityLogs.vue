@@ -2,21 +2,17 @@
 import { ref, onMounted, computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useTimeEntriesStore } from '../stores/time-entries.store';
-import { useSettingsStore } from '../stores/settings.store';
 
 const store = useTimeEntriesStore();
-const settingsStore = useSettingsStore();
 const { t } = useI18n();
 
 const logs = computed(() => store.activityLogs);
 const isLoading = ref(false);
 
 onMounted(async () => {
-    if (settingsStore.moduleId) {
-        isLoading.value = true;
-        await store.loadActivityLogs(settingsStore.moduleId);
-        isLoading.value = false;
-    }
+    isLoading.value = true;
+    await store.loadActivityLogs();
+    isLoading.value = false;
 });
 
 function formatTime(ts: number) {
@@ -38,7 +34,7 @@ function getActionColor(action: string) {
         <div class="flex justify-between items-center mb-6">
             <h2 class="text-xl font-bold text-gray-900 dark:text-white">{{ t('ct.extension.timetracker.admin.activityLogs') }}</h2>
             <button 
-                @click="store.loadActivityLogs(settingsStore.moduleId!)"
+                @click="store.loadActivityLogs()"
                 class="px-3 py-1.5 text-sm font-medium text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
             >
                 {{ t('ct.extension.timetracker.admin.refresh') }}

@@ -119,3 +119,24 @@ export interface AbsenceCategory {
     color: string;
     shortName: string;
 }
+
+export interface DayGroup {
+    date: string;
+    entries: TimeEntry[];
+    dayTotalMs: number;
+    dayTargetMs: number;
+    dayTargetDisplay: string;
+    dayTotalDisplay: string;
+    isWorkDay: boolean;
+}
+
+export interface TimeEntryGroup {
+    key: string;
+    title: string;
+    subTitle?: string;
+    totalMs: number;
+    targetMs: number;
+    totalDisplay: string;
+    targetDisplay: string;
+    sortedDays: DayGroup[];
+}

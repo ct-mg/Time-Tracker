@@ -34,9 +34,6 @@ const mainEntryPoint: EntryPoint<MainModuleData> = async ({ element, churchtools
         authStore.setUser(user);
     }
 
-    // Trigger permission checks
-    authStore.checkPermissions();
-
     // Mount
     app.mount(element);
 
